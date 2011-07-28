@@ -1212,13 +1212,10 @@ serial_omap_console_write(struct console *co, const char *s,
 	unsigned int ier;
 	int locked = 1;
 
-	local_irq_save(flags);
-	if (up->port.sysrq)
-		locked = 0;
-	else if (oops_in_progress)
-		locked = uart_port_trylock(&up->port);
+	if (up->port.sysrq || oops_in_progress)
+		locked = uart_port_trylock_irqsave(&up->port, &flags);
 	else
-		uart_port_lock(&up->port);
+		uart_port_lock_irqsave(&up->port, &flags);
 
 	/*
 	 * First save the IER then disable the interrupts
@@ -1245,8 +1242,7 @@ serial_omap_console_write(struct console *co, const char *s,
 		check_modem_status(up);
 
 	if (locked)
-		uart_port_unlock(&up->port);
-	local_irq_restore(flags);
+		uart_port_unlock_irqrestore(&up->port, flags);
 }
 
 static int __init
