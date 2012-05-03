@@ -5531,6 +5531,13 @@ static void hub_event(struct work_struct *work)
 			(u16) hub->change_bits[0],
 			(u16) hub->event_bits[0]);
 
+	/* Don't disconnect USB-SATA on TrimSlice */
+	if (strcmp(dev_name(hdev->bus->controller), "tegra-ehci.0") == 0) {
+		if ((hdev->state == 7) && (hub->change_bits[0] == 0) &&
+				(hub->event_bits[0] == 0x2))
+			hub->event_bits[0] = 0;
+	}
+
 	/* Lock the device, then check to see if we were
 	 * disconnected while waiting for the lock to succeed. */
 	usb_lock_device(hdev);
