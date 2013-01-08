@@ -2328,13 +2328,10 @@ pl011_console_write(struct console *co, const char *s, unsigned int count)
 
 	clk_enable(uap->clk);
 
-	local_irq_save(flags);
-	if (uap->port.sysrq)
-		locked = 0;
-	else if (oops_in_progress)
-		locked = uart_port_trylock(&uap->port);
+	if (uap->port.sysrq || oops_in_progress)
+		locked = uart_port_trylock_irqsave(&uap->port, &flags);
 	else
-		uart_port_lock(&uap->port);
+		uart_port_lock_irqsave(&uap->port, &flags);
 
 	/*
 	 *	First save the CR then disable the interrupts
@@ -2360,8 +2357,7 @@ pl011_console_write(struct console *co, const char *s, unsigned int count)
 		pl011_write(old_cr, uap, REG_CR);
 
 	if (locked)
-		uart_port_unlock(&uap->port);
-	local_irq_restore(flags);
+		uart_port_unlock_irqrestore(&uap->port, flags);
 
 	clk_disable(uap->clk);
 }
