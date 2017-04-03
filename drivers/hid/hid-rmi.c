@@ -322,18 +322,11 @@ static int rmi_input_event(struct hid_device *hdev, u8 *data, int size)
 {
 	struct rmi_data *hdata = hid_get_drvdata(hdev);
 	struct rmi_device *rmi_dev = hdata->xport.rmi_dev;
-	unsigned long flags;
 
 	if (!(test_bit(RMI_STARTED, &hdata->flags)))
 		return 0;
 
-	local_irq_save(flags);
-
 	rmi_set_attn_data(rmi_dev, data[1], &data[2], size - 2);
-
-	generic_handle_irq(hdata->rmi_irq);
-
-	local_irq_restore(flags);
 
 	return 1;
 }
@@ -591,56 +584,6 @@ static const struct rmi_transport_ops hid_rmi_ops = {
 	.reset		= rmi_hid_reset,
 };
 
-static void rmi_irq_teardown(void *data)
-{
-	struct rmi_data *hdata = data;
-	struct irq_domain *domain = hdata->domain;
-
-	if (!domain)
-		return;
-
-	irq_dispose_mapping(irq_find_mapping(domain, 0));
-
-	irq_domain_remove(domain);
-	hdata->domain = NULL;
-	hdata->rmi_irq = 0;
-}
-
-static int rmi_irq_map(struct irq_domain *h, unsigned int virq,
-		       irq_hw_number_t hw_irq_num)
-{
-	irq_set_chip_and_handler(virq, &dummy_irq_chip, handle_simple_irq);
-
-	return 0;
-}
-
-static const struct irq_domain_ops rmi_irq_ops = {
-	.map = rmi_irq_map,
-};
-
-static int rmi_setup_irq_domain(struct hid_device *hdev)
-{
-	struct rmi_data *hdata = hid_get_drvdata(hdev);
-	int ret;
-
-	hdata->domain = irq_domain_create_linear(hdev->dev.fwnode, 1,
-						 &rmi_irq_ops, hdata);
-	if (!hdata->domain)
-		return -ENOMEM;
-
-	ret = devm_add_action_or_reset(&hdev->dev, &rmi_irq_teardown, hdata);
-	if (ret)
-		return ret;
-
-	hdata->rmi_irq = irq_create_mapping(hdata->domain, 0);
-	if (hdata->rmi_irq <= 0) {
-		hid_err(hdev, "Can't allocate an IRQ\n");
-		return hdata->rmi_irq < 0 ? hdata->rmi_irq : -ENXIO;
-	}
-
-	return 0;
-}
-
 static int rmi_probe(struct hid_device *hdev, const struct hid_device_id *id)
 {
 	struct rmi_data *data = NULL;
@@ -713,18 +656,11 @@ static int rmi_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	mutex_init(&data->page_mutex);
 
-	ret = rmi_setup_irq_domain(hdev);
-	if (ret) {
-		hid_err(hdev, "failed to allocate IRQ domain\n");
-		return ret;
-	}
-
 	if (data->device_flags & RMI_DEVICE_HAS_PHYS_BUTTONS)
 		rmi_hid_pdata.gpio_data.disable = true;
 
 	data->xport.dev = hdev->dev.parent;
 	data->xport.pdata = rmi_hid_pdata;
-	data->xport.pdata.irq = data->rmi_irq;
 	data->xport.proto_name = "hid";
 	data->xport.ops = &hid_rmi_ops;
 

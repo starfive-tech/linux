@@ -364,6 +364,7 @@ struct rmi_driver_data {
 
 	struct rmi4_attn_data attn_data;
 	DECLARE_KFIFO(attn_fifo, struct rmi4_attn_data, 16);
+	struct work_struct attn_work;
 };
 
 int rmi_register_transport_device(struct rmi_transport_dev *xport);
