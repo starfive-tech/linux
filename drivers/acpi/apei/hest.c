@@ -88,6 +88,14 @@ int apei_hest_parse(apei_hest_func_t func, void *data)
 	if (hest_disable || !hest_tab)
 		return -EINVAL;
 
+#ifdef CONFIG_ARM64
+	/* Ignore broken firmware */
+	if (!strncmp(hest_tab->header.oem_id, "HPE   ", 6) &&
+	    !strncmp(hest_tab->header.oem_table_id, "ProLiant", 8) &&
+	    MIDR_IMPLEMENTOR(read_cpuid_id()) == ARM_CPU_IMP_APM)
+		return -EINVAL;
+#endif
+
 	hest_hdr = (struct acpi_hest_header *)(hest_tab + 1);
 	for (i = 0; i < hest_tab->error_source_count; i++) {
 		len = hest_esrc_len(hest_hdr);
