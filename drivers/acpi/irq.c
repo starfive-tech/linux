@@ -126,6 +126,7 @@ struct acpi_irq_parse_one_ctx {
 	unsigned int index;
 	unsigned long *res_flags;
 	struct irq_fwspec *fwspec;
+	bool skip_producer_check;
 };
 
 /**
@@ -197,7 +198,8 @@ static acpi_status acpi_irq_parse_one_cb(struct acpi_resource *ares,
 		return AE_CTRL_TERMINATE;
 	case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
 		eirq = &ares->data.extended_irq;
-		if (eirq->producer_consumer == ACPI_PRODUCER)
+		if (!ctx->skip_producer_check &&
+		    eirq->producer_consumer == ACPI_PRODUCER)
 			return AE_OK;
 		if (ctx->index >= eirq->interrupt_count) {
 			ctx->index -= eirq->interrupt_count;
@@ -232,8 +234,19 @@ static acpi_status acpi_irq_parse_one_cb(struct acpi_resource *ares,
 static int acpi_irq_parse_one(acpi_handle handle, unsigned int index,
 			      struct irq_fwspec *fwspec, unsigned long *flags)
 {
-	struct acpi_irq_parse_one_ctx ctx = { -EINVAL, index, flags, fwspec };
+	struct acpi_irq_parse_one_ctx ctx = { -EINVAL, index, flags, fwspec, false };
 
+	/*
+	 * Firmware on arm64-based HPE m400 platform incorrectly marks
+	 * its UART interrupt as ACPI_PRODUCER rather than ACPI_CONSUMER.
+	 * Don't do the producer/consumer check for that device.
+	 */
+	if (IS_ENABLED(CONFIG_ARM64)) {
+		struct acpi_device *adev = acpi_bus_get_acpi_device(handle);
+
+		if (adev && !strcmp(acpi_device_hid(adev), "APMC0D08"))
+			ctx.skip_producer_check = true;
+	}
 	acpi_walk_resources(handle, METHOD_NAME__CRS, acpi_irq_parse_one_cb, &ctx);
 	return ctx.rc;
 }
