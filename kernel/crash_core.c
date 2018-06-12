@@ -271,7 +271,7 @@ static int __init __parse_crashkernel(char *cmdline,
 #elif defined(CONFIG_PPC64)
 		ck_cmdline = "2G-4G:384M,4G-16G:512M,16G-64G:1G,64G-128G:2G,128G-:4G";
 #endif
-		pr_info("Using crashkernel=auto, the size choosed is a best effort estimation.\n");
+		pr_info("Using crashkernel=auto, the size chosen is a best effort estimation.\n");
 	}
 
 	/*
