@@ -1,0 +1,5 @@
+config NVDLA
+	bool "The NVIDIA Deep Learning Accelerator"
+	default n
+	depends on DRM
+	select DRM_GEM_CMA_HELPER
