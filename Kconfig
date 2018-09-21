@@ -1,0 +1,5 @@
+config NVDLA
+	bool
+	default y
+	depends on DRM
+	select DRM_GEM_CMA_HELPER
