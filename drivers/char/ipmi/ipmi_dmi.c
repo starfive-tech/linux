@@ -215,6 +215,21 @@ static int __init scan_for_dmi_ipmi(void)
 {
 	const struct dmi_device *dev = NULL;
 
+#ifdef CONFIG_ARM64
+	/* RHEL-only
+	 * If this is ARM-based HPE m400, return now, because that platform
+	 * reports the host-side ipmi address as intel port-io space, which
+	 * does not exist in the ARM architecture.
+	 */
+	const char *dmistr = dmi_get_system_info(DMI_PRODUCT_NAME);
+
+	if (dmistr && (strcmp("ProLiant m400 Server", dmistr) == 0)) {
+		pr_debug("%s does not support host ipmi\n", dmistr);
+		return 0;
+	}
+	/* END RHEL-only */
+#endif
+
 	while ((dev = dmi_find_device(DMI_DEV_TYPE_IPMI, NULL, dev)))
 		dmi_decode_ipmi((const struct dmi_header *) dev->device_data);
 
