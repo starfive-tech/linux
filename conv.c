@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -275,9 +275,10 @@ processor_conv_program(struct dla_processor_group *group)
 		ASSERT_GOTO((weight_compress_support), ret, ERR(INVALID_INPUT), exit);
 		ASSERT_GOTO((conv_surface->wmb_data.address != -1),
 			ret, ERR(INVALID_INPUT), exit);
-		dla_get_dma_address(engine->driver_context,
+		dla_get_dma_cube_address(engine->driver_context,
 					engine->task->task_data,
 					conv_surface->wmb_data.address,
+					conv_surface->wmb_data.offset,
 					(void *)&wmb_address,
 					DESTINATION_DMA);
 		CHECK_ALIGN(wmb_address, atom_size);
@@ -285,9 +286,10 @@ processor_conv_program(struct dla_processor_group *group)
 
 		ASSERT_GOTO((conv_surface->wgs_data.address != -1),
 			ret, ERR(INVALID_INPUT), exit);
-		dla_get_dma_address(engine->driver_context,
+		dla_get_dma_cube_address(engine->driver_context,
 					engine->task->task_data,
 					conv_surface->wgs_data.address,
+					conv_surface->wgs_data.offset,
 					(void *)&wgs_address,
 					DESTINATION_DMA);
 		CHECK_ALIGN(wgs_address, atom_size);
@@ -295,9 +297,10 @@ processor_conv_program(struct dla_processor_group *group)
 	}
 
 	if (conv_surface->weight_data.address != -1) {
-		dla_get_dma_address(engine->driver_context,
+		dla_get_dma_cube_address(engine->driver_context,
 					engine->task->task_data,
 					conv_surface->weight_data.address,
+					conv_surface->weight_data.offset,
 					(void *)&weight_address,
 					DESTINATION_DMA);
 		CHECK_ALIGN(weight_address, atom_size);
@@ -305,9 +308,10 @@ processor_conv_program(struct dla_processor_group *group)
 	}
 
 	if (conv_surface->dst_data.address != -1) {
-		dla_get_dma_address(engine->driver_context,
+		dla_get_dma_cube_address(engine->driver_context,
 					engine->task->task_data,
 					conv_surface->dst_data.address,
+					conv_surface->dst_data.offset,
 					(void *)&output_address,
 					DESTINATION_DMA);
 		CHECK_ALIGN(output_address, atom_size);
@@ -626,9 +630,7 @@ processor_conv_program(struct dla_processor_group *group)
 		<< SHIFT(CDMA_D_BATCH_NUMBER_0, BATCHES));
 	cdma_reg_write(D_BATCH_NUMBER, reg);
 
-	reg = (conv_op->batch_stride
-		<< SHIFT(CDMA_D_BATCH_STRIDE_0, BATCH_STRIDE));
-	cdma_reg_write(D_BATCH_STRIDE, reg);
+	cdma_reg_write(D_BATCH_STRIDE, conv_op->batch_stride);
 
 	reg = ((conv_op->entry_per_slice - 1)
 		<< SHIFT(CDMA_D_ENTRY_PER_SLICE_0, ENTRIES));

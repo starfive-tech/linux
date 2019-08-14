@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -325,6 +325,7 @@ struct dla_data_cube {
 	uint16_t type; /* dla_mem_type */
 	int16_t address; /* offset to the actual IOVA in task.address_list */
 
+	uint32_t offset; /* offset within address */
 	uint32_t size;
 
 	/* cube dimensions */
