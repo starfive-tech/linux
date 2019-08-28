@@ -64,7 +64,8 @@ static struct nvdla_config nvdla_config_os_initial = {
 };
 
 static struct nvdla_config nvdla_config_small = {
-	.atom_size = 32,
+	//.atom_size = 8,
+	.atom_size = 32,  // nv_large config
 	.bdma_enable = false,
 	.rubik_enable = false,
 	.weight_compress_support = false,
