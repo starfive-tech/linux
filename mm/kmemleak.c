@@ -1960,6 +1960,11 @@ void __init kmemleak_init(void)
  */
 static int __init kmemleak_late_init(void)
 {
+	if (!kmemleak_skip_disable) {
+		kmemleak_disable();
+		return 0;
+	}
+
 	kmemleak_initialized = 1;
 
 	debugfs_create_file("kmemleak", 0644, NULL, NULL, &kmemleak_fops);
