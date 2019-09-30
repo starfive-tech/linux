@@ -195,11 +195,12 @@ extern int __get_user_64t_4(void *);
 #define __get_user_check(x, p)						\
 	({								\
 		unsigned long __limit = current_thread_info()->addr_limit - 1; \
+		unsigned int __ua_flags = uaccess_save_and_enable();	\
 		register typeof(*(p)) __user *__p asm("r0") = (p);	\
 		register __inttype(x) __r2 asm("r2");			\
 		register unsigned long __l asm("r1") = __limit;		\
 		register int __e asm("r0");				\
-		unsigned int __ua_flags = uaccess_save_and_enable();	\
+		unsigned int __err;					\
 		switch (sizeof(*(__p))) {				\
 		case 1:							\
 			if (sizeof((x)) >= 8)				\
@@ -227,9 +228,10 @@ extern int __get_user_64t_4(void *);
 			break;						\
 		default: __e = __get_user_bad(); break;			\
 		}							\
-		uaccess_restore(__ua_flags);				\
+		__err = __e;						\
 		x = (typeof(*(p))) __r2;				\
-		__e;							\
+		uaccess_restore(__ua_flags);				\
+		__err;							\
 	})
 
 #define get_user(x, p)							\
