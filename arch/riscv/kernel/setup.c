@@ -252,6 +252,7 @@ void __init setup_arch(char **cmdline_p)
 	else
 		pr_err("No DTB found in kernel mappings\n");
 #endif
+	misc_mem_init();
 
 	if (IS_ENABLED(CONFIG_RISCV_SBI))
 		sbi_init();
