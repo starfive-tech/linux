@@ -281,21 +281,21 @@ long __keyctl_dh_compute(struct keyctl_dh_params __user *params,
 
 	memset(&dh_inputs, 0, sizeof(dh_inputs));
 
-	dlen = dh_data_from_key(pcopy.prime, &dh_inputs.p);
+	dlen = dh_data_from_key(pcopy.prime, (void **)&dh_inputs.p);
 	if (dlen < 0) {
 		ret = dlen;
 		goto out1;
 	}
 	dh_inputs.p_size = dlen;
 
-	dlen = dh_data_from_key(pcopy.base, &dh_inputs.g);
+	dlen = dh_data_from_key(pcopy.base, (void **)&dh_inputs.g);
 	if (dlen < 0) {
 		ret = dlen;
 		goto out2;
 	}
 	dh_inputs.g_size = dlen;
 
-	dlen = dh_data_from_key(pcopy.private, &dh_inputs.key);
+	dlen = dh_data_from_key(pcopy.private, (void **)&dh_inputs.key);
 	if (dlen < 0) {
 		ret = dlen;
 		goto out2;
