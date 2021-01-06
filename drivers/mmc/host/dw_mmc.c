@@ -145,6 +145,14 @@ static int dw_mci_req_show(struct seq_file *s, void *v)
 }
 DEFINE_SHOW_ATTRIBUTE(dw_mci_req);
 
+#ifdef CONFIG_MMC_DW_FLUSH_DDR
+#include <soc/starfive/vic7100.h>
+static inline void dw_mci_flush_dcache(unsigned long start, unsigned long len)
+{
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + start % 64);
+}
+#endif
+
 static int dw_mci_regs_show(struct seq_file *s, void *v)
 {
 	struct dw_mci *host = s->private;
@@ -690,7 +698,10 @@ static inline int dw_mci_prepare_desc32(struct dw_mci *host,
 
 			/* Physical address to DMA to/from */
 			desc->des2 = cpu_to_le32(mem_addr);
-
+#ifdef CONFIG_MMC_DW_FLUSH_DDR
+			dw_mci_flush_dcache((unsigned long)mem_addr,
+					    (unsigned long)desc_len);
+#endif
 			/* Update physical address for the next desc */
 			mem_addr += desc_len;
 
@@ -707,6 +718,10 @@ static inline int dw_mci_prepare_desc32(struct dw_mci *host,
 				       IDMAC_DES0_DIC));
 	desc_last->des0 |= cpu_to_le32(IDMAC_DES0_LD);
 
+#ifdef CONFIG_MMC_DW_FLUSH_DDR
+	dw_mci_flush_dcache((unsigned long)(host->sg_dma),
+			    (unsigned long)(sg_len * sizeof(struct idmac_desc)));
+#endif
 	return 0;
 err_own_bit:
 	/* restore the descriptor chain as it's polluted */
