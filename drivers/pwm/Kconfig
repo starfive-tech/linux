@@ -491,6 +491,16 @@ config PWM_SIFIVE
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-sifive.
 
+config PWM_SIFIVE_PTC
+	tristate "SiFive PWM PTC support"
+	depends on OF
+	depends on COMMON_CLK
+	help
+	  Generic PWM framework driver for SiFive SoCs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-sifive-ptc.
+
 config PWM_SL28CPLD
 	tristate "Kontron sl28cpld PWM support"
 	depends on MFD_SL28CPLD || COMPILE_TEST
