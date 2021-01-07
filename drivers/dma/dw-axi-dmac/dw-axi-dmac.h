@@ -70,6 +70,9 @@ struct axi_dma_chip {
 	struct clk		*core_clk;
 	struct clk		*cfgr_clk;
 	struct dw_axi_dma	*dw;
+#ifdef CONFIG_SOC_STARFIVE
+	bool need_flush;
+#endif
 };
 
 /* LLI == Linked List Item */
@@ -154,6 +157,7 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 #define DMAC_CHEN_H		0x01C /* R/W DMAC Channel Enable 32-63 */
 #define DMAC_CHSUSPREG		0x020 /* R/W DMAC Channel Suspend */
 #define DMAC_CHABORTREG		0x028 /* R/W DMAC Channel Abort */
+
 #define DMAC_INTSTATUS		0x030 /* R DMAC Interrupt Status */
 #define DMAC_COMMON_INTCLEAR	0x038 /* W DMAC Interrupt Clear */
 #define DMAC_COMMON_INTSTATUS_ENA 0x040 /* R DMAC Interrupt Status Enable */

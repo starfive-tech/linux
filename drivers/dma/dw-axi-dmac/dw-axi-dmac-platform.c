@@ -32,6 +32,10 @@
 #include "../dmaengine.h"
 #include "../virt-dma.h"
 
+#ifdef CONFIG_SOC_STARFIVE
+#include <soc/starfive/vic7100.h>
+#endif
+
 /*
  * The set of bus widths supported by the DMA controller. DW AXI DMAC supports
  * master data bus width up to 512 bits (for both AXI master interfaces), but
@@ -372,6 +376,7 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
+	struct axi_dma_desc *desc;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	struct axi_dma_chan_config config;
 	u32 irq_mask;
@@ -425,6 +430,23 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	/* Generate 'suspend' status but don't generate interrupt */
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
+
+    /*flush all the desc */
+#ifdef CONFIG_SOC_STARFIVE
+	if (chan->chip->need_flush) {
+		/*flush fisrt desc*/
+		starfive_flush_dcache(first->vd.tx.phys, sizeof(*first));
+
+		list_for_each_entry(desc, &first->xfer_list, xfer_list) {
+			starfive_flush_dcache(desc->vd.tx.phys, sizeof(*desc));
+
+			dev_dbg(chan->chip->dev,
+				"sar:%#llx dar:%#llx llp:%#llx ctl:0x%x:%08x\n",
+				desc->lli.sar, desc->lli.dar, desc->lli.llp,
+				desc->lli.ctl_hi, desc->lli.ctl_lo);
+		}
+	}
+#endif
 
 	axi_chan_enable(chan);
 }
@@ -1101,10 +1123,12 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 		dev_vdbg(chip->dev, "%s %u IRQ status: 0x%08x\n",
 			axi_chan_name(chan), i, status);
 
-		if (status & DWAXIDMAC_IRQ_ALL_ERR)
+		if (status & DWAXIDMAC_IRQ_ALL_ERR) {
 			axi_chan_handle_err(chan, status);
-		else if (status & DWAXIDMAC_IRQ_DMA_TRF)
+		} else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
+			dev_dbg(chip->dev, "axi_chan_block_xfer_complete.\n");
+		}
 	}
 
 	/* Re-enable interrupts */
@@ -1373,6 +1397,9 @@ static int dw_probe(struct platform_device *pdev)
 	chip->dw = dw;
 	chip->dev = &pdev->dev;
 	chip->dw->hdata = hdata;
+#ifdef CONFIG_SOC_STARFIVE
+	chip->need_flush = of_machine_is_compatible("starfive,jh7100");
+#endif
 
 	chip->irq = platform_get_irq(pdev, 0);
 	if (chip->irq < 0)
