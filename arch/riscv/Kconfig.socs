@@ -10,6 +10,64 @@ config SOC_SIFIVE
 	help
 	  This enables support for SiFive SoC platform hardware.
 
+config SOC_STARFIVE_VIC7100
+	bool "StarFive VIC7100 SoC"
+	select SOC_SIFIVE
+	select OF_RESERVED_MEM
+	select SIFIVE_L2
+	select SIFIVE_L2_FLUSH
+	select DW_AXI_DMAC_STARFIVE
+	select GPIO_STARFIVE_VIC
+	select HW_RANDOM_STARFIVE_VIC
+	help
+	  This enables support for StarFive VIC7100 SoC Platform Hardware.
+
+menu "StarFive VIC7100 SoC Debug Option"
+	depends on SOC_STARFIVE_VIC7100
+
+choice
+	prompt "VIC7100 SOC GMAC Speed"
+	depends on SOC_STARFIVE_VIC7100
+	default FPGA_GMAC_SPEED_AUTO
+	help
+	  choice VIC7100 GMAC speed.
+	  (GMAC only works well on 10M/duple, for FPGA board.)
+
+	config FPGA_GMAC_SPEED10
+		bool "GMAC works on 10M mode"
+	config FPGA_GMAC_SPEED100
+		bool "GMAC works on 100M mode"
+	config FPGA_GMAC_SPEED_AUTO
+		bool "GMAC works on auto mode"
+endchoice
+
+config FPGA_GMAC_FLUSH_DDR
+	bool "VIC7100 SOC GMAC description and packet buffer flush"
+	depends on SOC_STARFIVE_VIC7100
+	depends on STMMAC_ETH
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  enable VIC7100 GMAC description and packet buffer flush
+
+config MMC_DW_FLUSH_DDR
+	bool "VIC7100 SOC DW MMC buffer flush"
+	depends on SOC_STARFIVE_VIC7100
+	depends on MMC_DW
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  enable VIC7100 DW MMC description and data buffer flush
+
+config USB_CDNS3_HOST_FLUSH_DMA
+	bool "Cadence USB3 host controller flush dma memery"
+	depends on USB
+	depends on USB_CDNS3
+	depends on SOC_STARFIVE_VIC7100
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  enable VIC7100 DW USB CDNS3 driver data buffer flush
+
+endmenu
+
 config SOC_VIRT
 	bool "QEMU Virt Machine"
 	select CLINT_TIMER if RISCV_M_MODE
