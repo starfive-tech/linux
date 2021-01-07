@@ -44,6 +44,10 @@ struct starfive_gpio {
 	unsigned int		irq_parent[MAX_GPIO];
 };
 
+static DEFINE_SPINLOCK(sfg_lock);
+
+static void __iomem *gpio_base;
+
 static int starfive_direction_input(struct gpio_chip *gc, unsigned int offset)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
@@ -326,6 +330,121 @@ static irqreturn_t starfive_irq_handler(int irq, void *gc)
 	return IRQ_HANDLED;
 }
 
+void sf_vic_gpio_dout_reverse(int gpio, int en)
+{
+	unsigned int value;
+	int offset;
+
+	if (!gpio_base)
+		return;
+
+	offset = gpio * 8 + GPIO_DOUT_X_REG;
+
+	spin_lock(&sfg_lock);
+	value = ioread32(gpio_base + offset);
+	value &= ~(0x1 << 31);
+	value |= (en & 0x1) << 31;
+	iowrite32(value, gpio_base + offset);
+	spin_unlock(&sfg_lock);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_dout_reverse);
+
+void sf_vic_gpio_dout_value(int gpio, int v)
+{
+	unsigned int value;
+	int offset;
+
+	if (!gpio_base)
+		return;
+
+	offset = gpio * 8 + GPIO_DOUT_X_REG;
+	spin_lock(&sfg_lock);
+	value = ioread32(gpio_base + offset);
+	value &= ~(0xFF);
+	value |= (v&0xFF);
+	iowrite32(value, gpio_base + offset);
+	spin_unlock(&sfg_lock);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_dout_value);
+
+void sf_vic_gpio_dout_low(int gpio)
+{
+	sf_vic_gpio_dout_value(gpio, 0);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_dout_low);
+
+void sf_vic_gpio_dout_high(int gpio)
+{
+	sf_vic_gpio_dout_value(gpio, 1);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_dout_high);
+
+void sf_vic_gpio_doen_reverse(int gpio, int en)
+{
+	unsigned int value;
+	int offset;
+
+	if (!gpio_base)
+		return;
+
+	offset = gpio * 8 + GPIO_DOEN_X_REG;
+
+	spin_lock(&sfg_lock);
+	value = ioread32(gpio_base + offset);
+	value &= ~(0x1 << 31);
+	value |= (en & 0x1) << 31;
+	iowrite32(value, gpio_base + offset);
+	spin_unlock(&sfg_lock);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_doen_reverse);
+
+void sf_vic_gpio_doen_value(int gpio, int v)
+{
+	unsigned int value;
+	int offset;
+
+	if (!gpio_base)
+		return;
+
+	offset = gpio * 8 + GPIO_DOEN_X_REG;
+
+	spin_lock(&sfg_lock);
+	value = ioread32(gpio_base + offset);
+	value &= ~(0xFF);
+	value |= (v&0xFF);
+	iowrite32(value, gpio_base + offset);
+	spin_unlock(&sfg_lock);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_doen_value);
+
+void sf_vic_gpio_doen_low(int gpio)
+{
+	sf_vic_gpio_doen_value(gpio, 0);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_doen_low);
+
+void sf_vic_gpio_doen_high(int gpio)
+{
+	sf_vic_gpio_doen_value(gpio, 1);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_doen_high);
+
+void sf_vic_gpio_manual(int offset, int v)
+{
+	unsigned int value;
+
+	if (!gpio_base)
+		return;
+
+	spin_lock(&sfg_lock);
+	value = ioread32(gpio_base + offset);
+	value &= ~(0xFF);
+	value |= (v&0xFF);
+	iowrite32(value, gpio_base + offset);
+	spin_unlock(&sfg_lock);
+}
+EXPORT_SYMBOL_GPL(sf_vic_gpio_manual);
+
 static int starfive_gpio_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -344,6 +463,7 @@ static int starfive_gpio_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to allocate device memory\n");
 		return PTR_ERR(chip->base);
 	}
+	gpio_base = chip->base;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
