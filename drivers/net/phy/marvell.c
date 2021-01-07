@@ -699,6 +699,14 @@ static void marvell_config_led(struct phy_device *phydev)
 		return;
 	}
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	/* Default PHY LED config:
+	 * LED[1] .. 0001,Link, Blink - Activity
+	 * LED[0] .. 0100,Blink - Activity
+	 */
+	def_config = 0x1014;
+#endif
+
 	err = phy_write_paged(phydev, MII_MARVELL_LED_PAGE, MII_PHY_LED_CTRL,
 			      def_config);
 	if (err < 0)
