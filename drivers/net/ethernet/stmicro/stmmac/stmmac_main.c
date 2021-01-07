@@ -166,6 +166,20 @@ int stmmac_bus_clks_config(struct stmmac_priv *priv, bool enabled)
 }
 EXPORT_SYMBOL_GPL(stmmac_bus_clks_config);
 
+#ifdef CONFIG_FPGA_GMAC_FLUSH_DDR
+#define FLUSH_RX_DESC_ENABLE
+#define FLUSH_RX_BUF_ENABLE
+
+#define FLUSH_TX_DESC_ENABLE
+#define FLUSH_TX_BUF_ENABLE
+
+#include <soc/starfive/vic7100.h>
+static inline void stmmac_flush_dcache(unsigned long start, unsigned long len)
+{
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + start % 64);
+}
+#endif
+
 /**
  * stmmac_verify_args - verify the driver parameters.
  * Description: it checks the driver parameters and set a default in case of
@@ -1363,6 +1377,19 @@ static void stmmac_clear_rx_descriptors(struct stmmac_priv *priv, u32 queue)
 					priv->use_riwt, priv->mode,
 					(i == priv->dma_rx_size - 1),
 					priv->dma_buf_sz);
+
+#ifdef FLUSH_RX_DESC_ENABLE
+	{
+		unsigned long len;
+
+		if (priv->extend_desc)
+			len = DMA_DEFAULT_RX_SIZE * sizeof(struct dma_extended_desc);
+		else
+			len = DMA_DEFAULT_RX_SIZE * sizeof(struct dma_desc);
+
+		stmmac_flush_dcache(rx_q->dma_rx_phy, len);
+	}
+#endif
 }
 
 /**
@@ -1391,6 +1418,19 @@ static void stmmac_clear_tx_descriptors(struct stmmac_priv *priv, u32 queue)
 
 		stmmac_init_tx_desc(priv, p, priv->mode, last);
 	}
+
+#ifdef FLUSH_TX_DESC_ENABLE
+	{
+		unsigned long len;
+
+		if (priv->extend_desc)
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_extended_desc);
+		else
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_desc);
+
+		stmmac_flush_dcache(tx_q->dma_tx_phy, len);
+	}
+#endif
 }
 
 /**
@@ -1454,6 +1494,9 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 	buf->addr = page_pool_get_dma_addr(buf->page) + buf->page_offset;
 
 	stmmac_set_desc_addr(priv, p, buf->addr);
+#ifdef FLUSH_RX_BUF_ENABLE
+	stmmac_flush_dcache(buf->addr, priv->dma_buf_sz);
+#endif
 	if (priv->dma_buf_sz == BUF_SIZE_16KiB)
 		stmmac_init_desc3(priv, p);
 
@@ -1780,6 +1823,18 @@ static int __init_dma_tx_desc_rings(struct stmmac_priv *priv, u32 queue)
 		tx_q->tx_skbuff_dma[i].last_segment = false;
 		tx_q->tx_skbuff[i] = NULL;
 	}
+#ifdef FLUSH_TX_DESC_ENABLE
+	{
+		unsigned long len;
+
+		if (priv->extend_desc)
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_extended_desc);
+		else
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_desc);
+
+		stmmac_flush_dcache(tx_q->dma_tx_phy, len);
+	}
+#endif
 
 	tx_q->dirty_tx = 0;
 	tx_q->cur_tx = 0;
@@ -2494,8 +2549,22 @@ static int stmmac_tx_clean(struct stmmac_priv *priv, int budget, u32 queue)
 		status = stmmac_tx_status(priv, &priv->dev->stats,
 				&priv->xstats, p, priv->ioaddr);
 		/* Check if the descriptor is owned by the DMA */
-		if (unlikely(status & tx_dma_own))
+		if (unlikely(status & tx_dma_own)) {
+#ifdef FLUSH_TX_DESC_ENABLE
+			unsigned long start, len;
+
+			if (priv->extend_desc) {
+				start = tx_q->dma_tx_phy + entry * sizeof(struct dma_extended_desc);
+				len = sizeof(struct dma_extended_desc);
+			} else {
+				start = tx_q->dma_tx_phy + entry * sizeof(struct dma_desc);
+				len = sizeof(struct dma_desc);
+			}
+
+			stmmac_flush_dcache(start, len);
+#endif
 			break;
+		}
 
 		count++;
 
@@ -2564,6 +2633,22 @@ static int stmmac_tx_clean(struct stmmac_priv *priv, int budget, u32 queue)
 		}
 
 		stmmac_release_tx_desc(priv, p, priv->mode);
+#ifdef FLUSH_TX_DESC_ENABLE
+		{
+			/* wangyh for test,flush description */
+			unsigned long start, len;
+
+			if (priv->extend_desc) {
+				start = tx_q->dma_tx_phy + entry * sizeof(struct dma_extended_desc);
+				len = sizeof(struct dma_extended_desc);
+			} else {
+				start = tx_q->dma_tx_phy + entry * sizeof(struct dma_desc);
+				len = sizeof(struct dma_desc);
+			}
+
+			stmmac_flush_dcache(start, len);
+		}
+#endif
 
 		entry = STMMAC_GET_ENTRY(entry, priv->dma_tx_size);
 	}
@@ -2637,6 +2722,19 @@ static void stmmac_tx_err(struct stmmac_priv *priv, u32 chan)
 	stmmac_stop_tx_dma(priv, chan);
 	dma_free_tx_skbufs(priv, chan);
 	stmmac_clear_tx_descriptors(priv, chan);
+
+#ifdef FLUSH_TX_DESC_ENABLE
+	{
+		unsigned long len;
+
+		if (priv->extend_desc)
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_extended_desc);
+		else
+			len = DMA_DEFAULT_TX_SIZE * sizeof(struct dma_desc);
+
+		stmmac_flush_dcache(tx_q->dma_tx_phy, len);
+	}
+#endif
 	tx_q->dirty_tx = 0;
 	tx_q->cur_tx = 0;
 	tx_q->mss = 0;
@@ -3882,6 +3980,21 @@ static void stmmac_tso_allocator(struct stmmac_priv *priv, dma_addr_t des,
 				(last_segment) && (tmp_len <= TSO_MAX_BUFF_SIZE),
 				0, 0);
 
+#ifdef FLUSH_TX_DESC_ENABLE
+		{
+			unsigned long start, len;
+
+			if (priv->extend_desc) {
+				start = tx_q->dma_tx_phy + tx_q->cur_tx * sizeof(struct dma_extended_desc);
+				len = sizeof(struct dma_extended_desc);
+			} else {
+				start = tx_q->dma_tx_phy + tx_q->cur_tx * sizeof(struct dma_desc);
+				len = sizeof(struct dma_desc);
+			}
+
+			stmmac_flush_dcache(start, len);
+		}
+#endif
 		tmp_len -= TSO_MAX_BUFF_SIZE;
 	}
 }
@@ -3949,6 +4062,10 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 	u32 pay_len, mss;
 	dma_addr_t des;
 	int i;
+#ifdef FLUSH_TX_DESC_ENABLE
+	unsigned int mss_entry;
+	unsigned long start, len;
+#endif
 
 	tx_q = &priv->tx_queue[queue];
 	first_tx = tx_q->cur_tx;
@@ -3988,6 +4105,9 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 			mss_desc = &tx_q->dma_tx[tx_q->cur_tx];
 
 		stmmac_set_mss(priv, mss_desc, mss);
+#ifdef FLUSH_TX_DESC_ENABLE
+		mss_entry = tx_q->cur_tx;
+#endif
 		tx_q->mss = mss;
 		tx_q->cur_tx = STMMAC_GET_ENTRY(tx_q->cur_tx,
 						priv->dma_tx_size);
@@ -4022,6 +4142,10 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (dma_mapping_error(priv->device, des))
 		goto dma_map_err;
 
+#ifdef FLUSH_TX_BUF_ENABLE
+	stmmac_flush_dcache(des, skb_headlen(skb));
+#endif
+
 	tx_q->tx_skbuff_dma[first_entry].buf = des;
 	tx_q->tx_skbuff_dma[first_entry].len = skb_headlen(skb);
 	tx_q->tx_skbuff_dma[first_entry].map_as_page = false;
@@ -4055,6 +4179,9 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 		if (dma_mapping_error(priv->device, des))
 			goto dma_map_err;
 
+#ifdef FLUSH_TX_BUF_ENABLE
+		stmmac_flush_dcache(des, skb_frag_size(frag));
+#endif
 		stmmac_tso_allocator(priv, des, skb_frag_size(frag),
 				     (i == nfrags - 1), queue);
 
@@ -4102,7 +4229,6 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 	 * ndo_start_xmit will fill this descriptor the next time it's
 	 * called and stmmac_tx_clean may clean up to this descriptor.
 	 */
-	tx_q->cur_tx = STMMAC_GET_ENTRY(tx_q->cur_tx, priv->dma_tx_size);
 
 	if (unlikely(stmmac_tx_avail(priv, queue) <= (MAX_SKB_FRAGS + 1))) {
 		netif_dbg(priv, hw, priv->dev, "%s: stop transmitted packets\n",
@@ -4133,6 +4259,17 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 			1, tx_q->tx_skbuff_dma[first_entry].last_segment,
 			hdr / 4, (skb->len - proto_hdr_len));
 
+#ifdef FLUSH_TX_DESC_ENABLE
+	if (priv->extend_desc) {
+		start = tx_q->dma_tx_phy + first_entry * sizeof(struct dma_extended_desc);
+		len = sizeof(struct dma_extended_desc);
+	} else {
+		start = tx_q->dma_tx_phy + first_entry * sizeof(struct dma_desc);
+		len = sizeof(struct dma_desc);
+	}
+
+	stmmac_flush_dcache(start, len);
+#endif
 	/* If context desc is used to change MSS */
 	if (mss_desc) {
 		/* Make sure that first descriptor has been completely
@@ -4142,6 +4279,17 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 		 */
 		dma_wmb();
 		stmmac_set_tx_owner(priv, mss_desc);
+#ifdef FLUSH_TX_DESC_ENABLE
+		if (priv->extend_desc) {
+			start = tx_q->dma_tx_phy + mss_entry * sizeof(struct dma_extended_desc);
+			len = sizeof(struct dma_extended_desc);
+		} else {
+			start = tx_q->dma_tx_phy + mss_entry * sizeof(struct dma_desc);
+			len = sizeof(struct dma_desc);
+		}
+
+		stmmac_flush_dcache(start, len);
+#endif
 	}
 
 	if (netif_msg_pktdata(priv)) {
@@ -4189,6 +4337,9 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	bool has_vlan, set_ic;
 	int entry, first_tx;
 	dma_addr_t des;
+#ifdef FLUSH_TX_DESC_ENABLE
+	unsigned long start, len;
+#endif
 
 	tx_q = &priv->tx_queue[queue];
 	first_tx = tx_q->cur_tx;
@@ -4268,6 +4419,9 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		if (dma_mapping_error(priv->device, des))
 			goto dma_map_err; /* should reuse desc w/o issues */
 
+#ifdef FLUSH_TX_BUF_ENABLE
+		stmmac_flush_dcache(des, len);
+#endif
 		tx_q->tx_skbuff_dma[entry].buf = des;
 
 		stmmac_set_desc_addr(priv, desc, des);
@@ -4280,6 +4434,17 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 		/* Prepare the descriptor and set the own bit too */
 		stmmac_prepare_tx_desc(priv, desc, 0, len, csum_insertion,
 				priv->mode, 1, last_segment, skb->len);
+#ifdef FLUSH_TX_DESC_ENABLE
+		if (priv->extend_desc) {
+			start = tx_q->dma_tx_phy + entry * sizeof(struct dma_extended_desc);
+			len = sizeof(struct dma_extended_desc);
+		} else {
+			start = tx_q->dma_tx_phy + entry * sizeof(struct dma_desc);
+			len = sizeof(struct dma_desc);
+		}
+
+		stmmac_flush_dcache(start, len);
+#endif
 	}
 
 	/* Only the last descriptor gets to point to the skb. */
@@ -4316,6 +4481,17 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 
 		tx_q->tx_count_frames = 0;
 		stmmac_set_tx_ic(priv, desc);
+#ifdef FLUSH_TX_DESC_ENABLE
+		if (priv->extend_desc) {
+			start = tx_q->dma_tx_phy + entry * sizeof(struct dma_extended_desc);
+			len = sizeof(struct dma_extended_desc);
+		} else {
+			start = tx_q->dma_tx_phy + entry * sizeof(struct dma_desc);
+			len = sizeof(struct dma_desc);
+		}
+
+		stmmac_flush_dcache(start, len);
+#endif
 		priv->xstats.tx_set_ic_bit++;
 	}
 
@@ -4394,6 +4570,22 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	stmmac_set_tx_owner(priv, first);
 
 	netdev_tx_sent_queue(netdev_get_tx_queue(dev, queue), skb->len);
+
+#ifdef FLUSH_TX_BUF_ENABLE
+	stmmac_flush_dcache(des, nopaged_len);
+#endif
+
+#ifdef FLUSH_TX_DESC_ENABLE
+	if (priv->extend_desc) {
+		start = tx_q->dma_tx_phy + first_entry * sizeof(struct dma_extended_desc);
+		len = sizeof(struct dma_extended_desc);
+	} else {
+		start = tx_q->dma_tx_phy + first_entry * sizeof(struct dma_desc);
+		len = sizeof(struct dma_desc);
+	}
+
+	stmmac_flush_dcache(start, len);
+#endif
 
 	stmmac_enable_dma_transmission(priv, priv->ioaddr);
 
@@ -4488,8 +4680,24 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv, u32 queue)
 		if (!priv->use_riwt)
 			use_rx_wd = false;
 
-		dma_wmb();
 		stmmac_set_rx_owner(priv, p, use_rx_wd);
+
+#ifdef FLUSH_RX_DESC_ENABLE
+		{
+			unsigned long start, len;
+
+			if (priv->extend_desc) {
+				start = rx_q->dma_rx_phy + entry * sizeof(struct dma_extended_desc);
+				len = sizeof(struct dma_extended_desc);
+			} else {
+				start = rx_q->dma_rx_phy + entry * sizeof(struct dma_desc);
+				len = sizeof(struct dma_desc);
+			}
+
+			stmmac_flush_dcache(start, len);
+		}
+#endif
+		dma_wmb();
 
 		entry = STMMAC_GET_ENTRY(entry, priv->dma_rx_size);
 	}
@@ -5106,8 +5314,22 @@ read_again:
 		status = stmmac_rx_status(priv, &priv->dev->stats,
 				&priv->xstats, p);
 		/* check if managed by the DMA otherwise go ahead */
-		if (unlikely(status & dma_own))
+		if (unlikely(status & dma_own)) {
+#ifdef FLUSH_RX_DESC_ENABLE
+			unsigned long start, len;
+
+			if (priv->extend_desc) {
+				start = rx_q->dma_rx_phy + entry * sizeof(struct dma_extended_desc);
+				len = sizeof(struct dma_extended_desc);
+			} else {
+				start = rx_q->dma_rx_phy + entry * sizeof(struct dma_desc);
+				len = sizeof(struct dma_desc);
+			}
+
+			stmmac_flush_dcache(start, len);
+#endif
 			break;
+		}
 
 		rx_q->cur_rx = STMMAC_GET_ENTRY(rx_q->cur_rx,
 						priv->dma_rx_size);
@@ -5174,6 +5396,9 @@ read_again:
 
 			dma_sync_single_for_cpu(priv->device, buf->addr,
 						buf1_len, dma_dir);
+#ifdef FLUSH_RX_BUF_ENABLE
+			stmmac_flush_dcache(buf->addr, buf1_len);
+#endif
 
 			xdp.data = page_address(buf->page) + buf->page_offset;
 			xdp.data_end = xdp.data + buf1_len;
@@ -5245,6 +5470,9 @@ read_again:
 		} else if (buf1_len) {
 			dma_sync_single_for_cpu(priv->device, buf->addr,
 						buf1_len, dma_dir);
+#ifdef FLUSH_RX_BUF_ENABLE
+			stmmac_flush_dcache(buf->addr, buf1_len);
+#endif
 			skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags,
 					buf->page, buf->page_offset, buf1_len,
 					priv->dma_buf_sz);
@@ -5257,6 +5485,9 @@ read_again:
 		if (buf2_len) {
 			dma_sync_single_for_cpu(priv->device, buf->sec_addr,
 						buf2_len, dma_dir);
+#ifdef FLUSH_RX_BUF_ENABLE
+			stmmac_flush_dcache(buf->sec_addr, buf2_len);
+#endif
 			skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags,
 					buf->sec_page, 0, buf2_len,
 					priv->dma_buf_sz);
