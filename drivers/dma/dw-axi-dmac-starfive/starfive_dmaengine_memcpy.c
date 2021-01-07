@@ -27,7 +27,8 @@
 #include <linux/dma-map-ops.h>
 #include <linux/slab.h>
 
-#include <soc/starfive/vic7100.h>
+#include <soc/sifive/sifive_l2_cache.h>
+#include <soc/starfive/jh7100_dma.h>
 
 static volatile int dma_finished = 0;
 static DECLARE_WAIT_QUEUE_HEAD(wq);
@@ -183,8 +184,8 @@ int dw_dma_async_do_memcpy(void *src, void *dst, size_t size)
 
 	desc->callback = tx_callback;
 
-	starfive_flush_dcache(src_dma, size);
-	starfive_flush_dcache(dst_dma, size);
+	sifive_l2_flush64_range(src_dma, size);
+	sifive_l2_flush64_range(dst_dma, size);
 
 	_dma_async_do_start(desc, chan);
 	_dma_async_release(chan);
@@ -244,8 +245,8 @@ int dw_dma_memcpy_raw(dma_addr_t src_dma, dma_addr_t dst_dma, size_t size)
 
 	desc->callback = tx_callback;
 
-	starfive_flush_dcache(src_dma, size);
-	starfive_flush_dcache(dst_dma, size);
+	sifive_l2_flush64_range(src_dma, size);
+	sifive_l2_flush64_range(dst_dma, size);
 
 	_dma_async_do_start(desc, chan);
 	_dma_async_release(chan);

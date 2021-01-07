@@ -23,7 +23,8 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 
-#include <soc/starfive/vic7100.h>
+#include <soc/sifive/sifive_l2_cache.h>
+#include <soc/starfive/jh7100_dma.h>
 
 #define DRIVER_NAME			"dwaxidma"
 #define AXIDMA_IOC_MAGIC		'A'
@@ -121,7 +122,6 @@ static ssize_t axidma_write(struct file *file, const char __user *data,
 static void dma_complete_func(void *status)
 {
 	*(char *)status = DMA_STATUS_FINISHED;
-	printk("dma_complete!\n");
 }
 
 static long axidma_unlocked_ioctl(struct file *file, unsigned int cmd,
@@ -188,13 +188,13 @@ static long axidma_unlocked_ioctl(struct file *file, unsigned int cmd,
 		}
 		dma_dev = channels[chncfg.chn_num].dma_chan->device;
 #ifdef DW_DMA_FLUSH_DESC
-		starfive_flush_dcache(chncfg.phys,sizeof(chncfg));
+		sifive_l2_flush64_range(chncfg.phys,sizeof(chncfg));
 #endif
 #ifdef DW_DMA_CHECK_RESULTS
 		src = dw_phys_to_virt(chncfg.src_addr);
 		dst = dw_phys_to_virt(chncfg.dst_addr);
 #endif
-		starfive_flush_dcache(chncfg.src_addr, chncfg.len);
+		sifive_l2_flush64_range(chncfg.src_addr, chncfg.len);
 
 		tx = dma_dev->device_prep_dma_memcpy(
 			channels[chncfg.chn_num].dma_chan,
@@ -214,7 +214,7 @@ static long axidma_unlocked_ioctl(struct file *file, unsigned int cmd,
 		}
 		dma_async_issue_pending(channels[chncfg.chn_num].dma_chan);
 		/*flush dcache*/
-		starfive_flush_dcache(chncfg.dst_addr, chncfg.len);
+		sifive_l2_flush64_range(chncfg.dst_addr, chncfg.len);
 #ifdef DW_DMA_PRINT_MEM
 		print_in_line_u64((u8 *)"src", (u64 *)src, chncfg.len);
 		print_in_line_u64((u8 *)"dst", (u64 *)dst, chncfg.len);
