@@ -322,6 +322,19 @@ config HW_RANDOM_POWERNV
 
 	  If unsure, say Y.
 
+config HW_RANDOM_STARFIVE_VIC
+	tristate "Starfive VIC Random Number Generator support"
+	depends on HW_RANDOM && (SOC_STARFIVE || COMPILE_TEST)
+	default SOC_STARFIVE
+	help
+	  This driver provides kernel-side support for the Random Number
+	  Generator hardware found on Starfive VIC SoC.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called starfive-vic-rng.
+
+	  If unsure, say Y.
+
 config HW_RANDOM_HISI
 	tristate "Hisilicon Random Number Generator support"
 	depends on HW_RANDOM && ARCH_HISI
