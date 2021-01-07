@@ -32,6 +32,8 @@
 #include "../dmaengine.h"
 #include "../virt-dma.h"
 
+#include <soc/starfive/vic7100.h>
+
 /*
  * The set of bus widths supported by the DMA controller. DW AXI DMAC supports
  * master data bus width up to 512 bits (for both AXI master interfaces), but
@@ -148,24 +150,43 @@ static inline u32 axi_chan_irq_read(struct axi_dma_chan *chan)
 	return axi_chan_ioread32(chan, CH_INTSTATUS);
 }
 
+static inline bool axi_chan_get_nr8(struct axi_dma_chan *chan)
+{
+	return chan->chip->flag->nr_chan_8;
+}
+
 static inline void axi_chan_disable(struct axi_dma_chan *chan)
 {
 	u32 val;
 
-	val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
-	val &= ~(BIT(chan->id) << DMAC_CHAN_EN_SHIFT);
-	val |=   BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT;
-	axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
+	if(axi_chan_get_nr8(chan)) {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHEN_8);
+		val &= ~(BIT(chan->id) << DMAC_CHAN_EN_SHIFT_8);
+		val |=   BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT_8;
+		axi_dma_iowrite32(chan->chip, DMAC_CHEN_8, val);
+	} else {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
+		val &= ~(BIT(chan->id) << DMAC_CHAN_EN_SHIFT);
+		val |=   BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT;
+		axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
+	}
 }
 
 static inline void axi_chan_enable(struct axi_dma_chan *chan)
 {
 	u32 val;
 
-	val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
-	val |= BIT(chan->id) << DMAC_CHAN_EN_SHIFT |
-	       BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT;
-	axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
+	if(axi_chan_get_nr8(chan)) {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHEN_8);
+		val |= BIT(chan->id) << DMAC_CHAN_EN_SHIFT_8 |
+			BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT_8;
+		axi_dma_iowrite32(chan->chip, DMAC_CHEN_8, val);
+	} else {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
+		val |= BIT(chan->id) << DMAC_CHAN_EN_SHIFT |
+			BIT(chan->id) << DMAC_CHAN_EN_WE_SHIFT;
+		axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
+	}
 }
 
 static inline bool axi_chan_is_hw_enable(struct axi_dma_chan *chan)
@@ -335,6 +356,7 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
+	struct axi_dma_desc *desc;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	u32 reg, irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
@@ -383,6 +405,23 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	/* Generate 'suspend' status but don't generate interrupt */
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
+
+    /*flush all the desc */
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	if(chan->chip->flag->need_flush) {
+		/*flush fisrt desc*/
+		starfive_flush_dcache(first->vd.tx.phys, sizeof(*first));
+
+		list_for_each_entry(desc, &first->xfer_list, xfer_list) {
+			starfive_flush_dcache(desc->vd.tx.phys, sizeof(*desc));
+
+			dev_dbg(chan->chip->dev,
+				"sar:%#llx dar:%#llx llp:%#llx ctl:0x%x:%08x\n",
+				desc->lli.sar, desc->lli.dar, desc->lli.llp,
+				desc->lli.ctl_hi, desc->lli.ctl_lo);
+		}
+	}
+#endif
 
 	axi_chan_enable(chan);
 }
@@ -1070,8 +1109,10 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 
 		if (status & DWAXIDMAC_IRQ_ALL_ERR)
 			axi_chan_handle_err(chan, status);
-		else if (status & DWAXIDMAC_IRQ_DMA_TRF)
+		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
+			dev_dbg(chip->dev, "axi_chan_block_xfer_complete.\n");
+	}
 	}
 
 	/* Re-enable interrupts */
@@ -1126,10 +1167,17 @@ static int dma_chan_pause(struct dma_chan *dchan)
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
-	val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
-	val |= BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT |
-	       BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT;
-	axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
+	if(axi_chan_get_nr8(chan)){
+		val = axi_dma_ioread32(chan->chip, DMAC_CHSUSP_8);
+		val |= BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT_8 |
+			BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT_8;
+		axi_dma_iowrite32(chan->chip, DMAC_CHSUSP_8, val);
+	} else {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHSUSP);
+		val |= BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT |
+			BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT;
+		axi_dma_iowrite32(chan->chip, DMAC_CHSUSP, val);
+	}
 
 	do  {
 		if (axi_chan_irq_read(chan) & DWAXIDMAC_IRQ_SUSPENDED)
@@ -1152,11 +1200,17 @@ static inline void axi_chan_resume(struct axi_dma_chan *chan)
 {
 	u32 val;
 
-	val = axi_dma_ioread32(chan->chip, DMAC_CHEN);
-	val &= ~(BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT);
-	val |=  (BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT);
-	axi_dma_iowrite32(chan->chip, DMAC_CHEN, val);
-
+	if(axi_chan_get_nr8(chan)){
+		val = axi_dma_ioread32(chan->chip, DMAC_CHSUSP_8);
+		val &= ~(BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT_8);
+		val |=  (BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT_8);
+		axi_dma_iowrite32(chan->chip, DMAC_CHSUSP_8, val);
+	} else {
+		val = axi_dma_ioread32(chan->chip, DMAC_CHSUSP);
+		val &= ~(BIT(chan->id) << DMAC_CHAN_SUSP_SHIFT);
+		val |=  (BIT(chan->id) << DMAC_CHAN_SUSP_WE_SHIFT);
+		axi_dma_iowrite32(chan->chip, DMAC_CHSUSP, val);
+	}
 	chan->is_paused = false;
 }
 
@@ -1248,6 +1302,13 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 	chip->dw->hdata->nr_channels = tmp;
 
+	if(chip->dw->hdata->nr_channels > 8){
+		chip->flag->nr_chan_8 = true;
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+		chip->flag->need_flush = true;
+#endif
+	}
+
 	ret = device_property_read_u32(dev, "snps,dma-masters", &tmp);
 	if (ret)
 		return ret;
@@ -1309,6 +1370,7 @@ static int dw_probe(struct platform_device *pdev)
 	struct resource *mem;
 	struct dw_axi_dma *dw;
 	struct dw_axi_dma_hcfg *hdata;
+	struct dw_dma_flag *flag;
 	u32 i;
 	int ret;
 
@@ -1324,9 +1386,14 @@ static int dw_probe(struct platform_device *pdev)
 	if (!hdata)
 		return -ENOMEM;
 
+	flag = devm_kzalloc(&pdev->dev, sizeof(*flag), GFP_KERNEL);
+	if (!flag)
+		return -ENOMEM;
+
 	chip->dw = dw;
 	chip->dev = &pdev->dev;
 	chip->dw->hdata = hdata;
+	chip->flag = flag;
 
 	chip->irq = platform_get_irq(pdev, 0);
 	if (chip->irq < 0)

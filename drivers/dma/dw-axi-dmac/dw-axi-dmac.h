@@ -5,6 +5,8 @@
  * Synopsys DesignWare AXI DMA Controller driver.
  *
  * Author: Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
+ *         Samin.guo <samin.guo@starfivetech.com>
+ *                 add support for (channels > 8). 2020.
  */
 
 #ifndef _AXI_DMA_PLATFORM_H
@@ -18,9 +20,16 @@
 
 #include "../virt-dma.h"
 
-#define DMAC_MAX_CHANNELS	8
+#define DMAC_MAX_CHANNELS	16
 #define DMAC_MAX_MASTERS	2
 #define DMAC_MAX_BLK_SIZE	0x200000
+
+struct dw_dma_flag {
+	bool nr_chan_8;
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	bool need_flush;
+#endif
+};
 
 struct dw_axi_dma_hcfg {
 	u32	nr_channels;
@@ -68,6 +77,7 @@ struct axi_dma_chip {
 	struct clk		*core_clk;
 	struct clk		*cfgr_clk;
 	struct dw_axi_dma	*dw;
+	struct dw_dma_flag	*flag;
 };
 
 /* LLI == Linked List Item */
@@ -139,6 +149,15 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 #define DMAC_CHEN		0x018 /* R/W DMAC Channel Enable */
 #define DMAC_CHEN_L		0x018 /* R/W DMAC Channel Enable 00-31 */
 #define DMAC_CHEN_H		0x01C /* R/W DMAC Channel Enable 32-63 */
+#define DMAC_CHSUSP		0x018 /* R/W DMAC Channel suspend */
+#define DMAC_CHABORT		0x018 /* R/W DMAC Channel Abort */
+
+#define DMAC_CHEN_8		0x018 /* R/W DMAC Channel Enable */
+#define DMAC_CHEN_L_8		0x018 /* R/W DMAC Channel Enable */
+#define DMAC_CHEN_H_8		0x01C /* R/W DMAC Channel Enable */
+#define DMAC_CHSUSP_8		0x020 /* R/W DMAC Channel Suspend */
+#define DMAC_CHABORT_8		0x028 /* R/W DMAC Channel Abort */
+
 #define DMAC_INTSTATUS		0x030 /* R DMAC Interrupt Status */
 #define DMAC_COMMON_INTCLEAR	0x038 /* W DMAC Interrupt Clear */
 #define DMAC_COMMON_INTSTATUS_ENA 0x040 /* R DMAC Interrupt Status Enable */
@@ -199,6 +218,19 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 #define DMAC_CHAN_SUSP_SHIFT		16
 #define DMAC_CHAN_SUSP_WE_SHIFT		24
 
+#define DMAC_CHAN_ABORT_SHIFT		32
+#define DMAC_CHAN_ABORT_WE_SHIFT	40
+
+
+#define DMAC_CHAN_EN_SHIFT_8		0
+#define DMAC_CHAN_EN_WE_SHIFT_8		16
+
+#define DMAC_CHAN_SUSP_SHIFT_8		0
+#define DMAC_CHAN_SUSP_WE_SHIFT_8	16
+
+#define DMAC_CHAN_ABORT_SHIFT_8		0
+#define DMAC_CHAN_ABORT_WE_SHIFT_8	16
+
 /* CH_CTL_H */
 #define CH_CTL_H_ARLEN_EN		BIT(6)
 #define CH_CTL_H_ARLEN_POS		7
@@ -255,7 +287,7 @@ enum {
 #define CH_CTL_L_SRC_MAST		BIT(0)
 
 /* CH_CFG_H */
-#define CH_CFG_H_PRIORITY_POS		17
+#define CH_CFG_H_PRIORITY_POS		15
 #define CH_CFG_H_HS_SEL_DST_POS		4
 #define CH_CFG_H_HS_SEL_SRC_POS		3
 enum {
