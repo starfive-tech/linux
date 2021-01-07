@@ -14,40 +14,40 @@
 #include <linux/clk.h>
 #include <linux/io.h>
 
+#define PTC_DEBUG			0
+
 /* max channel of pwm */
-#define MAX_PWM								8
+#define MAX_PWM				8
 
 /* PTC Register offsets */
-#define REG_RPTC_CNTR 						0x0
-#define REG_RPTC_HRC						0x4
-#define REG_RPTC_LRC						0x8
-#define REG_RPTC_CTRL						0xC
+#define REG_RPTC_CNTR			0x0
+#define REG_RPTC_HRC			0x4
+#define REG_RPTC_LRC			0x8
+#define REG_RPTC_CTRL			0xC
 
 /* Bit for PWM clock */
-#define BIT_PWM_CLOCK_EN					31
+#define BIT_PWM_CLOCK_EN		31
 
 /* Bit for clock gen soft reset */
-#define BIT_CLK_GEN_SOFT_RESET				13
+#define BIT_CLK_GEN_SOFT_RESET		13
 
-#define NS_1                                1000000000
-
-#define PTC_DEBUG  0
+#define NS_1				1000000000
 
 /* Access PTC register (cntr hrc lrc and ctrl) ,need to replace PWM_BASE_ADDR */
-#define REG_PTC_BASE_ADDR_SUB(base, N)    ((base) + ((N>3)?((N-4)*0x10+(1<<15)):(N*0x10))) 
-#define REG_PTC_RPTC_CNTR(base,N)		(REG_PTC_BASE_ADDR_SUB(base,N))
-#define REG_PTC_RPTC_HRC(base,N)			(REG_PTC_BASE_ADDR_SUB(base,N) + 0x4)
-#define REG_PTC_RPTC_LRC(base,N)			(REG_PTC_BASE_ADDR_SUB(base,N) + 0x8)
-#define REG_PTC_RPTC_CTRL(base,N)		(REG_PTC_BASE_ADDR_SUB(base,N) + 0xC)
+#define REG_PTC_BASE_ADDR_SUB(base, N)	((base) + ((N>3)?((N-4)*0x10+(1<<15)):(N*0x10)))
+#define REG_PTC_RPTC_CNTR(base,N)	(REG_PTC_BASE_ADDR_SUB(base,N))
+#define REG_PTC_RPTC_HRC(base,N)	(REG_PTC_BASE_ADDR_SUB(base,N) + 0x4)
+#define REG_PTC_RPTC_LRC(base,N)	(REG_PTC_BASE_ADDR_SUB(base,N) + 0x8)
+#define REG_PTC_RPTC_CTRL(base,N)	(REG_PTC_BASE_ADDR_SUB(base,N) + 0xC)
 
 /* pwm ptc device */
 struct sifive_pwm_ptc_device {
-	struct pwm_chip		chip;
-	struct clk		*clk;
-	void __iomem		*regs;
-	int 			irq;
+	struct pwm_chip	chip;
+	struct clk	*clk;
+	void __iomem	*regs;
+	int		irq;
 	/* apb clock frequency , from dts */
-	unsigned int		approx_period;
+	unsigned int	approx_period;
 };
 
 static inline struct sifive_pwm_ptc_device *chip_to_sifive_ptc(struct pwm_chip *c)
@@ -61,13 +61,11 @@ static void sifive_pwm_ptc_get_state(struct pwm_chip *chip, struct pwm_device *d
 	struct sifive_pwm_ptc_device *pwm = chip_to_sifive_ptc(chip);
 	uint32_t data_lrc;
 	uint32_t data_hrc;
-	uint32_t period;	
 	uint32_t pwm_clk_ns = 0;
 
 	/* get lrc and hrc data from registe*/
-	data_lrc = ioread32(REG_PTC_RPTC_LRC(pwm->regs,dev->hwpwm));
-	data_hrc = ioread32(REG_PTC_RPTC_HRC(pwm->regs,dev->hwpwm));
-	//period = data_lrc + data_hrc;
+	data_lrc = ioread32(REG_PTC_RPTC_LRC(pwm->regs, dev->hwpwm));
+	data_hrc = ioread32(REG_PTC_RPTC_HRC(pwm->regs, dev->hwpwm));
 
 	/* how many ns does apb clock elapse */
 	pwm_clk_ns = NS_1 / pwm->approx_period;
@@ -83,15 +81,14 @@ static void sifive_pwm_ptc_get_state(struct pwm_chip *chip, struct pwm_device *d
 
 	/* enabled or not */
 	state->enabled    = 1;
-#if PTC_DEBUG   
+#ifdef PTC_DEBUG
 	printk("sifive_pwm_ptc_get_state in,no:%d....\r\n",dev->hwpwm);
 	printk("data_hrc:0x%x 0x%x \n", data_hrc, data_lrc);
-        printk("period:%d\r\n",state->period);
-        printk("duty_cycle:%d\r\n",state->duty_cycle);
-        printk("polarity:%d\r\n",state->polarity);
+	printk("period:%llu\r\n",state->period);
+	printk("duty_cycle:%llu\r\n",state->duty_cycle);
+	printk("polarity:%d\r\n",state->polarity);
 	printk("enabled:%d\r\n",state->enabled);
 #endif
-
 }
 
 
@@ -105,23 +102,21 @@ static int sifive_pwm_ptc_apply(struct pwm_chip *chip, struct pwm_device *dev, s
 	uint32_t duty_data = 0;
 	void __iomem* reg_addr;
 
-#if PTC_DEBUG	
+#if PTC_DEBUG
 	printk("sifive_pwm_ptc_apply in,no:%d....\r\n",dev->hwpwm);
 	printk("set parameter......\r\n");
 	printk("period:%d\r\n",state->period);
-	printk("duty_cycle:%d\r\n",state->duty_cycle);	
+	printk("duty_cycle:%d\r\n",state->duty_cycle);
 	printk("polarity:%d\r\n",state->polarity);
 	printk("enabled:%d\r\n",state->enabled);
 #endif
 	/* duty_cycle should be less or equal than period */
 	if(state->duty_cycle > state->period)
-	{
 		state->duty_cycle = state->period;
-	}	
 
 	/* calculate pwm real period (ns) */
 	pwm_clk_ns = NS_1 / pwm->approx_period;
-	
+
 #if PTC_DEBUG
 	printk("approx_period,:%d,pwm_clk_ns:%d\r\n",pwm->approx_period,pwm_clk_ns);
 #endif
@@ -129,35 +124,28 @@ static int sifive_pwm_ptc_apply(struct pwm_chip *chip, struct pwm_device *dev, s
 	/* calculate period count */
 	period_data = state->period / pwm_clk_ns;
 
-	if (!state->enabled) 
-	{
+	if (!state->enabled)
 		/* if is unenable,just set duty_dat to 0 , means low level always */
 		duty_data = 0;
-	}
 	else
-	{
 		/* calculate duty count*/
 		duty_data = state->duty_cycle / pwm_clk_ns;
-	}
 
 #if PTC_DEBUG
 	printk("period_data:%d,duty_data:%d\r\n",period_data,duty_data);
 #endif
 
 	if(state->polarity == PWM_POLARITY_NORMAL)
-	{
-		/* calculate data_hrc */	
-		data_hrc = period_data - duty_data;		
-	}
-	else
-	{
 		/* calculate data_hrc */
-		data_hrc = duty_data;	
-	}
+		data_hrc = period_data - duty_data;
+	else
+		/* calculate data_hrc */
+		data_hrc = duty_data;
+
 	data_lrc = period_data;
 
 	/* set hrc */
-	reg_addr = REG_PTC_RPTC_HRC(pwm->regs,dev->hwpwm);
+	reg_addr = REG_PTC_RPTC_HRC(pwm->regs, dev->hwpwm);
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_config]reg_addr:0x%lx,data:%d....\n",reg_addr,data_hrc);
 #endif
@@ -165,22 +153,19 @@ static int sifive_pwm_ptc_apply(struct pwm_chip *chip, struct pwm_device *dev, s
 
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_config]hrc ok....\n");
-#endif	
+#endif
 
 	/* set lrc */
-	reg_addr = REG_PTC_RPTC_LRC(pwm->regs,dev->hwpwm);
+	reg_addr = REG_PTC_RPTC_LRC(pwm->regs, dev->hwpwm);
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_config]reg_addr:0x%lx,data:%d....\n",reg_addr,data_lrc);
-#endif	
-	
-	iowrite32(data_lrc, reg_addr);	
+#endif
+
+	iowrite32(data_lrc, reg_addr);
 
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_config]lrc ok....\n");
-#endif	
-        /* set REG_RPTC_CNTR*/
-        reg_addr = REG_PTC_RPTC_CNTR(pwm->regs, dev->hwpwm);
-        iowrite32(0, reg_addr);
+#endif
 
 	return 0;
 }
@@ -189,7 +174,7 @@ static int sifive_pwm_ptc_apply(struct pwm_chip *chip, struct pwm_device *dev, s
 
 static const struct pwm_ops sifive_pwm_ptc_ops = {
 	.get_state	= sifive_pwm_ptc_get_state,
-	.apply		= (void*)sifive_pwm_ptc_apply,
+	.apply		= (void *)sifive_pwm_ptc_apply,
 	.owner		= THIS_MODULE,
 };
 
@@ -204,7 +189,6 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 	struct pwm_chip *chip;
 	struct resource *res;
 	int ret;
-	
 #if PTC_DEBUG
 	printk("sifive_pwm_ptc_probe in....\r\n");
 #endif
@@ -224,15 +208,14 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 
 	/* get pwm channels count, max value is 8 */
 	ret = of_property_read_u32(node, "starfive,npwm", &chip->npwm);
-	if (ret < 0 || chip->npwm > MAX_PWM) 
-	{
+	if (ret < 0 || chip->npwm > MAX_PWM)
 		chip->npwm = MAX_PWM;
-	}
-#if PTC_DEBUG	
+
+#if PTC_DEBUG
 	printk("[sifive_pwm_ptc_probe] npwm:0x%lx....\r\n",chip->npwm);
 #endif
 	/* get apb clock frequency */
-	ret = of_property_read_u32(node, "starfive,approx-period", &pwm->approx_period);
+	ret = of_property_read_u32(node, "sifive,approx-period", &pwm->approx_period);
 
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_probe] approx_period:%d....\r\n",pwm->approx_period);
@@ -242,9 +225,9 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_probe] res start:0x%lx,end:0x%lx....\r\n",res->start,res->end);
-#endif	
+#endif
 	pwm->regs = devm_ioremap_resource(dev, res);
-	if (IS_ERR(pwm->regs)) 
+	if (IS_ERR(pwm->regs))
 	{
 		dev_err(dev, "Unable to map IO resources\n");
 		return PTR_ERR(pwm->regs);
@@ -258,11 +241,9 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 	if (IS_ERR(pwm->clk)) {
 		dev_err(dev, "Unable to find controller clock\n");
 		return PTR_ERR(pwm->clk);
-	} else {
-		pwm->approx_period = (unsigned int)clk_get_rate(pwm->clk);
 	}
 
-	/* after add,it will display as /sys/class/pwm/pwmchip0,0 is chip->base 
+	/* after add,it will display as /sys/class/pwm/pwmchip0,0 is chip->base
 	 * after execute echo 0 > export in  , pwm0 can be seen */
 	ret = pwmchip_add(chip);
 	if (ret < 0) {
@@ -271,7 +252,6 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, pwm);
-	
 #if PTC_DEBUG
 	printk("SiFive PWM PTC chip registered %d PWMs\n", chip->npwm);
 #endif
@@ -284,12 +264,14 @@ static int sifive_pwm_ptc_remove(struct platform_device *dev)
 	struct sifive_pwm_ptc_device *pwm = platform_get_drvdata(dev);
 	struct pwm_chip *chip = &pwm->chip;
 
-	return pwmchip_remove(chip);
+	pwmchip_remove(chip);
+	return 0;
 }
 
 static const struct of_device_id sifive_pwm_ptc_of_match[] = {
+	{ .compatible = "sifive,pwm0" },
 	{ .compatible = "starfive,pwm0" },
-	{},
+	{ },
 };
 MODULE_DEVICE_TABLE(of, sifive_pwm_ptc_of_match);
 
@@ -305,4 +287,3 @@ module_platform_driver(sifive_pwm_ptc_driver);
 
 MODULE_DESCRIPTION("SiFive PWM PTC driver");
 MODULE_LICENSE("GPL v2");
-
