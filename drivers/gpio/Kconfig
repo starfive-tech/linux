@@ -542,6 +542,14 @@ config GPIO_SIFIVE
 	help
 	  Say yes here to support the GPIO device on SiFive SoCs.
 
+config GPIO_STARFIVE_JH7100
+	bool "StarFive JH7100 GPIO support"
+	depends on OF_GPIO
+	select GPIOLIB_IRQCHIP
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  Say yes here to support the GPIO device on StarFive JH7100 SoC.
+
 config GPIO_SIOX
 	tristate "SIOX GPIO support"
 	depends on SIOX
