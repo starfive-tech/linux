@@ -187,6 +187,9 @@ DECLARE_EVENT_CLASS(cdns3_log_ctrl,
 		__entry->wIndex = le16_to_cpu(ctrl->wIndex);
 		__entry->wLength = le16_to_cpu(ctrl->wLength);
 	),
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	TP_printk("%s", usb_decode_ctrl(__get_str(str), CDNS3_MSG_MAX,
 					__entry->bRequestType,
 					__entry->bRequest, __entry->wValue,
@@ -410,6 +413,10 @@ DECLARE_EVENT_CLASS(cdns3_log_trb,
 		__entry->type = usb_endpoint_type(priv_ep->endpoint.desc);
 		__entry->last_stream_id = priv_ep->last_stream_id;
 	),
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+       cdns_flush_dcache(EP_TRADDR_TRADDR(cdns3_trb_virt_to_dma(priv_ep, trb)),
+			 sizeof(struct cdns3_trb));
+#endif
 	TP_printk("%s: trb %p, dma buf: 0x%08x, size: %ld, burst: %d ctrl: 0x%08x (%s%s%s%s%s%s%s) SID:%lu LAST_SID:%u",
 		__get_str(name), __entry->trb, __entry->buffer,
 		TRB_LEN(__entry->length),

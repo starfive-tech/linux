@@ -207,6 +207,9 @@ static void xhci_ring_dump_segment(struct seq_file *s,
 					   le32_to_cpu(trb->generic.field[1]),
 					   le32_to_cpu(trb->generic.field[2]),
 					   le32_to_cpu(trb->generic.field[3])));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(dma,sizeof(*trb));
+#endif
 	}
 }
 
@@ -268,6 +271,9 @@ static int xhci_slot_context_show(struct seq_file *s, void *unused)
 					    le32_to_cpu(slot_ctx->dev_info2),
 					    le32_to_cpu(slot_ctx->tt_info),
 					    le32_to_cpu(slot_ctx->dev_state)));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 
 	return 0;
 }
@@ -291,6 +297,9 @@ static int xhci_endpoint_context_show(struct seq_file *s, void *unused)
 						  le32_to_cpu(ep_ctx->ep_info2),
 						  le64_to_cpu(ep_ctx->deq),
 						  le32_to_cpu(ep_ctx->tx_info)));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 	}
 
 	return 0;
@@ -551,6 +560,9 @@ static int xhci_stream_context_array_show(struct seq_file *s, void *unused)
 		else
 			seq_printf(s, "%pad stream context entry not used deq %016llx\n",
 				   &dma, le64_to_cpu(stream_ctx->stream_ring));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(dma,16);
+#endif
 	}
 
 	return 0;

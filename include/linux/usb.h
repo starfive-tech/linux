@@ -1597,6 +1597,20 @@ struct urb {
 					/* (in) ISO ONLY */
 };
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+#include <soc/starfive/vic7100.h>
+static inline void cdns_flush_dcache(unsigned long start, unsigned long len)
+{
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + (start & 63));
+}
+
+static inline void cdns_virt_flush_dcache(void *virt_start, unsigned long len)
+{
+	unsigned long start = dw_virt_to_phys(virt_start);
+
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + (start & 63));
+}
+#endif
 /* ----------------------------------------------------------------------- */
 
 /**
@@ -1629,6 +1643,9 @@ static inline void usb_fill_control_urb(struct urb *urb,
 	urb->transfer_buffer_length = buffer_length;
 	urb->complete = complete_fn;
 	urb->context = context;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(transfer_buffer, buffer_length);
+#endif
 }
 
 /**
@@ -1658,6 +1675,9 @@ static inline void usb_fill_bulk_urb(struct urb *urb,
 	urb->transfer_buffer_length = buffer_length;
 	urb->complete = complete_fn;
 	urb->context = context;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(transfer_buffer, buffer_length);
+#endif
 }
 
 /**
@@ -1701,6 +1721,9 @@ static inline void usb_fill_int_urb(struct urb *urb,
 	urb->complete = complete_fn;
 	urb->context = context;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(transfer_buffer, buffer_length);
+#endif
 	if (dev->speed == USB_SPEED_HIGH || dev->speed >= USB_SPEED_SUPER) {
 		/* make sure interval is within allowed range */
 		interval = clamp(interval, 1, 16);
