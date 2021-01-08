@@ -251,6 +251,10 @@ static int usbdev_mmap(struct file *file, struct vm_area_struct *vma)
 	usbm->vma_use_count = 1;
 	INIT_LIST_HEAD(&usbm->memlist);
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dma_handle, size);
+#endif
+
 	if (hcd->localmem_pool || !hcd_uses_dma(hcd)) {
 		if (remap_pfn_range(vma, vma->vm_start,
 				    virt_to_phys(usbm->mem) >> PAGE_SHIFT,
@@ -262,6 +266,9 @@ static int usbdev_mmap(struct file *file, struct vm_area_struct *vma)
 		if (dma_mmap_coherent(hcd->self.sysdev, vma, mem, dma_handle,
 				      size)) {
 			dec_usb_memory_use_count(usbm, &usbm->vma_use_count);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_flush_dcache(dma_handle, size);
+#endif
 			return -EAGAIN;
 		}
 	}
@@ -542,6 +549,9 @@ static int copy_urb_data_to_user(u8 __user *userbuffer, struct urb *urb)
 	if (urb->num_sgs == 0) {
 		if (copy_to_user(userbuffer, urb->transfer_buffer, len))
 			return -EFAULT;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(urb->transfer_buffer, len);
+#endif
 		return 0;
 	}
 
@@ -1734,6 +1744,12 @@ static int proc_do_submiturb(struct usb_dev_state *ps, struct usbdevfs_urb *uurb
 
 			as->urb->transfer_buffer = as->usbm->mem +
 					(uurb_start - as->usbm->vm_start);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_flush_dcache(as->usbm->dma_handle +
+						(uurb_start - as->usbm->vm_start),
+					  as->usbm->size -
+						(uurb_start - as->usbm->vm_start));
+#endif
 		} else {
 			as->urb->transfer_buffer = kmalloc(uurb->buffer_length,
 					GFP_KERNEL | __GFP_NOWARN);
@@ -1820,6 +1836,12 @@ static int proc_do_submiturb(struct usb_dev_state *ps, struct usbdevfs_urb *uurb
 		as->urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 		as->urb->transfer_dma = as->usbm->dma_handle +
 				(uurb_start - as->usbm->vm_start);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(as->usbm->dma_handle +
+					(uurb_start - as->usbm->vm_start),
+				  as->usbm->size -
+					(uurb_start - as->usbm->vm_start));
+#endif
 	} else if (is_in && uurb->buffer_length > 0)
 		as->userbuffer = uurb->buffer;
 	as->signr = uurb->signr;

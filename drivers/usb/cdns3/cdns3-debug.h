@@ -152,6 +152,9 @@ static inline char *cdns3_dbg_ring(struct cdns3_endpoint *priv_ep,
 			le32_to_cpu(trb->buffer),
 			le32_to_cpu(trb->length),
 			le32_to_cpu(trb->control));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(trb, sizeof(struct cdns3_trb));
+#endif
 		addr += sizeof(*trb);
 	}
 
