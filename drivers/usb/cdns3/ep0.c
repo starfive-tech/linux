@@ -53,6 +53,11 @@ static void cdns3_ep0_run_transfer(struct cdns3_device *priv_dev,
 		priv_ep->trb_pool[1].control = 0;
 	}
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+			    2 * sizeof(struct cdns3_trb));
+#endif
+
 	trace_cdns3_prepare_trb(priv_ep, priv_ep->trb_pool);
 
 	cdns3_select_ep(priv_dev, priv_dev->ep0_data_dir);
@@ -97,6 +102,12 @@ static void cdns3_prepare_setup_packet(struct cdns3_device *priv_dev)
 {
 	priv_dev->ep0_data_dir = 0;
 	priv_dev->ep0_stage = CDNS3_SETUP_STAGE;
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(priv_dev->setup_dma,
+			    sizeof(struct usb_ctrlrequest));
+#endif
+
 	cdns3_ep0_run_transfer(priv_dev, priv_dev->setup_dma,
 			       sizeof(struct usb_ctrlrequest), 0, 0);
 }
@@ -265,6 +276,10 @@ static int cdns3_req_ep0_get_status(struct cdns3_device *priv_dev,
 
 	response_pkt = (__le16 *)priv_dev->setup_buf;
 	*response_pkt = cpu_to_le16(usb_status);
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(priv_dev->setup_dma, sizeof(*response_pkt));
+#endif
 
 	cdns3_ep0_run_transfer(priv_dev, priv_dev->setup_dma,
 			       sizeof(*response_pkt), 1, 0);
@@ -437,6 +452,10 @@ static int cdns3_req_ep0_set_sel(struct cdns3_device *priv_dev,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(priv_dev->setup_dma, 6);
+#endif
+
 	cdns3_ep0_run_transfer(priv_dev, priv_dev->setup_dma, 6, 1, 0);
 	return 0;
 }
@@ -579,6 +598,10 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev)
 		request->actual =
 			TRB_LEN(le32_to_cpu(priv_ep->trb_pool->length));
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+			    sizeof(struct cdns3_trb));
+#endif
 		priv_ep->dir = priv_dev->ep0_data_dir;
 		cdns3_gadget_giveback(priv_ep, to_cdns3_request(request), 0);
 	}
@@ -764,6 +787,9 @@ static int cdns3_gadget_ep0_queue(struct usb_ep *ep,
 	    (request->length % ep->maxpacket == 0))
 		zlp = 1;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(request->dma, request->length);
+#endif
 	cdns3_ep0_run_transfer(priv_dev, request->dma, request->length, 1, zlp);
 
 	spin_unlock_irqrestore(&priv_dev->lock, flags);

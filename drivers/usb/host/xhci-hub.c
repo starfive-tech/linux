@@ -413,8 +413,15 @@ static int xhci_stop_device(struct xhci_hcd *xhci, int slot_id, int suspend)
 			ep_ctx = xhci_get_ep_ctx(xhci, virt_dev->out_ctx, i);
 
 			/* Check ep is running, required by AMD SNPS 3.1 xHC */
-			if (GET_EP_CTX_STATE(ep_ctx) != EP_STATE_RUNNING)
+			if (GET_EP_CTX_STATE(ep_ctx) != EP_STATE_RUNNING) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+				cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 				continue;
+			}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 
 			command = xhci_alloc_command(xhci, false, GFP_NOWAIT);
 			if (!command) {

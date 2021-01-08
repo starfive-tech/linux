@@ -1365,4 +1365,12 @@ int cdns3_ep_config(struct cdns3_endpoint *priv_ep, bool enable);
 void cdns3_check_ep0_interrupt_proceed(struct cdns3_device *priv_dev, int dir);
 int __cdns3_gadget_wakeup(struct cdns3_device *priv_dev);
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+#include <soc/starfive/vic7100.h>
+static inline void gadget_flush_dcache(unsigned long start, unsigned long len)
+{
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + start % 64);
+}
+#endif
+
 #endif /* __LINUX_CDNS3_GADGET */

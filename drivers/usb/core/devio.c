@@ -251,6 +251,10 @@ static int usbdev_mmap(struct file *file, struct vm_area_struct *vma)
 	usbm->vma_use_count = 1;
 	INIT_LIST_HEAD(&usbm->memlist);
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dma_handle, size);
+#endif
+
 	if (hcd->localmem_pool || !hcd_uses_dma(hcd)) {
 		if (remap_pfn_range(vma, vma->vm_start,
 				    virt_to_phys(usbm->mem) >> PAGE_SHIFT,
@@ -542,6 +546,9 @@ static int copy_urb_data_to_user(u8 __user *userbuffer, struct urb *urb)
 	if (urb->num_sgs == 0) {
 		if (copy_to_user(userbuffer, urb->transfer_buffer, len))
 			return -EFAULT;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(urb->transfer_buffer, len);
+#endif
 		return 0;
 	}
 

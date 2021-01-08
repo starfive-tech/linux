@@ -892,9 +892,19 @@ EXPORT_SYMBOL_GPL(__usb_get_extra_descriptor);
 void *usb_alloc_coherent(struct usb_device *dev, size_t size, gfp_t mem_flags,
 			 dma_addr_t *dma)
 {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	void *ret;
+#endif
 	if (!dev || !dev->bus)
 		return NULL;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	ret = hcd_buffer_alloc(dev->bus, size, mem_flags, dma);
+	if(ret)
+		cdns_flush_dcache(*dma, size);
+	return ret;
+#else
 	return hcd_buffer_alloc(dev->bus, size, mem_flags, dma);
+#endif
 }
 EXPORT_SYMBOL_GPL(usb_alloc_coherent);
 

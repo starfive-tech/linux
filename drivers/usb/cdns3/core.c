@@ -18,6 +18,7 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
+#include <linux/gpio.h>
 
 #include "gadget.h"
 #include "core.h"
@@ -91,6 +92,10 @@ static int cdns3_core_init_role(struct cdns3 *cdns)
 	dr_mode = usb_get_dr_mode(dev);
 	cdns->role = USB_ROLE_NONE;
 
+	if(!gpio_get_value(22))
+		dr_mode = USB_DR_MODE_HOST;
+	else
+		dr_mode = USB_DR_MODE_PERIPHERAL;
 	/*
 	 * If driver can't read mode by means of usb_get_dr_mode function then
 	 * chooses mode according with Kernel configuration. This setting

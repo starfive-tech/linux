@@ -44,6 +44,9 @@ static struct xhci_segment *xhci_segment_alloc(struct xhci_hcd *xhci,
 		kfree(seg);
 		return NULL;
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dma, sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 
 	if (max_packet) {
 		seg->bounce_buf = kzalloc_node(max_packet, flags,
@@ -56,8 +59,13 @@ static struct xhci_segment *xhci_segment_alloc(struct xhci_hcd *xhci,
 	}
 	/* If the cycle state is 0, set the cycle bit to 1 for all the TRBs */
 	if (cycle_state == 0) {
-		for (i = 0; i < TRBS_PER_SEGMENT; i++)
+		for (i = 0; i < TRBS_PER_SEGMENT; i++) {
 			seg->trbs[i].link.control |= cpu_to_le32(TRB_CYCLE);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(&seg->trbs[i],
+					       sizeof(union xhci_trb));
+#endif
+		}
 	}
 	seg->dma = dma;
 	seg->next = NULL;
@@ -68,6 +76,9 @@ static struct xhci_segment *xhci_segment_alloc(struct xhci_hcd *xhci,
 static void xhci_segment_free(struct xhci_hcd *xhci, struct xhci_segment *seg)
 {
 	if (seg->trbs) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(seg->trbs, sizeof(union xhci_trb));
+#endif
 		dma_pool_free(xhci->segment_pool, seg->trbs, seg->dma);
 		seg->trbs = NULL;
 	}
@@ -111,11 +122,19 @@ static void xhci_link_segments(struct xhci_segment *prev,
 
 		/* Set the last TRB in the segment to have a TRB type ID of Link TRB */
 		val = le32_to_cpu(prev->trbs[TRBS_PER_SEGMENT-1].link.control);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&prev->trbs[TRBS_PER_SEGMENT - 1],
+				       sizeof(union xhci_trb));
+#endif
 		val &= ~TRB_TYPE_BITMASK;
 		val |= TRB_TYPE(TRB_LINK);
 		if (chain_links)
 			val |= TRB_CHAIN;
 		prev->trbs[TRBS_PER_SEGMENT-1].link.control = cpu_to_le32(val);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&prev->trbs[TRBS_PER_SEGMENT - 1],
+				       sizeof(union xhci_trb));
+#endif
 	}
 }
 
@@ -149,7 +168,15 @@ static void xhci_link_rings(struct xhci_hcd *xhci, struct xhci_ring *ring,
 			&= ~cpu_to_le32(LINK_TOGGLE);
 		last->trbs[TRBS_PER_SEGMENT-1].link.control
 			|= cpu_to_le32(LINK_TOGGLE);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&ring->last_seg->trbs[TRBS_PER_SEGMENT - 1],
+				       sizeof(union xhci_trb));
+#endif
 		ring->last_seg = last;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&last->trbs[TRBS_PER_SEGMENT - 1],
+				       sizeof(union xhci_trb));
+#endif
 	}
 }
 
@@ -265,6 +292,10 @@ static void xhci_remove_stream_mapping(struct xhci_ring *ring)
 
 	seg = ring->first_seg;
 	do {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(seg->dma,
+				  sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 		xhci_remove_segment_mapping(ring->trb_address_map, seg);
 		seg = seg->next;
 	} while (seg != ring->first_seg);
@@ -398,6 +429,10 @@ struct xhci_ring *xhci_ring_alloc(struct xhci_hcd *xhci,
 		/* See section 4.9.2.1 and 6.4.4.1 */
 		ring->last_seg->trbs[TRBS_PER_SEGMENT - 1].link.control |=
 			cpu_to_le32(LINK_TOGGLE);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&ring->last_seg->trbs[TRBS_PER_SEGMENT - 1],
+				       sizeof(union xhci_trb));
+#endif
 	}
 	xhci_initialize_ring_info(ring, cycle_state);
 	trace_xhci_ring_alloc(ring);
@@ -489,6 +524,9 @@ struct xhci_container_ctx *xhci_alloc_container_ctx(struct xhci_hcd *xhci,
 		kfree(ctx);
 		return NULL;
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(ctx->dma, ctx->size);
+#endif
 	return ctx;
 }
 
@@ -662,6 +700,10 @@ struct xhci_stream_info *xhci_alloc_stream_info(struct xhci_hcd *xhci,
 		goto cleanup_ctx;
 	memset(stream_info->stream_ctx_array, 0,
 			sizeof(struct xhci_stream_ctx)*num_stream_ctxs);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(stream_info->ctx_array_dma,
+			  sizeof(struct xhci_stream_ctx) * num_stream_ctxs);
+#endif
 
 	/* Allocate everything needed to free the stream rings later */
 	stream_info->free_streams_command =
@@ -691,6 +733,10 @@ struct xhci_stream_info *xhci_alloc_stream_info(struct xhci_hcd *xhci,
 			cur_ring->cycle_state;
 		stream_info->stream_ctx_array[cur_stream].stream_ring =
 			cpu_to_le64(addr);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(&stream_info->stream_ctx_array[cur_stream],
+				       sizeof(struct xhci_stream_ctx));
+#endif
 		xhci_dbg(xhci, "Setting stream %d ring ptr to 0x%08llx\n",
 				cur_stream, (unsigned long long) addr);
 
@@ -748,6 +794,9 @@ void xhci_setup_streams_ep_input_ctx(struct xhci_hcd *xhci,
 	ep_ctx->ep_info |= cpu_to_le32(EP_MAXPSTREAMS(max_primary_streams)
 				       | EP_HAS_LSA);
 	ep_ctx->deq  = cpu_to_le64(stream_info->ctx_array_dma);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 }
 
 /*
@@ -762,6 +811,9 @@ void xhci_setup_no_streams_ep_input_ctx(struct xhci_ep_ctx *ep_ctx,
 	ep_ctx->ep_info &= cpu_to_le32(~(EP_MAXPSTREAMS_MASK | EP_HAS_LSA));
 	addr = xhci_trb_virt_to_dma(ep->ring->deq_seg, ep->ring->dequeue);
 	ep_ctx->deq  = cpu_to_le64(addr | ep->ring->cycle_state);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep_ctx,sizeof(*ep_ctx));
+#endif
 }
 
 /* Frees all stream contexts associated with the endpoint,
@@ -1024,12 +1076,19 @@ int xhci_alloc_virt_device(struct xhci_hcd *xhci, int slot_id,
 
 	dev->udev = udev;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dev->out_ctx->dma, dev->out_ctx->size);
+#endif
 	/* Point to output device context in dcbaa. */
 	xhci->dcbaa->dev_context_ptrs[slot_id] = cpu_to_le64(dev->out_ctx->dma);
 	xhci_dbg(xhci, "Set slot id %d dcbaa entry %p to 0x%llx\n",
 		 slot_id,
 		 &xhci->dcbaa->dev_context_ptrs[slot_id],
 		 le64_to_cpu(xhci->dcbaa->dev_context_ptrs[slot_id]));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(xhci->dcbaa->dma,
+			  sizeof(struct xhci_device_context_array));
+#endif
 
 	trace_xhci_alloc_virt_device(dev);
 
@@ -1067,6 +1126,9 @@ void xhci_copy_ep0_dequeue_into_input_ctx(struct xhci_hcd *xhci,
 	ep0_ctx->deq = cpu_to_le64(xhci_trb_virt_to_dma(ep_ring->enq_seg,
 							ep_ring->enqueue)
 				   | ep_ring->cycle_state);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep0_ctx, sizeof(*ep0_ctx));
+#endif
 }
 
 /*
@@ -1119,6 +1181,9 @@ int xhci_setup_addressable_virt_dev(struct xhci_hcd *xhci, struct usb_device *ud
 
 	/* 3) Only the control endpoint is valid - one endpoint context */
 	slot_ctx->dev_info |= cpu_to_le32(LAST_CTX(1) | udev->route);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(slot_ctx,sizeof(*slot_ctx));
+#endif
 	switch (udev->speed) {
 	case USB_SPEED_SUPER_PLUS:
 		slot_ctx->dev_info |= cpu_to_le32(SLOT_SPEED_SSP);
@@ -1150,10 +1215,16 @@ int xhci_setup_addressable_virt_dev(struct xhci_hcd *xhci, struct usb_device *ud
 		return -EINVAL;
 	}
 	/* Find the root hub port this device is under */
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 	port_num = xhci_find_real_port_number(xhci, udev);
 	if (!port_num)
 		return -EINVAL;
 	slot_ctx->dev_info2 |= cpu_to_le32(ROOT_HUB_PORT(port_num));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 	/* Set the port number in the virtual_device to the faked port number */
 	for (top_dev = udev; top_dev->parent && top_dev->parent->parent;
 			top_dev = top_dev->parent)
@@ -1199,6 +1270,9 @@ int xhci_setup_addressable_virt_dev(struct xhci_hcd *xhci, struct usb_device *ud
 						(udev->ttport << 8));
 		if (udev->tt->multi)
 			slot_ctx->dev_info |= cpu_to_le32(DEV_MTT);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 	}
 	xhci_dbg(xhci, "udev->tt = %p\n", udev->tt);
 	xhci_dbg(xhci, "udev->ttport = 0x%x\n", udev->ttport);
@@ -1213,6 +1287,9 @@ int xhci_setup_addressable_virt_dev(struct xhci_hcd *xhci, struct usb_device *ud
 
 	ep0_ctx->deq = cpu_to_le64(dev->eps[0].ring->first_seg->dma |
 				   dev->eps[0].ring->cycle_state);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep0_ctx, sizeof(*ep0_ctx));
+#endif
 
 	trace_xhci_setup_addressable_virt_device(dev);
 
@@ -1522,6 +1599,9 @@ int xhci_endpoint_init(struct xhci_hcd *xhci,
 
 	ep_ctx->tx_info = cpu_to_le32(EP_MAX_ESIT_PAYLOAD_LO(max_esit_payload) |
 				      EP_AVG_TRB_LENGTH(avg_trb_len));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 
 	return 0;
 }
@@ -1543,6 +1623,9 @@ void xhci_endpoint_zero(struct xhci_hcd *xhci,
 	/* Don't free the endpoint ring until the set interface or configuration
 	 * request succeeds.
 	 */
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 }
 
 void xhci_clear_endpoint_bw_info(struct xhci_bw_info *bw_info)
@@ -1574,14 +1657,29 @@ void xhci_update_bw_info(struct xhci_hcd *xhci,
 		 * set in the first place.
 		 */
 		if (!EP_IS_ADDED(ctrl_ctx, i) && EP_IS_DROPPED(ctrl_ctx, i)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(ctrl_ctx,
+					sizeof(struct xhci_input_control_ctx));
+#endif
 			/* Dropped endpoint */
 			xhci_clear_endpoint_bw_info(bw_info);
 			continue;
 		}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl_ctx,
+				       sizeof(struct xhci_input_control_ctx));
+#endif
 
 		if (EP_IS_ADDED(ctrl_ctx, i)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(ctrl_ctx,
+					sizeof(struct xhci_input_control_ctx));
+#endif
 			ep_ctx = xhci_get_ep_ctx(xhci, in_ctx, i);
 			ep_type = CTX_TO_EP_TYPE(le32_to_cpu(ep_ctx->ep_info2));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 
 			/* Ignore non-periodic endpoints */
 			if (ep_type != ISOC_OUT_EP && ep_type != INT_OUT_EP &&
@@ -1605,7 +1703,13 @@ void xhci_update_bw_info(struct xhci_hcd *xhci,
 			bw_info->type = ep_type;
 			bw_info->max_esit_payload = CTX_TO_MAX_ESIT_PAYLOAD(
 					le32_to_cpu(ep_ctx->tx_info));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 		}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl_ctx, sizeof(struct xhci_input_control_ctx));
+#endif
 	}
 }
 
@@ -1632,6 +1736,10 @@ void xhci_endpoint_copy(struct xhci_hcd *xhci,
 		in_ep_ctx->reserved[0] = out_ep_ctx->reserved[0];
 		in_ep_ctx->reserved[1] = out_ep_ctx->reserved[1];
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(in_ep_ctx, sizeof(*in_ep_ctx));
+	cdns_virt_flush_dcache(out_ep_ctx, sizeof(*out_ep_ctx));
+#endif
 }
 
 /* Copy output xhci_slot_ctx to the input xhci_slot_ctx.
@@ -1653,6 +1761,10 @@ void xhci_slot_copy(struct xhci_hcd *xhci,
 	in_slot_ctx->dev_info2 = out_slot_ctx->dev_info2;
 	in_slot_ctx->tt_info = out_slot_ctx->tt_info;
 	in_slot_ctx->dev_state = out_slot_ctx->dev_state;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(in_slot_ctx, sizeof(*in_slot_ctx));
+	cdns_virt_flush_dcache(out_slot_ctx, sizeof(*out_slot_ctx));
+#endif
 }
 
 /* Set up the scratchpad buffer array and scratchpad buffers, if needed. */
@@ -1678,6 +1790,9 @@ static int scratchpad_alloc(struct xhci_hcd *xhci, gfp_t flags)
 				     &xhci->scratchpad->sp_dma, flags);
 	if (!xhci->scratchpad->sp_array)
 		goto fail_sp2;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(xhci->scratchpad->sp_dma, num_sp * sizeof(u64));
+#endif
 
 	xhci->scratchpad->sp_buffers = kcalloc_node(num_sp, sizeof(void *),
 					flags, dev_to_node(dev));
@@ -1694,7 +1809,13 @@ static int scratchpad_alloc(struct xhci_hcd *xhci, gfp_t flags)
 
 		xhci->scratchpad->sp_array[i] = dma;
 		xhci->scratchpad->sp_buffers[i] = buf;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(dma, xhci->page_size);
+#endif
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(xhci->scratchpad->sp_dma, num_sp * sizeof(u64));
+#endif
 
 	return 0;
 
@@ -1818,6 +1939,9 @@ int xhci_alloc_erst(struct xhci_hcd *xhci,
 					   size, &erst->erst_dma_addr, flags);
 	if (!erst->entries)
 		return -ENOMEM;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(erst->erst_dma_addr, size);
+#endif
 
 	erst->num_entries = evt_ring->num_segs;
 
@@ -1829,6 +1953,9 @@ int xhci_alloc_erst(struct xhci_hcd *xhci,
 		entry->rsvd = 0;
 		seg = seg->next;
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(erst->erst_dma_addr, size);
+#endif
 
 	return 0;
 }
@@ -2434,6 +2561,9 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	if (!xhci->dcbaa)
 		goto fail;
 	xhci->dcbaa->dma = dma;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(xhci->dcbaa->dma, sizeof(*xhci->dcbaa));
+#endif
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init,
 			"// Device context base array address = 0x%llx (DMA), %p (virt)",
 			(unsigned long long)xhci->dcbaa->dma, xhci->dcbaa);
@@ -2542,6 +2672,11 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 	val_64 = xhci_read_64(xhci, &xhci->ir_set->erst_base);
 	val_64 &= ERST_PTR_MASK;
 	val_64 |= (xhci->erst.erst_dma_addr & (u64) ~ERST_PTR_MASK);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(xhci->erst.erst_dma_addr,
+			  xhci->event_ring->num_segs *
+				sizeof(struct xhci_erst_entry));
+#endif
 	xhci_write_64(xhci, val_64, &xhci->ir_set->erst_base);
 
 	/* Set the event ring dequeue address */

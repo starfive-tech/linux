@@ -268,6 +268,9 @@ static int xhci_slot_context_show(struct seq_file *s, void *unused)
 					    le32_to_cpu(slot_ctx->dev_info2),
 					    le32_to_cpu(slot_ctx->tt_info),
 					    le32_to_cpu(slot_ctx->dev_state)));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 
 	return 0;
 }
@@ -291,6 +294,9 @@ static int xhci_endpoint_context_show(struct seq_file *s, void *unused)
 						  le32_to_cpu(ep_ctx->ep_info2),
 						  le64_to_cpu(ep_ctx->deq),
 						  le32_to_cpu(ep_ctx->tx_info)));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 	}
 
 	return 0;

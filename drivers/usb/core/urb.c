@@ -407,6 +407,10 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 			return -ENOEXEC;
 		is_out = !(setup->bRequestType & USB_DIR_IN) ||
 				!setup->wLength;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(setup,
+				sizeof(struct usb_ctrlrequest));
+#endif
 	} else {
 		is_out = usb_endpoint_dir_out(&ep->desc);
 	}

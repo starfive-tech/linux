@@ -245,6 +245,10 @@ int cdns3_allocate_trb_pool(struct cdns3_endpoint *priv_ep)
 	}
 
 	memset(priv_ep->trb_pool, 0, ring_size);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+					     ring_size);
+#endif
 
 	priv_ep->num_trbs = num_trbs;
 
@@ -264,6 +268,11 @@ int cdns3_allocate_trb_pool(struct cdns3_endpoint *priv_ep)
 		link_trb->buffer = cpu_to_le32(TRB_BUFFER(priv_ep->trb_pool_dma));
 		link_trb->control = cpu_to_le32(TRB_CYCLE | TRB_TYPE(TRB_LINK) | TRB_TOGGLE);
 	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(EP_TRADDR_TRADDR(cdns3_trb_virt_to_dma(priv_ep,
+								   link_trb)),
+			    TRB_SIZE);
+#endif
 	return 0;
 }
 
@@ -936,6 +945,10 @@ static int cdns3_prepare_aligned_request_buf(struct cdns3_request *priv_req)
 			return -ENOMEM;
 		}
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(buf->dma, buf->size);
+#endif
+
 		if (priv_req->aligned_buf) {
 			trace_cdns3_free_aligned_request(priv_req);
 			priv_req->aligned_buf->in_use = 0;
@@ -1015,10 +1028,18 @@ static int cdns3_ep_run_stream_transfer(struct cdns3_endpoint *priv_ep,
 	priv_ep->flags |= EP_PENDING_REQUEST;
 
 	/* must allocate buffer aligned to 8 */
-	if (priv_req->flags & REQUEST_UNALIGNED)
+	if (priv_req->flags & REQUEST_UNALIGNED){
 		trb_dma = priv_req->aligned_buf->dma;
-	else
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(priv_req->aligned_buf->dma,
+			    priv_req->aligned_buf->size);
+#endif
+	}else{
 		trb_dma = request->dma;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(request->dma, request->length);
+#endif
+	}
 
 	/*  For stream capable endpoints driver use only single TD. */
 	trb = priv_ep->trb_pool + priv_ep->enqueue;
@@ -1037,6 +1058,10 @@ static int cdns3_ep_run_stream_transfer(struct cdns3_endpoint *priv_ep,
 	} else {
 		trb->buffer = cpu_to_le32(TRB_BUFFER(request->sg[sg_idx].dma_address));
 		length = request->sg[sg_idx].length;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(TRB_BUFFER(request->sg[sg_idx].dma_address),
+			    request->sg[sg_idx].length);
+#endif
 	}
 
 	tdl = DIV_ROUND_UP(length, priv_ep->endpoint.maxpacket);
@@ -1062,6 +1087,10 @@ static int cdns3_ep_run_stream_transfer(struct cdns3_endpoint *priv_ep,
 	 * Memory barrier - Cycle Bit must be set before trb->length  and
 	 * trb->buffer fields.
 	 */
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	gadget_flush_dcache(cdns3_trb_virt_to_dma(priv_ep, trb),
+			    sizeof(struct cdns3_trb));
+#endif
 	wmb();
 
 	/* always first element */
@@ -1123,6 +1152,9 @@ static int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	u32 control;
 	int pcs;
 	u16 total_tdl = 0;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	int number = 0;
+#endif
 	struct scatterlist *s = NULL;
 	bool sg_supported = !!(request->num_mapped_sgs);
 
@@ -1142,10 +1174,18 @@ static int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	priv_ep->flags |= EP_PENDING_REQUEST;
 
 	/* must allocate buffer aligned to 8 */
-	if (priv_req->flags & REQUEST_UNALIGNED)
+	if (priv_req->flags & REQUEST_UNALIGNED){
 		trb_dma = priv_req->aligned_buf->dma;
-	else
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		gadget_flush_dcache(priv_req->aligned_buf->dma,
+				    priv_req->aligned_buf->size);
+#endif
+	}else{
 		trb_dma = request->dma;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		gadget_flush_dcache(request->dma, request->length);
+#endif
+	}
 
 	trb = priv_ep->trb_pool + priv_ep->enqueue;
 	priv_req->start_trb = priv_ep->enqueue;
@@ -1217,6 +1257,12 @@ static int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 			trb->buffer = cpu_to_le32(TRB_BUFFER(trb_dma));
 			length = request->length;
 		}
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		if(request->num_sgs)
+			gadget_flush_dcache(request->sg[sg_iter].dma_address,
+					    request->sg[sg_iter].length);
+#endif
 
 		if (priv_ep->flags & EP_TDLCHK_EN)
 			total_tdl += DIV_ROUND_UP(length,
@@ -1322,6 +1368,22 @@ static int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	 * trb->buffer fields.
 	 */
 	wmb();
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	if((priv_req->start_trb + num_trb) > (priv_ep->num_trbs - 1)) {
+		number = priv_ep->num_trbs - 1 - priv_req->start_trb;
+		gadget_flush_dcache(priv_ep->trb_pool_dma +
+					(priv_req->start_trb * TRB_SIZE),
+				    (number + 1) * TRB_SIZE);
+		gadget_flush_dcache(priv_ep->trb_pool_dma,
+				    (num_trb - number)* TRB_SIZE);
+	} else {
+		gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma +
+						     priv_req->start_trb *
+						     TRB_SIZE),
+				    num_trb * TRB_SIZE);
+	}
+#endif
 
 	/*
 	 * For DMULT mode we can set address to transfer ring only once after
@@ -1507,6 +1569,10 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev,
 		/* Request was dequeued and TRB was changed to TRB_LINK. */
 		if (TRB_FIELD_TO_TYPE(le32_to_cpu(trb->control)) == TRB_LINK) {
 			trace_cdns3_complete_trb(priv_ep, trb);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			gadget_flush_dcache(EP_TRADDR_TRADDR(cdns3_trb_virt_to_dma(priv_ep, trb)),
+					    sizeof(struct cdns3_trb));
+#endif
 			cdns3_move_deq_to_next_trb(priv_req);
 		}
 
@@ -1561,6 +1627,10 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev,
 					 priv_req->trb, trb);
 
 			request->actual += TRB_LEN(le32_to_cpu(trb->length));
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			gadget_flush_dcache(EP_TRADDR_TRADDR(cdns3_trb_virt_to_dma(priv_ep, trb)),
+					    sizeof(struct cdns3_trb));
+#endif
 
 			if (!request->num_sgs ||
 			    (request->num_sgs == (priv_ep->stream_sg_idx + 1))) {
@@ -1768,6 +1838,10 @@ static void cdns3_check_usb_interrupt_proceed(struct cdns3_device *priv_dev,
 __must_hold(&priv_dev->lock)
 {
 	int speed = 0;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	int i;
+	struct cdns3_endpoint *priv_ep;
+#endif
 
 	trace_cdns3_usb_irq(priv_dev, usb_ists);
 	if (usb_ists & USB_ISTS_L1ENTI) {
@@ -1796,6 +1870,18 @@ __must_hold(&priv_dev->lock)
 		priv_dev->gadget.speed = USB_SPEED_UNKNOWN;
 		usb_gadget_set_state(&priv_dev->gadget, USB_STATE_NOTATTACHED);
 		cdns3_hw_reset_eps_config(priv_dev);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		/* clean TRB*/
+		for(i = 0;i < CDNS3_ENDPOINTS_MAX_COUNT; i++){
+			priv_ep = priv_dev->eps[i];
+			if(priv_ep && priv_ep->trb_pool){
+				memset(priv_ep->trb_pool, 0,
+				       priv_ep->alloc_ring_size);
+				gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+						    priv_ep->alloc_ring_size);
+			}
+		}
+#endif
 	}
 
 	if (usb_ists & (USB_ISTS_L2ENTI | USB_ISTS_U3ENTI)) {

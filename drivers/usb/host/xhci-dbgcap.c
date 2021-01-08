@@ -105,6 +105,9 @@ static void xhci_dbc_init_contexts(struct xhci_dbc *dbc, u32 string_length)
 	info->product		= cpu_to_le64(dma + DBC_MAX_STRING_LENGTH * 2);
 	info->serial		= cpu_to_le64(dma + DBC_MAX_STRING_LENGTH * 3);
 	info->length		= cpu_to_le32(string_length);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dma, string_length);
+#endif
 
 	/* Populate bulk out endpoint context: */
 	ep_ctx			= dbc_bulkout_ctx(dbc);
@@ -113,6 +116,9 @@ static void xhci_dbc_init_contexts(struct xhci_dbc *dbc, u32 string_length)
 	ep_ctx->ep_info		= 0;
 	ep_ctx->ep_info2	= dbc_epctx_info2(BULK_OUT_EP, 1024, max_burst);
 	ep_ctx->deq		= cpu_to_le64(deq | dbc->ring_out->cycle_state);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(deq, sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 
 	/* Populate bulk in endpoint context: */
 	ep_ctx			= dbc_bulkin_ctx(dbc);
@@ -120,6 +126,9 @@ static void xhci_dbc_init_contexts(struct xhci_dbc *dbc, u32 string_length)
 	ep_ctx->ep_info		= 0;
 	ep_ctx->ep_info2	= dbc_epctx_info2(BULK_IN_EP, 1024, max_burst);
 	ep_ctx->deq		= cpu_to_le64(deq | dbc->ring_in->cycle_state);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(deq, sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 
 	/* Set DbC context and info registers: */
 	lo_hi_writeq(dbc->ctx->dma, &dbc->regs->dccp);
@@ -279,6 +288,11 @@ static int xhci_dbc_queue_bulk_tx(struct dbc_ep *dep,
 	 * Add a barrier between writes of trb fields and flipping
 	 * the cycle bit:
 	 */
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(req->dma, req->length);
+	cdns_flush_dcache(req->trb_dma,
+			  sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 	wmb();
 
 	if (cycle)
@@ -286,6 +300,10 @@ static int xhci_dbc_queue_bulk_tx(struct dbc_ep *dep,
 	else
 		trb->generic.field[3] &= cpu_to_le32(~TRB_CYCLE);
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(req->trb_dma,
+			  sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 	writel(DBC_DOOR_BELL_TARGET(dep->direction), &dbc->regs->doorbell);
 
 	return 0;
@@ -501,12 +519,19 @@ static int xhci_dbc_mem_init(struct xhci_dbc *dbc, gfp_t flags)
 	if (!dbc->string)
 		goto string_fail;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dbc->string_dma, dbc->string_size);
+#endif
+
 	/* Setup ERST register: */
 	writel(dbc->erst.erst_size, &dbc->regs->ersts);
 
 	lo_hi_writeq(dbc->erst.erst_dma_addr, &dbc->regs->erstba);
 	deq = xhci_trb_virt_to_dma(dbc->ring_evt->deq_seg,
 				   dbc->ring_evt->dequeue);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(deq, sizeof(union xhci_trb) * TRBS_PER_SEGMENT);
+#endif
 	lo_hi_writeq(deq, &dbc->regs->erdp);
 
 	/* Setup strings and contexts: */
@@ -877,6 +902,9 @@ static enum evtreturn xhci_dbc_do_handle_events(struct xhci_dbc *dbc)
 	if (update_erdp) {
 		deq = xhci_trb_virt_to_dma(dbc->ring_evt->deq_seg,
 					   dbc->ring_evt->dequeue);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(deq, sizeof(union xhci_trb));
+#endif
 		lo_hi_writeq(deq, &dbc->regs->erdp);
 	}
 
