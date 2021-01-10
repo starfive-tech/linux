@@ -1,0 +1,12 @@
+#
+# Video TX driver configuration
+#
+menu "Video TX Configuration"
+
+config FB_STARFIVE_HDMI_ADV7513
+	bool "HDMI ADV7513 displayer support"
+	depends on FB_STARFIVE
+	help
+	  Say Y here if you want to have support for ADV7513 displayer
+
+endmenu

@@ -41,6 +41,8 @@ obj-$(CONFIG_VIDEO_STI_DELTA)		+= sti/delta/
 
 obj-y					+= stm32/
 
+obj-y					+= starfive/
+
 obj-y					+= davinci/
 
 obj-$(CONFIG_VIDEO_SH_VOU)		+= sh_vou.o

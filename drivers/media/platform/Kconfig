@@ -138,6 +138,13 @@ config VIDEO_STM32_DCMI
 	  To compile this driver as a module, choose M here: the module
 	  will be called stm32-dcmi.
 
+config VIDEO_STF_VIN
+	tristate "starfive VIC video in support"
+	depends on VIDEO_V4L2 && OF
+	help
+	  To compile this driver as a module, choose M here: the module
+	  will be called stf-vin.
+
 config VIDEO_RENESAS_CEU
 	tristate "Renesas Capture Engine Unit (CEU) driver"
 	depends on VIDEO_DEV && VIDEO_V4L2
