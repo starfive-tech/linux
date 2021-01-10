@@ -1,0 +1,32 @@
+#
+# VIN sensor driver configuration
+#
+config VIDEO_STARFIVE_VIN
+	bool "starfive VIC video input support"
+	depends on OF
+	help
+	  To compile this driver as a module, choose M here: the module
+	  will be called stf-vin.
+
+choice
+	prompt "Image Sensor for VIC board"
+	default VIDEO_STARFIVE_VIN_SENSOR_IMX219
+	depends on VIDEO_STARFIVE_VIN
+	optional
+
+config VIDEO_STARFIVE_VIN_SENSOR_OV5640
+	bool "OmniVision OV5640 5mp MIPI Camera Module"
+	help
+	  Say Y here if you want to have support for VIN sensor OV5640
+
+config VIDEO_STARFIVE_VIN_SENSOR_IMX219
+	bool "Sony IMX219 CMOS Image Sensor"
+	help
+	  Say Y here if you want to have support for VIN sensor IMX219
+
+config VIDEO_STARFIVE_VIN_SENSOR_SC2235
+	bool "SmartSens Technology SC2235 CMOS Image Sensor"
+	help
+	  Say Y here if you want to have support for VIN sensor SC2235
+
+endchoice
