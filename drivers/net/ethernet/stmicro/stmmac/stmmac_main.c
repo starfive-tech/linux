@@ -4061,6 +4061,9 @@ read_again:
 
 			dma_sync_single_for_cpu(priv->device, buf->addr,
 						buf1_len, DMA_FROM_DEVICE);
+#ifdef FLUSH_RX_BUF_ENABLE
+				stmmac_flush_dcache(buf->addr, buf1_len);
+#endif
 			skb_copy_to_linear_data(skb, page_address(buf->page),
 						buf1_len);
 			skb_put(skb, buf1_len);
@@ -4071,6 +4074,9 @@ read_again:
 		} else if (buf1_len) {
 			dma_sync_single_for_cpu(priv->device, buf->addr,
 						buf1_len, DMA_FROM_DEVICE);
+#ifdef FLUSH_RX_BUF_ENABLE
+				stmmac_flush_dcache(buf->addr, buf1_len);
+#endif
 			skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags,
 					buf->page, 0, buf1_len,
 					priv->dma_buf_sz);
@@ -4083,6 +4089,9 @@ read_again:
 		if (buf2_len) {
 			dma_sync_single_for_cpu(priv->device, buf->sec_addr,
 						buf2_len, DMA_FROM_DEVICE);
+#ifdef FLUSH_RX_BUF_ENABLE
+				stmmac_flush_dcache(buf->sec_addr, buf2_len);
+#endif
 			skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags,
 					buf->sec_page, 0, buf2_len,
 					priv->dma_buf_sz);
