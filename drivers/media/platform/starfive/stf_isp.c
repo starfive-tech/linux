@@ -43,7 +43,6 @@ void isp_ddr_format_config(struct stf_vin_dev *vin)
 		pr_err("unknown format\n");
 		return;
 	}
-	
 	reg_write(vin->base_isp, ISP_REG_RAW_FORMAT_CFG, 0x000011BB);	// sym_order = [0+:16]
 	reg_write(vin->base_isp, ISP_REG_CFA_MODE, 0x00000030);
 	reg_write(vin->base_isp, ISP_REG_PIC_CAPTURE_START_CFG, 0x00000000); // cro_hstart = [0+:16], cro_vstart = [16+:16]
@@ -64,9 +63,10 @@ void isp_ddr_resolution_config(struct stf_vin_dev *vin)
 	reg_write(vin->base_isp, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
 
 	reg_write(vin->base_isp, ISP_REG_PIXEL_COORDINATE_GEN, 0x00000010);	// Unscaled Output Pixel Coordinate Generator Mode Register
-	reg_write(vin->base_isp, ISP_REG_PIXEL_AXI_CONTROL, 0x00000000);	
-	reg_write(vin->base_isp, ISP_REG_SS_AXI_CONTROL, 0x00000000);
 	
+	reg_write(vin->base_isp, ISP_REG_PIXEL_AXI_CONTROL, 0x00000000);
+	reg_write(vin->base_isp, ISP_REG_SS_AXI_CONTROL, 0x00000000);
+
 	reg_write(vin->base_isp, ISP_REG_RGB_TO_YUV_COVERSION0, 0x0000004D);	// ICCONV_0
 	reg_write(vin->base_isp, ISP_REG_RGB_TO_YUV_COVERSION1, 0x00000096);	// ICCONV_1
 	reg_write(vin->base_isp, ISP_REG_RGB_TO_YUV_COVERSION2, 0x0000001D);	// ICCONV_2
@@ -77,8 +77,8 @@ void isp_ddr_resolution_config(struct stf_vin_dev *vin)
 	reg_write(vin->base_isp, ISP_REG_RGB_TO_YUV_COVERSION7, 0x0000017C);	// ICCONV_7
 	reg_write(vin->base_isp, ISP_REG_RGB_TO_YUV_COVERSION8, 0x000001E6);	// ICCONV_8
 	
-	reg_write(vin->base_isp, ISP_REG_CIS_MODULE_CFG, 0x00000000);	
-	reg_write(vin->base_isp, ISP_REG_ISP_CTRL_1, 0x10000022);	//0x30000022);//	
+	reg_write(vin->base_isp, ISP_REG_CIS_MODULE_CFG, 0x00000000);
+	reg_write(vin->base_isp, ISP_REG_ISP_CTRL_1, 0x10000022);	//0x30000022);//
 	reg_write(vin->base_isp, ISP_REG_DC_AXI_ID, 0x00000000);
 	reg_write(vin->base_isp, 0x00000008, 0x00010005);//this reg can not be found in document
 }

@@ -14,4 +14,3 @@ extern void isp_ddr_config(struct stf_vin_dev *vin);
 extern void isp_base_addr_config(struct stf_vin_dev *vin);
 
 #endif
-

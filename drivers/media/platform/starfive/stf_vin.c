@@ -51,7 +51,7 @@ static inline void reg_clear(void __iomem * base, u32 reg, u32 mask)
 {
 	reg_write(base, reg, reg_read(base, reg) & ~mask);
 }
-	
+
 static void reg_set_highest_bit(void __iomem * base, u32 reg)
 {
     u32 val;
@@ -74,7 +74,7 @@ static int vin_open(struct inode *inode, struct file *file)
 {
 	int ret = 0;
 	mutex_lock(&vin_mutex);
-	
+
 	struct stf_vin_dev *dev;
 	dev=container_of(inode->i_cdev, struct stf_vin_dev, vin_cdev);
 
@@ -356,7 +356,7 @@ static int stf_vin_config_set(struct stf_vin_dev *vin)
 		val_vin_rw_ctrl_reg = 0x00010300;
 		val_vin_src_channel_reg = 0x00000088;
 		val_vin_axi_ctrl_reg = 0x00000004;
-		
+
 		reg_write(sysctrl_base, SYSCTRL_REG13, val_vin_rd_pix_total_reg);
 		reg_write(sysctrl_base, SYSCTRL_REG17, val_vin_rd_vblank_reg);
 		reg_write(sysctrl_base, SYSCTRL_REG18, val_vin_rd_vend_reg);
@@ -432,7 +432,7 @@ static int vin_get_axiwr_pixel_size(struct stf_vin_dev *vin)
 	int cnfg_axiwr_pix_ct;
 
 	value = reg_read(sysctrl_base, SYSCTRL_REG14) & 0x3;
-	
+
 	if (value == 0)
 		cnfg_axiwr_pix_ct = 2;
 	else if (value == 1)
@@ -515,7 +515,7 @@ static irqreturn_t vin_wr_irq_handler(int irq, void *priv)
 	vin->odd = wtimes;
 	wake_up_interruptible(&vin->wq);
 	wtimes++;
-	
+
 	return IRQ_HANDLED;
 }
 
@@ -751,7 +751,7 @@ static int __init stf_vin_init(void)
 }
 
 static void __exit stf_vin_cleanup(void)
-{	
+{
 	platform_driver_unregister(&stf_vin_driver);
 }
 
