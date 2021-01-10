@@ -1,0 +1,35 @@
+#
+# Video TX driver configuration
+#
+menu "Displayer Configuration for VIC board"
+
+choice
+	prompt "Displayer support for VIC board"
+	default FB_STARFIVE_HDMI_TDA998X
+	depends on FB_STARFIVE
+	optional
+
+config FB_STARFIVE_HDMI_ADV7513
+	bool "HDMI ADV7513 displayer support"
+	help
+	  Say Y here if you want to have support for ADV7513 displayer
+
+config FB_STARFIVE_HDMI_TDA998X
+	bool "HDMI TDA998X displayer support"
+	help
+	  Say Y here if you want to have support for TDA998X displayer
+
+config FB_STARFIVE_SEEED5INCH
+	bool "seeed5inch mipi LCD panel displayer support"
+	help
+	  Say Y here if you want to have support for seeed5inch mipi LCD panel
+
+endchoice
+
+config FB_STARFIVE_VIDEO
+	bool "Cam sensor image data to framebuffer, instead of Console"
+	depends on FB_STARFIVE && VIDEO_STARFIVE_VIN
+	help
+	  Say Y here if you want to display video from sensor, instead of console.
+
+endmenu
