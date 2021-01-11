@@ -1312,6 +1312,9 @@ static int hcd_alloc_coherent(struct usb_bus *bus,
 		memcpy(vaddr, *vaddr_handle, size);
 
 	*vaddr_handle = vaddr;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(*dma_handle, size + sizeof(vaddr));
+#endif
 	return 0;
 }
 
@@ -1323,9 +1326,12 @@ static void hcd_free_coherent(struct usb_bus *bus, dma_addr_t *dma_handle,
 
 	vaddr = (void *)get_unaligned((unsigned long *)(vaddr + size));
 
-	if (dir == DMA_FROM_DEVICE)
+	if (dir == DMA_FROM_DEVICE) {
 		memcpy(vaddr, *vaddr_handle, size);
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(vaddr, size);
+#endif
+	}
 	hcd_buffer_free(bus, size + sizeof(vaddr), *vaddr_handle, *dma_handle);
 
 	*vaddr_handle = vaddr;
@@ -1335,12 +1341,16 @@ static void hcd_free_coherent(struct usb_bus *bus, dma_addr_t *dma_handle,
 void usb_hcd_unmap_urb_setup_for_dma(struct usb_hcd *hcd, struct urb *urb)
 {
 	if (IS_ENABLED(CONFIG_HAS_DMA) &&
-	    (urb->transfer_flags & URB_SETUP_MAP_SINGLE))
+	    (urb->transfer_flags & URB_SETUP_MAP_SINGLE)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(urb->setup_dma,
+				  sizeof(struct usb_ctrlrequest));
+#endif
 		dma_unmap_single(hcd->self.sysdev,
 				urb->setup_dma,
 				sizeof(struct usb_ctrlrequest),
 				DMA_TO_DEVICE);
-	else if (urb->transfer_flags & URB_SETUP_MAP_LOCAL)
+	} else if (urb->transfer_flags & URB_SETUP_MAP_LOCAL)
 		hcd_free_coherent(urb->dev->bus,
 				&urb->setup_dma,
 				(void **) &urb->setup_packet,
@@ -1374,23 +1384,36 @@ void usb_hcd_unmap_urb_for_dma(struct usb_hcd *hcd, struct urb *urb)
 				urb->num_sgs,
 				dir);
 	else if (IS_ENABLED(CONFIG_HAS_DMA) &&
-		 (urb->transfer_flags & URB_DMA_MAP_PAGE))
+		 (urb->transfer_flags & URB_DMA_MAP_PAGE)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(urb->transfer_dma,
+				  urb->transfer_buffer_length);
+#endif
 		dma_unmap_page(hcd->self.sysdev,
 				urb->transfer_dma,
 				urb->transfer_buffer_length,
 				dir);
-	else if (IS_ENABLED(CONFIG_HAS_DMA) &&
-		 (urb->transfer_flags & URB_DMA_MAP_SINGLE))
+	} else if (IS_ENABLED(CONFIG_HAS_DMA) &&
+		 (urb->transfer_flags & URB_DMA_MAP_SINGLE)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(urb->transfer_dma,
+				  urb->transfer_buffer_length);
+#endif
 		dma_unmap_single(hcd->self.sysdev,
 				urb->transfer_dma,
 				urb->transfer_buffer_length,
 				dir);
-	else if (urb->transfer_flags & URB_MAP_LOCAL)
+	} else if (urb->transfer_flags & URB_MAP_LOCAL) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(urb->transfer_dma,
+				  urb->transfer_buffer_length);
+#endif
 		hcd_free_coherent(urb->dev->bus,
 				&urb->transfer_dma,
 				&urb->transfer_buffer,
 				urb->transfer_buffer_length,
 				dir);
+	}
 
 	/* Make it safe to call this routine more than once */
 	urb->transfer_flags &= ~(URB_DMA_MAP_SG | URB_DMA_MAP_PAGE |

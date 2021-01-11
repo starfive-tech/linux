@@ -1736,6 +1736,12 @@ static int proc_do_submiturb(struct usb_dev_state *ps, struct usbdevfs_urb *uurb
 
 			as->urb->transfer_buffer = as->usbm->mem +
 					(uurb_start - as->usbm->vm_start);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_flush_dcache(as->usbm->dma_handle +
+						(uurb_start - as->usbm->vm_start),
+					  as->usbm->size -
+						(uurb_start - as->usbm->vm_start));
+#endif
 		} else {
 			as->urb->transfer_buffer = kmalloc(uurb->buffer_length,
 					GFP_KERNEL);
@@ -1822,6 +1828,12 @@ static int proc_do_submiturb(struct usb_dev_state *ps, struct usbdevfs_urb *uurb
 		as->urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 		as->urb->transfer_dma = as->usbm->dma_handle +
 				(uurb_start - as->usbm->vm_start);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_flush_dcache(as->usbm->dma_handle +
+					(uurb_start - as->usbm->vm_start),
+				  as->usbm->size -
+					(uurb_start - as->usbm->vm_start));
+#endif
 	} else if (is_in && uurb->buffer_length > 0)
 		as->userbuffer = uurb->buffer;
 	as->signr = uurb->signr;
