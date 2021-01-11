@@ -729,7 +729,18 @@ static struct platform_driver starfive_gpio_driver = {
 		.of_match_table	= of_match_ptr(starfive_gpio_match),
 	},
 };
-builtin_platform_driver(starfive_gpio_driver)
+
+static int __init starfive_gpio_init(void)
+{
+	return platform_driver_register(&starfive_gpio_driver);
+}
+subsys_initcall(starfive_gpio_init);
+
+static void __exit starfive_gpio_exit(void)
+{
+	platform_driver_unregister(&starfive_gpio_driver);
+}
+module_exit(starfive_gpio_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Huan Feng <huan.feng@starfivetech.com>");
