@@ -54,8 +54,8 @@ static void cdns3_ep0_run_transfer(struct cdns3_device *priv_dev,
 	}
 
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-	gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
-			    2 * sizeof(struct cdns3_trb));
+	cdns_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+					   2 * TRB_SIZE);
 #endif
 
 	trace_cdns3_prepare_trb(priv_ep, priv_ep->trb_pool);
@@ -93,6 +93,9 @@ static int cdns3_ep0_delegate_req(struct cdns3_device *priv_dev,
 	spin_unlock(&priv_dev->lock);
 	priv_dev->setup_pending = 1;
 	ret = priv_dev->gadget_driver->setup(&priv_dev->gadget, ctrl_req);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 	priv_dev->setup_pending = 0;
 	spin_lock(&priv_dev->lock);
 	return ret;
@@ -151,6 +154,9 @@ static int cdns3_req_ep0_set_configuration(struct cdns3_device *priv_dev,
 	u32 config = le16_to_cpu(ctrl_req->wValue);
 	int result = 0;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 	switch (device_state) {
 	case USB_STATE_ADDRESS:
 		result = cdns3_ep0_delegate_req(priv_dev, ctrl_req);
@@ -196,7 +202,9 @@ static int cdns3_req_ep0_set_address(struct cdns3_device *priv_dev,
 	u32 addr;
 
 	addr = le16_to_cpu(ctrl_req->wValue);
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 	if (addr > USB_DEVICE_MAX_ADDRESS) {
 		dev_err(priv_dev->dev,
 			"Device address (%d) cannot be greater than %d\n",
@@ -236,9 +244,14 @@ static int cdns3_req_ep0_get_status(struct cdns3_device *priv_dev,
 	u16 usb_status = 0;
 	u32 recip;
 	u8 index;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	u32 tmp_ind;
+#endif
 
 	recip = ctrl->bRequestType & USB_RECIP_MASK;
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	switch (recip) {
 	case USB_RECIP_DEVICE:
 		/* self powered */
@@ -264,8 +277,17 @@ static int cdns3_req_ep0_get_status(struct cdns3_device *priv_dev,
 		index = cdns3_ep_addr_to_index(le16_to_cpu(ctrl->wIndex));
 		priv_ep = priv_dev->eps[index];
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		tmp_ind = ctrl->wIndex;
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+
+		/* check if endpoint is stalled or stall is pending */
+		cdns3_select_ep(priv_dev, tmp_ind);
+#else
+
 		/* check if endpoint is stalled or stall is pending */
 		cdns3_select_ep(priv_dev, le16_to_cpu(ctrl->wIndex));
+#endif
 		if (EP_STS_STALL(readl(&priv_dev->regs->ep_sts)) ||
 		    (priv_ep->flags & EP_STALL_PENDING))
 			usb_status =  BIT(USB_ENDPOINT_HALT);
@@ -278,7 +300,7 @@ static int cdns3_req_ep0_get_status(struct cdns3_device *priv_dev,
 	*response_pkt = cpu_to_le16(usb_status);
 
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-	gadget_flush_dcache(priv_dev->setup_dma, sizeof(*response_pkt));
+	cdns_flush_dcache(priv_dev->setup_dma, sizeof(*response_pkt));
 #endif
 
 	cdns3_ep0_run_transfer(priv_dev, priv_dev->setup_dma,
@@ -297,6 +319,9 @@ static int cdns3_ep0_feature_handle_device(struct cdns3_device *priv_dev,
 	u16 tmode;
 
 	wValue = le16_to_cpu(ctrl->wValue);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	state = priv_dev->gadget.state;
 	speed = priv_dev->gadget.speed;
 
@@ -324,7 +349,9 @@ static int cdns3_ep0_feature_handle_device(struct cdns3_device *priv_dev,
 			return -EINVAL;
 
 		tmode = le16_to_cpu(ctrl->wIndex);
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 		if (!set || (tmode & 0xff) != 0)
 			return -EINVAL;
 
@@ -357,7 +384,9 @@ static int cdns3_ep0_feature_handle_intf(struct cdns3_device *priv_dev,
 	int ret = 0;
 
 	wValue = le16_to_cpu(ctrl->wValue);
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	switch (wValue) {
 	case USB_INTRF_FUNC_SUSPEND:
 		break;
@@ -375,17 +404,38 @@ static int cdns3_ep0_feature_handle_endpoint(struct cdns3_device *priv_dev,
 	struct cdns3_endpoint *priv_ep;
 	int ret = 0;
 	u8 index;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	u32 tmp_ind;
+#endif
 
-	if (le16_to_cpu(ctrl->wValue) != USB_ENDPOINT_HALT)
+	if (le16_to_cpu(ctrl->wValue) != USB_ENDPOINT_HALT) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 		return -EINVAL;
+	}
 
-	if (!(ctrl->wIndex & ~USB_DIR_IN))
+	if (!(ctrl->wIndex & ~USB_DIR_IN)) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 		return 0;
+	}
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 
 	index = cdns3_ep_addr_to_index(le16_to_cpu(ctrl->wIndex));
 	priv_ep = priv_dev->eps[index];
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	tmp_ind = ctrl->wIndex;
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+	cdns3_select_ep(priv_dev, tmp_ind);
+#else
 	cdns3_select_ep(priv_dev, le16_to_cpu(ctrl->wIndex));
+#endif
 
 	if (set)
 		__cdns3_gadget_ep_set_halt(priv_ep);
@@ -415,7 +465,9 @@ static int cdns3_req_ep0_handle_feature(struct cdns3_device *priv_dev,
 	u32 recip;
 
 	recip = ctrl->bRequestType & USB_RECIP_MASK;
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	switch (recip) {
 	case USB_RECIP_DEVICE:
 		ret = cdns3_ep0_feature_handle_device(priv_dev, ctrl, set);
@@ -449,11 +501,15 @@ static int cdns3_req_ep0_set_sel(struct cdns3_device *priv_dev,
 	if (le16_to_cpu(ctrl_req->wLength) != 6) {
 		dev_err(priv_dev->dev, "Set SEL should be 6 bytes, got %d\n",
 			ctrl_req->wLength);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 		return -EINVAL;
 	}
 
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-	gadget_flush_dcache(priv_dev->setup_dma, 6);
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+	cdns_flush_dcache(priv_dev->setup_dma, 6);
 #endif
 
 	cdns3_ep0_run_transfer(priv_dev, priv_dev->setup_dma, 6, 1, 0);
@@ -471,10 +527,18 @@ static int cdns3_req_ep0_set_sel(struct cdns3_device *priv_dev,
 static int cdns3_req_ep0_set_isoch_delay(struct cdns3_device *priv_dev,
 					 struct usb_ctrlrequest *ctrl_req)
 {
-	if (ctrl_req->wIndex || ctrl_req->wLength)
+	if (ctrl_req->wIndex || ctrl_req->wLength) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 		return -EINVAL;
+	}
 
 	priv_dev->isoch_delay = le16_to_cpu(ctrl_req->wValue);
+
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+#endif
 
 	return 0;
 }
@@ -491,7 +555,13 @@ static int cdns3_ep0_standard_request(struct cdns3_device *priv_dev,
 {
 	int ret;
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	u8 bReq = ctrl_req->bRequest;
+	cdns_virt_flush_dcache(ctrl_req, sizeof(struct usb_ctrlrequest));
+	switch (bReq) {
+#else
 	switch (ctrl_req->bRequest) {
+#endif
 	case USB_REQ_SET_ADDRESS:
 		ret = cdns3_req_ep0_set_address(priv_dev, ctrl_req);
 		break;
@@ -554,7 +624,9 @@ static void cdns3_ep0_setup_phase(struct cdns3_device *priv_dev)
 	int result;
 
 	priv_dev->ep0_data_dir = ctrl->bRequestType & USB_DIR_IN;
-
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 	trace_cdns3_ctrl_req(ctrl);
 
 	if (!list_empty(&priv_ep->pending_req_list)) {
@@ -571,10 +643,17 @@ static void cdns3_ep0_setup_phase(struct cdns3_device *priv_dev)
 	else
 		priv_dev->ep0_stage = CDNS3_STATUS_STAGE;
 
-	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 		result = cdns3_ep0_standard_request(priv_dev, ctrl);
-	else
+	} else {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ctrl, sizeof(struct usb_ctrlrequest));
+#endif
 		result = cdns3_ep0_delegate_req(priv_dev, ctrl);
+	}
 
 	if (result == USB_GADGET_DELAYED_STATUS)
 		return;
@@ -599,8 +678,8 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev)
 			TRB_LEN(le32_to_cpu(priv_ep->trb_pool->length));
 
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-	gadget_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
-			    sizeof(struct cdns3_trb));
+		cdns_flush_dcache(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma),
+				  sizeof(struct cdns3_trb));
 #endif
 		priv_ep->dir = priv_dev->ep0_data_dir;
 		cdns3_gadget_giveback(priv_ep, to_cdns3_request(request), 0);
