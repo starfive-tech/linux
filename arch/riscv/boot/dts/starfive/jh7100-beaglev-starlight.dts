@@ -1,0 +1,465 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2021 StarFive Technology Co., Ltd. */
+
+/dts-v1/;
+#include "jh7100.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/starfive_fb.h>
+
+/ {
+	model = "BeagleV Starlight Beta";
+	compatible = "beagle,beaglev-starlight-jh7100", "starfive,jh7100";
+
+	aliases {
+		mshc0 = &sdio0;
+		mshc1 = &sdio1;
+		serial0 = &uart3;
+		serial1 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	cpus {
+		timebase-frequency = <6250000>;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x2 0x0>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led-ack {
+			gpios = <&gpio 43 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_HEARTBEAT;
+			linux,default-trigger = "heartbeat";
+			label = "ack";
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x28000000>;
+			alignment = <0x0 0x1000>;
+			alloc-ranges = <0x0 0xa0000000 0x0 0x28000000>;
+			linux,cma-default;
+		};
+
+		jpu_reserved: framebuffer@c9000000 {
+			reg = <0x0 0xc9000000 0x0 0x4000000>;
+		};
+
+		nvdla_reserved: framebuffer@d0000000 {
+			no-map;
+			reg = <0x0 0xd0000000 0x0 0x28000000>;
+		};
+
+		vin_reserved: framebuffer@f9000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0xf9000000 0x0 0x1000000>;
+		};
+
+		sffb_reserved: framebuffer@fb000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0xfb000000 0x0 0x2000000>;
+		};
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpio 37 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	scl-gpio = <&gpio 62 0>;
+	sda-gpio = <&gpio 61 0>;
+	status = "okay";
+
+	imx219@10 {
+		compatible = "imx219";
+		reg = <0x10>;
+		reset-gpio = <&gpio 58 GPIO_ACTIVE_HIGH>;
+	};
+
+	pmic@5e {
+		compatible = "ti,tps65086";
+		reg = <0x5e>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		regulators {
+		};
+	};
+
+	tda998x@70 {
+		compatible = "nxp,tda998x";
+		reg = <0x70>;
+	};
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <100>;
+	i2c-scl-falling-time-ns = <100>;
+	scl-gpio = <&gpio 47 0>;
+	sda-gpio = <&gpio 48 0>;
+	status = "okay";
+};
+
+&i2c2 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	scl-gpio = <&gpio 60 0>;
+	sda-gpio = <&gpio 59 0>;
+	status = "okay";
+
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+	};
+};
+
+&osc_sys {
+	clock-frequency = <25000000>;
+};
+
+&osc_aud {
+	clock-frequency = <27000000>;
+};
+
+&qspi {
+	nor_flash: nor-flash@0 {
+		compatible = "spi-flash";
+		reg = <0>;
+		spi-max-frequency = <31250000>;
+		page-size = <256>;
+		block-size = <16>;
+		cdns,read-delay = <4>;
+		cdns,tshsl-ns = <1>;
+		cdns,tsd2d-ns = <1>;
+		cdns,tchsh-ns = <1>;
+		cdns,tslch-ns = <1>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
+	};
+
+	nand_flash: nand-flash@1 {
+		compatible = "spi-flash-nand";
+		reg = <1>;
+		spi-max-frequency = <31250000>;
+		page-size = <2048>;
+		block-size = <17>;
+		cdns,read-delay = <4>;
+		cdns,tshsl-ns = <1>;
+		cdns,tsd2d-ns = <1>;
+		cdns,tchsh-ns = <1>;
+		cdns,tslch-ns = <1>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
+	};
+};
+
+&sdio0 {
+	broken-cd;
+	bus-width = <4>;
+	cap-sd-highspeed;
+	max-frequency = <10000000>;
+	status = "okay";
+};
+
+&sdio1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	cap-power-off-card;
+	max-frequency = <10000000>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	non-removable;
+	status = "okay";
+
+	wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+	};
+};
+
+&sfivefb {
+	status = "okay";
+
+	/*
+	pp1 {
+		pp-id = <1>;
+		fifo-out;
+		src-format = <COLOR_YUV420_NV21>;
+		src-width = <800>;
+		src-height = <480>;
+		dst-format = <COLOR_RGB888_ARGB>;
+		dst-width = <800>;
+		dst-height = <480>;
+	};
+	*/
+
+	tda_998x_1080p {
+		compatible = "starfive,display-dev";
+		panel_name = "tda_998x_1080p";
+		panel_lcd_id = <22>;  /* 1080p */
+		interface_info = "rgb_interface";
+		refresh_en = <1>;
+		bits-per-pixel = <16>;
+		physical-width = <62>;
+		physical-height = <114>;
+		panel-width = <1920>;
+		panel-height = <1080>;
+		pixel-clock = <78000000>;
+		/*dyn_fps;*/		/*dynamic frame rate support*/
+
+		/*.flags = PREFER_CMD_SEND_MONOLITHIC | CE_CMD_SEND_MONOLITHIC | RESUME_WITH_PREFER | RESUME_WITH_CE*/
+		/*gamma-command-monolithic;*/
+		/*ce-command-monolithic;*/
+		/*resume-with-gamma;*/
+		/*resume-with-ce;*/
+
+		/*mipi info*/
+		mipi-byte-clock = <78000>;
+		mipi-escape-clock = <13000>;
+		lane-no = <4>;
+		display_mode = "video_mode";		/*video_mode, command_mode*/
+
+		/*
+		auto_stop_clklane_en;
+		im_pin_val;*/
+
+		color_bits = <COLOR_CODE_24BIT>;
+		/*is_18bit_loosely;*/
+
+		/*video mode info*/
+		h-pulse-width = <44>;
+		h-back-porch = <148>;
+		h-front-porch = <88>;
+		v-pulse-width = <5>;
+		v-back-porch = <36>;
+		v-front-porch = <4>;
+		status = "okay";
+		sync_pol = "vsync_high_act";		/*vsync_high_act, hsync_high_act*/
+		lp_cmd_en;
+		/*lp_hfp_en;*/
+		/*lp_hbp_en;*/
+		/*lp_vact_en;*/
+		lp_vfp_en;
+		lp_vbp_en;
+		lp_vsa_en;
+		traffic-mode = "burst_with_sync_pulses";	/*non_burst_with_sync_pulses, non_burst_with_sync_events*/
+
+		/*phy info*/
+		data_tprepare = /bits/ 8 <0>;
+		data_hs_zero = /bits/ 8 <0>;
+		data_hs_exit = /bits/ 8 <0>;
+		data_hs_trail = /bits/ 8 <0>;
+
+		/*te info*/
+		te_source = "external_pin";			/*external_pin, dsi_te_trigger*/
+		te_trigger_mode = "rising_edge";		/*rising_edge, high_1000us*/
+		te_enable = <0>;
+		cm_te_effect_sync_enable = <0>;			/*used in command mode*/
+		te_count_per_sec = <64>;				/*used in esd*/
+
+		/*ext info*/
+		/*
+		crc_rx_en;
+		ecc_rx_en;
+		eotp_rx_en;
+		*/
+		eotp_tx_en;
+
+		dev_read_time = <0x7fff>;
+		/*type cmd return_count return_code*/
+		/*id_read_cmd_info = [];*/
+		/*pre_id_cmd = [];*/
+		/*esd_read_cmd_info = [DCS_CMD 0A 01 9C];*/
+		/*pre_esd_cmd = [];*/
+		/*panel-on-command = [];*/
+		/*panel-off-command = [];*/
+		/*reset-sequence = <1 5>, <0 10>, <1 30>;*/
+		/*
+		panel-gamma-warm-command = [
+
+		];
+		panel-gamma-nature-command = [
+
+		];
+		panel-gamma-cool-command = [
+
+		];
+
+		panel-ce-std-command = [
+
+		];
+		panel-ce-vivid-command = [
+
+		];
+		*/
+	};
+
+	seeed_5_inch {
+		compatible = "starfive,display-dev";
+		panel_name = "seeed_5_inch";
+		panel_lcd_id = <22>;  /* 480p */
+		interface_info = "mipi_interface";
+		refresh_en = <1>;
+		bits-per-pixel = <24>;
+		physical-width = <62>;
+		physical-height = <114>;
+		panel-width = <800>;
+		panel-height = <480>;
+		pixel-clock = <27500000>;
+		/*dyn_fps;*/		/*dynamic frame rate support*/
+		fps = <50>;
+		/*.flags = PREFER_CMD_SEND_MONOLITHIC | CE_CMD_SEND_MONOLITHIC | RESUME_WITH_PREFER | RESUME_WITH_CE*/
+		/*gamma-command-monolithic;*/
+		/*ce-command-monolithic;*/
+		/*resume-with-gamma;*/
+		/*resume-with-ce;*/
+
+		/*mipi info*/
+		mipi-byte-clock = <78000>;
+		mipi-escape-clock = <13000>;
+		lane-no = <1>;
+		display_mode = "video_mode";		/*video_mode, command_mode*/
+
+		/*
+		auto_stop_clklane_en;
+		im_pin_val;
+		*/
+
+		color_bits = <COLOR_CODE_24BIT>;
+		/*is_18bit_loosely;*/
+
+		/*video mode info*/
+		h-pulse-width = <10>;
+		h-back-porch = <20>;
+		h-front-porch = <50>;
+		v-pulse-width = <5>;
+		v-back-porch = <5>;
+		v-front-porch = <135>;
+
+		/*seeed panel mode info*/
+		dphy_bps   = <700000000>;
+		dsi_burst_mode = <0>;
+		dsi_sync_pulse = <1>;
+		// bytes
+		dsi_hsa   = <30>;
+		dsi_hbp   = <211>;
+		dsi_hfp   = <159>;
+		// lines
+		dsi_vsa   = <5>;
+		dsi_vbp   = <5>;
+		dsi_vfp   = <134>;
+
+		status = "okay";
+		sync_pol = "vsync_high_act";		/*vsync_high_act, hsync_high_act*/
+		lp_cmd_en;
+		/*lp_hfp_en;*/
+		/*lp_hbp_en;*/
+		/*lp_vact_en;*/
+		lp_vfp_en;
+		lp_vbp_en;
+		lp_vsa_en;
+		traffic-mode = "burst_with_sync_pulses";	/*non_burst_with_sync_pulses, non_burst_with_sync_events*/
+
+		/*phy info*/
+		data_tprepare = /bits/ 8 <0>;
+		data_hs_zero = /bits/ 8 <0>;
+		data_hs_exit = /bits/ 8 <0>;
+		data_hs_trail = /bits/ 8 <0>;
+
+		/*te info*/
+		te_source = "external_pin";			/*external_pin, dsi_te_trigger*/
+		te_trigger_mode = "rising_edge";		/*rising_edge, high_1000us*/
+		te_enable = <0>;
+		cm_te_effect_sync_enable = <0>;			/*used in command mode*/
+		te_count_per_sec = <64>;				/*used in esd*/
+
+		/*ext info*/
+		/*
+		crc_rx_en;
+		ecc_rx_en;
+		eotp_rx_en;
+		*/
+		eotp_tx_en;
+
+		dev_read_time = <0x7fff>;
+		/*type cmd return_count return_code*/
+		/*id_read_cmd_info = [];*/
+		/*pre_id_cmd = [];*/
+		/*esd_read_cmd_info = [DCS_CMD 0A 01 9C];*/
+		/*pre_esd_cmd = [];*/
+		/*panel-on-command = [];*/
+		/*panel-off-command = [];*/
+		/*reset-sequence = <1 5>, <0 10>, <1 30>;*/
+		/*
+		panel-gamma-warm-command = [
+
+		];
+		panel-gamma-nature-command = [
+
+		];
+		panel-gamma-cool-command = [
+
+		];
+
+		panel-ce-std-command = [
+
+		];
+		panel-ce-vivid-command = [
+
+		];
+		*/
+	};
+};
+
+&spi2 {
+	status = "okay";
+
+	spi_dev0: spi@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <10000000>;
+		reg = <0>;
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart3 {
+	status = "okay";
+};
+
+&usb3 {
+	dr_mode = "host";
+	status = "okay";
+};
