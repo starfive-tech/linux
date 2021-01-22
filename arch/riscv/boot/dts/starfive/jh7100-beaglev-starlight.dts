@@ -1,0 +1,774 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2021 StarFive Technology Co., Ltd. */
+
+/dts-v1/;
+#include "jh7100.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/pinctrl/pinctrl-starfive.h>
+#include <dt-bindings/starfive_fb.h>
+
+/ {
+	model = "BeagleV Starlight Beta";
+	compatible = "beagle,beaglev-starlight-jh7100", "starfive,jh7100";
+
+	aliases {
+		mshc0 = &sdio0;
+		mshc1 = &sdio1;
+		serial0 = &uart3;
+		serial1 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	cpus {
+		timebase-frequency = <6250000>;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x2 0x0>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led-ack {
+			gpios = <&gpio 43 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_HEARTBEAT;
+			linux,default-trigger = "heartbeat";
+			label = "ack";
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x28000000>;
+			alignment = <0x0 0x1000>;
+			alloc-ranges = <0x0 0xa0000000 0x0 0x28000000>;
+			linux,cma-default;
+		};
+
+		jpu_reserved: framebuffer@c9000000 {
+			reg = <0x0 0xc9000000 0x0 0x4000000>;
+		};
+
+		nvdla_reserved: framebuffer@d0000000 {
+			no-map;
+			reg = <0x0 0xd0000000 0x0 0x28000000>;
+		};
+
+		vin_reserved: framebuffer@f9000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0xf9000000 0x0 0x1000000>;
+		};
+
+		sffb_reserved: framebuffer@fb000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0xfb000000 0x0 0x2000000>;
+		};
+	};
+
+	wifi_pwrseq: wifi-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpio 37 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&gmac {
+	snps,reset-gpios = <&gpio 63 GPIO_ACTIVE_LOW>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac_pins>;
+};
+
+&gpio {
+	/* don't reset gpio mux for serial console on uart3 */
+	starfive,keep-gpiomux = <13 14>;
+
+	gmac_pins: gmac-0 {
+		gtxclk-pins {
+			pins = <PAD_FUNC_SHARE(115)>;
+			bias-pull-up;
+			drive-strength = <35>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+		miitxclk-pins {
+			pins = <PAD_FUNC_SHARE(116)>;
+			bias-pull-up;
+			drive-strength = <14>;
+			input-enable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+		tx-pins {
+			pins = <PAD_FUNC_SHARE(117)>,
+			       <PAD_FUNC_SHARE(119)>,
+			       <PAD_FUNC_SHARE(120)>,
+			       <PAD_FUNC_SHARE(121)>,
+			       <PAD_FUNC_SHARE(122)>,
+			       <PAD_FUNC_SHARE(123)>,
+			       <PAD_FUNC_SHARE(124)>,
+			       <PAD_FUNC_SHARE(125)>,
+			       <PAD_FUNC_SHARE(126)>;
+			bias-pull-up;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+		rxclk-pins {
+			pins = <PAD_FUNC_SHARE(127)>;
+			bias-pull-up;
+			drive-strength = <14>;
+			input-enable;
+			input-schmitt-disable;
+			slew-rate = <6>;
+		};
+		rxer-pins {
+			pins = <PAD_FUNC_SHARE(129)>;
+			bias-pull-up;
+			drive-strength = <14>;
+			input-enable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+		rx-pins {
+			pins = <PAD_FUNC_SHARE(128)>,
+			       <PAD_FUNC_SHARE(130)>,
+			       <PAD_FUNC_SHARE(131)>,
+			       <PAD_FUNC_SHARE(132)>,
+			       <PAD_FUNC_SHARE(133)>,
+			       <PAD_FUNC_SHARE(134)>,
+			       <PAD_FUNC_SHARE(135)>,
+			       <PAD_FUNC_SHARE(136)>,
+			       <PAD_FUNC_SHARE(137)>,
+			       <PAD_FUNC_SHARE(138)>,
+			       <PAD_FUNC_SHARE(139)>,
+			       <PAD_FUNC_SHARE(140)>,
+			       <PAD_FUNC_SHARE(141)>;
+			bias-pull-up;
+			drive-strength = <14>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+	};
+
+	i2c0_pins: i2c0-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(62, GPO_LOW,
+				  GPO_I2C0_PAD_SCK_OEN,
+				  GPI_I2C0_PAD_SCK_IN)>,
+				 <GPIOMUX(61, GPO_LOW,
+				  GPO_I2C0_PAD_SDA_OEN,
+				  GPI_I2C0_PAD_SDA_IN)>;
+			bias-disable; /* external pull-up */
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c1_pins: i2c1-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(47, GPO_LOW,
+				  GPO_I2C1_PAD_SCK_OEN,
+				  GPI_I2C1_PAD_SCK_IN)>,
+				 <GPIOMUX(48, GPO_LOW,
+				  GPO_I2C1_PAD_SDA_OEN,
+				  GPI_I2C1_PAD_SDA_IN)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c2_pins: i2c2-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(60, GPO_LOW,
+				  GPO_I2C2_PAD_SCK_OEN,
+				  GPI_I2C2_PAD_SCK_IN)>,
+				 <GPIOMUX(59, GPO_LOW,
+				  GPO_I2C2_PAD_SDA_OEN,
+				  GPI_I2C2_PAD_SDA_IN)>;
+			bias-disable; /* external pull-up */
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	pwm_pins: pwm-0 {
+		pwm-pins {
+			pinmux = <GPIOMUX(7,
+				  GPO_PWM_PAD_OUT_BIT0,
+				  GPO_PWM_PAD_OE_N_BIT0,
+				  GPI_NONE)>,
+				 <GPIOMUX(5,
+				  GPO_PWM_PAD_OUT_BIT1,
+				  GPO_PWM_PAD_OE_N_BIT1,
+				  GPI_NONE)>,
+				 <GPIOMUX(45,
+				  GPO_PWM_PAD_OUT_BIT2,
+				  GPO_PWM_PAD_OE_N_BIT2,
+				  GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sdio0_pins: sdio0-0 {
+		clk-pins {
+			pinmux = <GPIOMUX(54, GPO_SDIO0_PAD_CCLK_OUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+		sdio-pins {
+			pinmux = <GPIOMUX(55, GPO_LOW, GPO_DISABLE,
+				  GPI_SDIO0_PAD_CARD_DETECT_N)>,
+				 <GPIOMUX(53,
+				  GPO_SDIO0_PAD_CCMD_OUT,
+				  GPO_SDIO0_PAD_CCMD_OEN,
+				  GPI_SDIO0_PAD_CCMD_IN)>,
+				 <GPIOMUX(49,
+				  GPO_SDIO0_PAD_CDATA_OUT_BIT0,
+				  GPO_SDIO0_PAD_CDATA_OEN_BIT0,
+				  GPI_SDIO0_PAD_CDATA_IN_BIT0)>,
+				 <GPIOMUX(50,
+				  GPO_SDIO0_PAD_CDATA_OUT_BIT1,
+				  GPO_SDIO0_PAD_CDATA_OEN_BIT1,
+				  GPI_SDIO0_PAD_CDATA_IN_BIT1)>,
+				 <GPIOMUX(51,
+				  GPO_SDIO0_PAD_CDATA_OUT_BIT2,
+				  GPO_SDIO0_PAD_CDATA_OEN_BIT2,
+				  GPI_SDIO0_PAD_CDATA_IN_BIT2)>,
+				 <GPIOMUX(52,
+				  GPO_SDIO0_PAD_CDATA_OUT_BIT3,
+				  GPO_SDIO0_PAD_CDATA_OEN_BIT3,
+				  GPI_SDIO0_PAD_CDATA_IN_BIT3)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	sdio1_pins: sdio1-0 {
+		clk-pins {
+			pinmux = <GPIOMUX(33, GPO_SDIO1_PAD_CCLK_OUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+		sdio-pins {
+			pinmux = <GPIOMUX(29,
+				  GPO_SDIO1_PAD_CCMD_OUT,
+				  GPO_SDIO1_PAD_CCMD_OEN,
+				  GPI_SDIO1_PAD_CCMD_IN)>,
+				 <GPIOMUX(36,
+				  GPO_SDIO1_PAD_CDATA_OUT_BIT0,
+				  GPO_SDIO1_PAD_CDATA_OEN_BIT0,
+				  GPI_SDIO1_PAD_CDATA_IN_BIT0)>,
+				 <GPIOMUX(30,
+				  GPO_SDIO1_PAD_CDATA_OUT_BIT1,
+				  GPO_SDIO1_PAD_CDATA_OEN_BIT1,
+				  GPI_SDIO1_PAD_CDATA_IN_BIT1)>,
+				 <GPIOMUX(34,
+				  GPO_SDIO1_PAD_CDATA_OUT_BIT2,
+				  GPO_SDIO1_PAD_CDATA_OEN_BIT2,
+				  GPI_SDIO1_PAD_CDATA_IN_BIT2)>,
+				 <GPIOMUX(31,
+				  GPO_SDIO1_PAD_CDATA_OUT_BIT3,
+				  GPO_SDIO1_PAD_CDATA_OEN_BIT3,
+				  GPI_SDIO1_PAD_CDATA_IN_BIT3)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	spi2_pins: spi2-0 {
+		mosi-pin {
+			pinmux = <GPIOMUX(18, GPO_SPI2_PAD_TXD,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+		miso-pin {
+			pinmux = <GPIOMUX(16, GPO_LOW, GPO_DISABLE,
+				  GPI_SPI2_PAD_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+		sck-pin {
+			pinmux = <GPIOMUX(12, GPO_SPI2_PAD_SCK_OUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+		ss-pins {
+			pinmux = <GPIOMUX(15, GPO_SPI2_PAD_SS_0_N,
+				  GPO_ENABLE, GPI_NONE)>,
+				 <GPIOMUX(11, GPO_SPI2_PAD_SS_1_N,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	uart0_pins: uart0-0 {
+		rx-pins {
+			pinmux = <GPIOMUX(40, GPO_LOW, GPO_DISABLE,
+				  GPI_UART0_PAD_SIN)>,
+				 <GPIOMUX(39, GPO_LOW, GPO_DISABLE,
+				  GPI_UART0_PAD_CTSN)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+		tx-pins {
+			pinmux = <GPIOMUX(41, GPO_UART0_PAD_SOUT,
+				  GPO_ENABLE, GPI_NONE)>,
+				 <GPIOMUX(42, GPO_UART0_PAD_RTSN,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	uart3_pins: uart3-0 {
+		rx-pins {
+			pinmux = <GPIOMUX(13, GPO_LOW, GPO_DISABLE,
+				  GPI_UART3_PAD_SIN)>;
+			bias-pull-up;
+			drive-strength = <14>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+		tx-pins {
+			pinmux = <GPIOMUX(14, GPO_UART3_PAD_SOUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+
+	imx219@10 {
+		compatible = "imx219";
+		reg = <0x10>;
+		reset-gpio = <&gpio 58 GPIO_ACTIVE_HIGH>;
+	};
+
+	pmic@5e {
+		compatible = "ti,tps65086";
+		reg = <0x5e>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		regulators {
+		};
+	};
+
+	tda998x@70 {
+		compatible = "nxp,tda998x";
+		reg = <0x70>;
+	};
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <100>;
+	i2c-scl-falling-time-ns = <100>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+};
+
+&i2c2 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+	status = "okay";
+
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+	};
+};
+
+&osc_sys {
+	clock-frequency = <25000000>;
+};
+
+&osc_aud {
+	clock-frequency = <27000000>;
+};
+
+&ptc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm_pins>;
+	status = "okay";
+};
+
+&qspi {
+	nor_flash: nor-flash@0 {
+		compatible = "spi-flash";
+		reg = <0>;
+		spi-max-frequency = <31250000>;
+		page-size = <256>;
+		block-size = <16>;
+		cdns,read-delay = <4>;
+		cdns,tshsl-ns = <1>;
+		cdns,tsd2d-ns = <1>;
+		cdns,tchsh-ns = <1>;
+		cdns,tslch-ns = <1>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
+	};
+
+	nand_flash: nand-flash@1 {
+		compatible = "spi-flash-nand";
+		reg = <1>;
+		spi-max-frequency = <31250000>;
+		page-size = <2048>;
+		block-size = <17>;
+		cdns,read-delay = <4>;
+		cdns,tshsl-ns = <1>;
+		cdns,tsd2d-ns = <1>;
+		cdns,tchsh-ns = <1>;
+		cdns,tslch-ns = <1>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <1>;
+	};
+};
+
+&sdio0 {
+	broken-cd;
+	bus-width = <4>;
+	cap-sd-highspeed;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdio0_pins>;
+	status = "okay";
+};
+
+&sdio1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	cap-power-off-card;
+	max-frequency = <10000000>;
+	mmc-pwrseq = <&wifi_pwrseq>;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdio1_pins>;
+	status = "okay";
+
+	wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+	};
+};
+
+&sfivefb {
+	status = "okay";
+
+	/*
+	pp1 {
+		pp-id = <1>;
+		fifo-out;
+		src-format = <COLOR_YUV420_NV21>;
+		src-width = <800>;
+		src-height = <480>;
+		dst-format = <COLOR_RGB888_ARGB>;
+		dst-width = <800>;
+		dst-height = <480>;
+	};
+	*/
+
+	tda_998x_1080p {
+		compatible = "starfive,display-dev";
+		panel_name = "tda_998x_1080p";
+		panel_lcd_id = <22>;  /* 1080p */
+		interface_info = "rgb_interface";
+		refresh_en = <1>;
+		bits-per-pixel = <16>;
+		physical-width = <62>;
+		physical-height = <114>;
+		panel-width = <1920>;
+		panel-height = <1080>;
+		pixel-clock = <78000000>;
+		/*dyn_fps;*/		/*dynamic frame rate support*/
+
+		/*.flags = PREFER_CMD_SEND_MONOLITHIC | CE_CMD_SEND_MONOLITHIC | RESUME_WITH_PREFER | RESUME_WITH_CE*/
+		/*gamma-command-monolithic;*/
+		/*ce-command-monolithic;*/
+		/*resume-with-gamma;*/
+		/*resume-with-ce;*/
+
+		/*mipi info*/
+		mipi-byte-clock = <78000>;
+		mipi-escape-clock = <13000>;
+		lane-no = <4>;
+		display_mode = "video_mode";		/*video_mode, command_mode*/
+
+		/*
+		auto_stop_clklane_en;
+		im_pin_val;*/
+
+		color_bits = <COLOR_CODE_24BIT>;
+		/*is_18bit_loosely;*/
+
+		/*video mode info*/
+		h-pulse-width = <44>;
+		h-back-porch = <148>;
+		h-front-porch = <88>;
+		v-pulse-width = <5>;
+		v-back-porch = <36>;
+		v-front-porch = <4>;
+		status = "okay";
+		sync_pol = "vsync_high_act";		/*vsync_high_act, hsync_high_act*/
+		lp_cmd_en;
+		/*lp_hfp_en;*/
+		/*lp_hbp_en;*/
+		/*lp_vact_en;*/
+		lp_vfp_en;
+		lp_vbp_en;
+		lp_vsa_en;
+		traffic-mode = "burst_with_sync_pulses";	/*non_burst_with_sync_pulses, non_burst_with_sync_events*/
+
+		/*phy info*/
+		data_tprepare = /bits/ 8 <0>;
+		data_hs_zero = /bits/ 8 <0>;
+		data_hs_exit = /bits/ 8 <0>;
+		data_hs_trail = /bits/ 8 <0>;
+
+		/*te info*/
+		te_source = "external_pin";			/*external_pin, dsi_te_trigger*/
+		te_trigger_mode = "rising_edge";		/*rising_edge, high_1000us*/
+		te_enable = <0>;
+		cm_te_effect_sync_enable = <0>;			/*used in command mode*/
+		te_count_per_sec = <64>;				/*used in esd*/
+
+		/*ext info*/
+		/*
+		crc_rx_en;
+		ecc_rx_en;
+		eotp_rx_en;
+		*/
+		eotp_tx_en;
+
+		dev_read_time = <0x7fff>;
+		/*type cmd return_count return_code*/
+		/*id_read_cmd_info = [];*/
+		/*pre_id_cmd = [];*/
+		/*esd_read_cmd_info = [DCS_CMD 0A 01 9C];*/
+		/*pre_esd_cmd = [];*/
+		/*panel-on-command = [];*/
+		/*panel-off-command = [];*/
+		/*reset-sequence = <1 5>, <0 10>, <1 30>;*/
+		/*
+		panel-gamma-warm-command = [
+
+		];
+		panel-gamma-nature-command = [
+
+		];
+		panel-gamma-cool-command = [
+
+		];
+
+		panel-ce-std-command = [
+
+		];
+		panel-ce-vivid-command = [
+
+		];
+		*/
+	};
+
+	seeed_5_inch {
+		compatible = "starfive,display-dev";
+		panel_name = "seeed_5_inch";
+		panel_lcd_id = <22>;  /* 480p */
+		interface_info = "mipi_interface";
+		refresh_en = <1>;
+		bits-per-pixel = <24>;
+		physical-width = <62>;
+		physical-height = <114>;
+		panel-width = <800>;
+		panel-height = <480>;
+		pixel-clock = <27500000>;
+		/*dyn_fps;*/		/*dynamic frame rate support*/
+		fps = <50>;
+		/*.flags = PREFER_CMD_SEND_MONOLITHIC | CE_CMD_SEND_MONOLITHIC | RESUME_WITH_PREFER | RESUME_WITH_CE*/
+		/*gamma-command-monolithic;*/
+		/*ce-command-monolithic;*/
+		/*resume-with-gamma;*/
+		/*resume-with-ce;*/
+
+		/*mipi info*/
+		mipi-byte-clock = <78000>;
+		mipi-escape-clock = <13000>;
+		lane-no = <1>;
+		display_mode = "video_mode";		/*video_mode, command_mode*/
+
+		/*
+		auto_stop_clklane_en;
+		im_pin_val;
+		*/
+
+		color_bits = <COLOR_CODE_24BIT>;
+		/*is_18bit_loosely;*/
+
+		/*video mode info*/
+		h-pulse-width = <10>;
+		h-back-porch = <20>;
+		h-front-porch = <50>;
+		v-pulse-width = <5>;
+		v-back-porch = <5>;
+		v-front-porch = <135>;
+
+		/*seeed panel mode info*/
+		dphy_bps   = <700000000>;
+		dsi_burst_mode = <0>;
+		dsi_sync_pulse = <1>;
+		// bytes
+		dsi_hsa   = <30>;
+		dsi_hbp   = <211>;
+		dsi_hfp   = <159>;
+		// lines
+		dsi_vsa   = <5>;
+		dsi_vbp   = <5>;
+		dsi_vfp   = <134>;
+
+		status = "okay";
+		sync_pol = "vsync_high_act";		/*vsync_high_act, hsync_high_act*/
+		lp_cmd_en;
+		/*lp_hfp_en;*/
+		/*lp_hbp_en;*/
+		/*lp_vact_en;*/
+		lp_vfp_en;
+		lp_vbp_en;
+		lp_vsa_en;
+		traffic-mode = "burst_with_sync_pulses";	/*non_burst_with_sync_pulses, non_burst_with_sync_events*/
+
+		/*phy info*/
+		data_tprepare = /bits/ 8 <0>;
+		data_hs_zero = /bits/ 8 <0>;
+		data_hs_exit = /bits/ 8 <0>;
+		data_hs_trail = /bits/ 8 <0>;
+
+		/*te info*/
+		te_source = "external_pin";			/*external_pin, dsi_te_trigger*/
+		te_trigger_mode = "rising_edge";		/*rising_edge, high_1000us*/
+		te_enable = <0>;
+		cm_te_effect_sync_enable = <0>;			/*used in command mode*/
+		te_count_per_sec = <64>;				/*used in esd*/
+
+		/*ext info*/
+		/*
+		crc_rx_en;
+		ecc_rx_en;
+		eotp_rx_en;
+		*/
+		eotp_tx_en;
+
+		dev_read_time = <0x7fff>;
+		/*type cmd return_count return_code*/
+		/*id_read_cmd_info = [];*/
+		/*pre_id_cmd = [];*/
+		/*esd_read_cmd_info = [DCS_CMD 0A 01 9C];*/
+		/*pre_esd_cmd = [];*/
+		/*panel-on-command = [];*/
+		/*panel-off-command = [];*/
+		/*reset-sequence = <1 5>, <0 10>, <1 30>;*/
+		/*
+		panel-gamma-warm-command = [
+
+		];
+		panel-gamma-nature-command = [
+
+		];
+		panel-gamma-cool-command = [
+
+		];
+
+		panel-ce-std-command = [
+
+		];
+		panel-ce-vivid-command = [
+
+		];
+		*/
+	};
+};
+
+&spi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi2_pins>;
+	status = "okay";
+
+	spi_dev0: spi@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <10000000>;
+		reg = <0>;
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pins>;
+	status = "okay";
+};
+
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3_pins>;
+	status = "okay";
+};
+
+&usb3 {
+	dr_mode = "host";
+	status = "okay";
+};
