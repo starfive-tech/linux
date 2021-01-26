@@ -1223,7 +1223,6 @@ static void dw_mci_setup_bus(struct dw_mci_slot *slot, bool force_clkinit)
 		sdmmc_cmd_bits |= SDMMC_CMD_VOLT_SWITCH;
 
 	slot->mmc->actual_clock = 0;
-
 	if (!clock) {
 		mci_writel(host, CLKENA, 0);
 		mci_send_cmd(slot, sdmmc_cmd_bits, 0);
@@ -1592,6 +1591,28 @@ static int dw_mci_get_ro(struct mmc_host *mmc)
 	return read_only;
 }
 
+static int dw_mci_set_sdio_status(struct mmc_host *mmc, int val)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+
+	//	if (!(mmc->restrict_caps & RESTRICT_CARD_TYPE_SDIO))
+	//	return 0;
+	printk("this is debug %s %s %d\n",__FILE__,__func__,__LINE__);
+	spin_lock_bh(&host->lock);
+
+	if (val)
+		set_bit(DW_MMC_CARD_PRESENT, &slot->flags);
+	else
+		clear_bit(DW_MMC_CARD_PRESENT, &slot->flags);
+
+	spin_unlock_bh(&host->lock);
+
+	mmc_detect_change(slot->mmc, 20);
+
+	return 0;
+}
+
 static void dw_mci_hw_reset(struct mmc_host *mmc)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
@@ -1791,6 +1812,7 @@ static const struct mmc_host_ops dw_mci_ops = {
 	.pre_req		= dw_mci_pre_req,
 	.post_req		= dw_mci_post_req,
 	.set_ios		= dw_mci_set_ios,
+	.set_sdio_status	= dw_mci_set_sdio_status,
 	.get_ro			= dw_mci_get_ro,
 	.get_cd			= dw_mci_get_cd,
 	.hw_reset               = dw_mci_hw_reset,

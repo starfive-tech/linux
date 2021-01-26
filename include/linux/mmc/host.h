@@ -141,6 +141,7 @@ struct mmc_host_ops {
 
 	/* Check if the card is pulling dat[0:3] low */
 	int	(*card_busy)(struct mmc_host *host);
+	int     (*set_sdio_status)(struct mmc_host *host, int val);
 
 	/* The tuning command opcode value is different for SD and eMMC cards */
 	int	(*execute_tuning)(struct mmc_host *host, u32 opcode);
