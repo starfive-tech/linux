@@ -107,6 +107,7 @@ static int starfive_direction_output(struct gpio_chip *gc, unsigned offset, int 
 		return -EINVAL;
 	raw_spin_lock_irqsave(&chip->lock, flags);
 	writel_relaxed(0x0, chip->base + GPIO_DOEN_X_REG + offset * 8);
+	writel_relaxed(value, chip->base + GPIO_DOUT_X_REG + offset * 8);
 	raw_spin_unlock_irqrestore(&chip->lock, flags);
 
 	return 0;
