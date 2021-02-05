@@ -855,7 +855,7 @@ EXPORT_SYMBOL_GPL(hwmon_device_register_with_info);
  */
 struct device *hwmon_device_register(struct device *dev)
 {
-	dev_warn(dev,
+	dev_dbg(dev,
 		 "hwmon_device_register() is deprecated. Please convert the driver to use hwmon_device_register_with_info().\n");
 
 	return __hwmon_device_register(dev, NULL, NULL, NULL, NULL);
