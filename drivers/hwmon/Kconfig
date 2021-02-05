@@ -1872,6 +1872,14 @@ config SENSORS_TMP513
 	  This driver can also be built as a module. If so, the module
 	  will be called tmp513.
 
+config SENSORS_SFCTMP
+	tristate "SFC temperature sensor and compatible"
+	help
+	  If you say yes here you get support for SFC tmperature sensor.
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called sfc_temp.
+
 config SENSORS_VEXPRESS
 	tristate "Versatile Express"
 	depends on VEXPRESS_CONFIG
