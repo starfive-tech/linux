@@ -44,7 +44,9 @@
 #define SIFIVE_L2_FLUSH64_LINE_LEN 64
 
 static void __iomem *l2_base = NULL;
+#if !IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
 static int g_irq[SIFIVE_L2_MAX_ECCINTR];
+#endif
 static struct riscv_cacheinfo_ops l2_cache_ops;
 
 enum {
@@ -195,6 +197,7 @@ static const struct attribute_group *l2_get_priv_group(struct cacheinfo *this_le
 		return NULL;
 }
 
+#if !IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
 static irqreturn_t l2_int_handler(int irq, void *device)
 {
 	unsigned int add_h, add_l;
@@ -240,12 +243,15 @@ static irqreturn_t l2_int_handler(int irq, void *device)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 static int __init sifive_l2_init(void)
 {
 	struct device_node *np;
 	struct resource res;
+#if !IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
 	int i, rc;
+#endif
 
 	np = of_find_matching_node(NULL, sifive_l2_ids);
 	if (!np)
@@ -258,6 +264,7 @@ static int __init sifive_l2_init(void)
 	if (!l2_base)
 		return -ENOMEM;
 
+#if !IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
 	for (i = 0; i < SIFIVE_L2_MAX_ECCINTR; i++) {
 		g_irq[i] = irq_of_parse_and_map(np, i);
 		rc = request_irq(g_irq[i], l2_int_handler, 0, "l2_ecc", NULL);
@@ -266,6 +273,7 @@ static int __init sifive_l2_init(void)
 			return rc;
 		}
 	}
+#endif
 
 	l2_config_read();
 
