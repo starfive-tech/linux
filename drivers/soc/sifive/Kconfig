@@ -22,4 +22,8 @@ config SIFIVE_L2_FLUSH_SIZE
 
 endif # SIFIVE_L2_FLUSH
 
+config SIFIVE_L2_IRQ_DISABLE
+	bool "Disable Level 2 Cache Controller interrupts"
+	default y if SOC_STARFIVE_VIC7100
+
 endif
