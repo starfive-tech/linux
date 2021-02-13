@@ -273,6 +273,44 @@ static int plic_starting_cpu(unsigned int cpu)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#define SIFIVE_L2_MAX_ECCINTR 4
+#else
+#define SIFIVE_L2_MAX_ECCINTR 3
+#endif
+static const struct of_device_id sifive_l2_ids[] = {
+	{ .compatible = "sifive,fu540-c000-ccache" },
+	{ .compatible = "starfive,ccache0" },
+	{ /* end of table */ },
+};
+
+static void sifive_l2_irq_disable(struct plic_handler *handler)
+{
+	int i, irq;
+	struct of_phandle_args oirq;
+
+	struct device_node *np = of_find_matching_node(NULL, sifive_l2_ids);
+	if (!np) {
+		pr_err("Can't get L2 cache device node.\n");
+		return;
+	}
+
+	for (i = 0; i < SIFIVE_L2_MAX_ECCINTR; i++) {
+		if (!of_irq_parse_one(np, i, &oirq)) {
+			irq = *oirq.args;
+			if (irq) {
+				pr_info("disable L2 cache irq %d in plic\n", irq);
+				plic_toggle(handler, irq, 0);
+				continue;
+			}
+		}
+		pr_err("Can't get L2 cache irq(#%d).\n", i);
+	}
+}
+#endif
+
+
 static int __init plic_init(struct device_node *node,
 		struct device_node *parent)
 {
@@ -366,6 +404,9 @@ static int __init plic_init(struct device_node *node,
 done:
 		for (hwirq = 1; hwirq <= nr_irqs; hwirq++)
 			plic_toggle(handler, hwirq, 0);
+#if IS_ENABLED(CONFIG_SIFIVE_L2_IRQ_DISABLE)
+		sifive_l2_irq_disable(handler);
+#endif
 		nr_handlers++;
 	}
 
