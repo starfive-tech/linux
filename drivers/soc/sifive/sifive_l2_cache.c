@@ -17,6 +17,10 @@
 #define SIFIVE_L2_DIRECCFIX_HIGH 0x104
 #define SIFIVE_L2_DIRECCFIX_COUNT 0x108
 
+#define SIFIVE_L2_DIRECCFAIL_LOW 0x120
+#define SIFIVE_L2_DIRECCFAIL_HIGH 0x124
+#define SIFIVE_L2_DIRECCFAIL_COUNT 0x128
+
 #define SIFIVE_L2_DATECCFIX_LOW 0x140
 #define SIFIVE_L2_DATECCFIX_HIGH 0x144
 #define SIFIVE_L2_DATECCFIX_COUNT 0x148
@@ -31,7 +35,11 @@
 #define SIFIVE_L2_WAYENABLE 0x08
 #define SIFIVE_L2_ECCINJECTERR 0x40
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#define SIFIVE_L2_MAX_ECCINTR 4
+#else
 #define SIFIVE_L2_MAX_ECCINTR 3
+#endif
 
 #define SIFIVE_L2_FLUSH64_LINE_LEN 64
 
@@ -40,7 +48,12 @@ static int g_irq[SIFIVE_L2_MAX_ECCINTR];
 static struct riscv_cacheinfo_ops l2_cache_ops;
 
 enum {
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	DIR_UNCORR = 0,
+	DIR_CORR,
+#else
 	DIR_CORR = 0,
+#endif
 	DATA_CORR,
 	DATA_UNCORR,
 };
@@ -97,6 +110,7 @@ static void l2_config_read(void)
 
 static const struct of_device_id sifive_l2_ids[] = {
 	{ .compatible = "sifive,fu540-c000-ccache" },
+	{ .compatible = "starfive,ccache0" },
 	{ /* end of table */ },
 };
 
@@ -185,6 +199,17 @@ static irqreturn_t l2_int_handler(int irq, void *device)
 {
 	unsigned int add_h, add_l;
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	if (irq == g_irq[DIR_UNCORR]) {
+		add_h = readl(l2_base + SIFIVE_L2_DIRECCFAIL_HIGH);
+		add_l = readl(l2_base + SIFIVE_L2_DIRECCFAIL_LOW);
+		pr_err("L2CACHE: DirFail @ 0x%08X.%08X\n", add_h, add_l);
+		/* Reading this register clears the DirFail interrupt sig */
+		readl(l2_base + SIFIVE_L2_DIRECCFAIL_COUNT);
+		atomic_notifier_call_chain(&l2_err_chain, SIFIVE_L2_ERR_TYPE_UE,
+					   "DirECCFail");
+	}
+#endif
 	if (irq == g_irq[DIR_CORR]) {
 		add_h = readl(l2_base + SIFIVE_L2_DIRECCFIX_HIGH);
 		add_l = readl(l2_base + SIFIVE_L2_DIRECCFIX_LOW);
