@@ -15565,16 +15565,26 @@ dhd_wait_pend8021x(struct net_device *dev)
 	return pend;
 }
 
+static inline int warn_unsupported(struct file *file, const char *op)
+{
+	pr_warn_ratelimited(
+		"kernel %s not supported for file %pD4 (pid: %d comm: %.20s)\n",
+		op, file, current->pid, current->comm);
+	return -EINVAL;
+}
+
 #if defined(DHD_DEBUG)
 int write_file(const char * file_name, uint32 flags, uint8 *buf, int size)
 {
 	int ret = 0;
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
 	loff_t pos = 0;
-	/* change to KERNEL_DS address limit */
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
+	struct kvec iov = {
+		.iov_base	= (void *)buf,
+		.iov_len	= min_t(size_t, size, MAX_RW_COUNT),
+	};
+	struct kiocb kiocb;
+	struct iov_iter iter;
 
 	/* open file to write */
 	fp = filp_open(file_name, flags, 0664);
@@ -15583,8 +15593,16 @@ int write_file(const char * file_name, uint32 flags, uint8 *buf, int size)
 		goto exit;
 	}
 
+	if (unlikely(!fp->f_op->write_iter || fp->f_op->write)) {
+		ret = warn_unsupported(fp, "write");
+		goto exit;
+	}
+
 	/* Write buf to file */
-	ret = compat_vfs_write(fp, buf, size, &pos);
+	init_sync_kiocb(&kiocb, fp);
+	kiocb.ki_pos = pos;
+	iov_iter_kvec(&iter, WRITE, &iov, 1, iov.iov_len);
+	ret = fp->f_op->write_iter(&kiocb, &iter);
 	if (ret < 0) {
 		DHD_ERROR(("write file error, err = %d\n", ret));
 		goto exit;
@@ -15602,9 +15620,6 @@ exit:
 	/* close file before return */
 	if (!IS_ERR(fp))
 		filp_close(fp, current->files);
-
-	/* restore previous address limit */
-	set_fs(old_fs);
 
 	return ret;
 }
@@ -20036,12 +20051,13 @@ int
 dhd_write_file(const char *filepath, char *buf, int buf_len)
 {
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
+	struct kvec iov = {
+		.iov_base	= (void *)buf,
+		.iov_len	= min_t(size_t, buf_len, MAX_RW_COUNT),
+        };
+	struct kiocb kiocb;
+	struct iov_iter iter;
 	int ret = 0;
-
-	/* change to KERNEL_DS address limit */
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
 
 	/* File is always created. */
 	fp = filp_open(filepath, O_RDWR | O_CREAT, 0664);
@@ -20050,21 +20066,25 @@ dhd_write_file(const char *filepath, char *buf, int buf_len)
 			__FUNCTION__, filepath, PTR_ERR(fp)));
 		ret = BCME_ERROR;
 	} else {
-		if (fp->f_mode & FMODE_WRITE) {
-			ret = compat_vfs_write(fp, buf, buf_len, &fp->f_pos);
-			if (ret < 0) {
-				DHD_ERROR(("%s: Couldn't write file '%s'\n",
-					__FUNCTION__, filepath));
-				ret = BCME_ERROR;
-			} else {
-				ret = BCME_OK;
+		if (unlikely(!fp->f_op->write_iter || fp->f_op->write)) {
+			ret = warn_unsupported(fp, "write");
+		} else {
+			if (fp->f_mode & FMODE_WRITE) {
+				init_sync_kiocb(&kiocb, fp);
+				kiocb.ki_pos = fp->f_pos;
+				iov_iter_kvec(&iter, WRITE, &iov, 1, iov.iov_len);
+				ret = fp->f_op->write_iter(&kiocb, &iter);
+				if (ret < 0) {
+					DHD_ERROR(("%s: Couldn't write file '%s'\n",
+						__FUNCTION__, filepath));
+					ret = BCME_ERROR;
+				} else {
+					ret = BCME_OK;
+				}
 			}
 		}
 		filp_close(fp, NULL);
 	}
-
-	/* restore previous address limit */
-	set_fs(old_fs);
 
 	return ret;
 }
@@ -20073,25 +20093,28 @@ int
 dhd_read_file(const char *filepath, char *buf, int buf_len)
 {
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
+	struct kvec iov = {
+		.iov_base	= (void *)buf,
+		.iov_len	= min_t(size_t, buf_len, MAX_RW_COUNT),
+        };
+	struct kiocb kiocb;
+	struct iov_iter iter;
 	int ret;
-
-	/* change to KERNEL_DS address limit */
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
 
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		set_fs(old_fs);
 		DHD_ERROR(("%s: File %s doesn't exist\n", __FUNCTION__, filepath));
 		return BCME_ERROR;
 	}
 
-	ret = compat_kernel_read(fp, 0, buf, buf_len);
-	filp_close(fp, NULL);
-
-	/* restore previous address limit */
-	set_fs(old_fs);
+        if (unlikely(!fp->f_op->read_iter || fp->f_op->read)) {
+		ret = warn_unsupported(fp, "read");
+	} else {
+          init_sync_kiocb(&kiocb, fp);
+          kiocb.ki_pos = fp->f_pos;
+          iov_iter_kvec(&iter, READ, &iov, 1, iov.iov_len);
+          ret = fp->f_op->read_iter(&kiocb, &iter);
+	}
 
 	/* Return the number of bytes read */
 	if (ret > 0) {
@@ -20102,6 +20125,8 @@ dhd_read_file(const char *filepath, char *buf, int buf_len)
 			__FUNCTION__, filepath, ret));
 		ret = BCME_ERROR;
 	}
+
+	filp_close(fp, NULL);
 
 	return ret;
 }

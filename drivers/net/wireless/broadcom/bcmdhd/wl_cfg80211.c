@@ -9737,13 +9737,17 @@ exit:
 }
 
 static void
-wl_cfg80211_mgmt_frame_register(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev,
-	u16 frame, bool reg)
+wl_cfg80211_update_mgmt_frame_registrations(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev,
+	struct mgmt_frame_regs *upd)
 {
 
-	WL_DBG(("frame_type: %x, reg: %d\n", frame, reg));
+	WL_DBG(("frame_type: %x, reg: %x,%x,%x\n",
+		upd->interface_stypes,
+		upd->global_stypes,
+		upd->global_mcast_stypes,
+		upd->interface_mcast_stypes));
 
-	if (frame != (IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_REQ))
+	if (upd->interface_stypes != (IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_REQ))
 		return;
 
 	return;
@@ -12716,7 +12720,7 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.remain_on_channel = wl_cfg80211_remain_on_channel,
 	.cancel_remain_on_channel = wl_cfg80211_cancel_remain_on_channel,
 	.mgmt_tx = wl_cfg80211_mgmt_tx,
-	.mgmt_frame_register = wl_cfg80211_mgmt_frame_register,
+	.update_mgmt_frame_registrations = wl_cfg80211_update_mgmt_frame_registrations,
 	.change_bss = wl_cfg80211_change_bss,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)) || defined(WL_COMPAT_WIRELESS)
 	.set_channel = wl_cfg80211_set_channel,

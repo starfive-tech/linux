@@ -299,14 +299,11 @@ dev_wlc_ioctl(
 	ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = '\0';
 	ifr.ifr_data = (caddr_t) &ioc;
 
-	fs = get_fs();
-	set_fs(get_ds());
 #if defined(WL_USE_NETDEV_OPS)
 	ret = dev->netdev_ops->ndo_do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
 #else
 	ret = dev->do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
 #endif
-	set_fs(fs);
 
 	return ret;
 }
