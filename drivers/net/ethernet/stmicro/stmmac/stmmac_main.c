@@ -3736,9 +3736,6 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	else
 		desc_size = sizeof(struct dma_desc);
 
-	entry = STMMAC_GET_ENTRY(entry, DMA_DEFAULT_TX_SIZE);
-	tx_q->cur_tx = entry;
-
 	tx_q->tx_tail_addr = tx_q->dma_tx_phy + (tx_q->cur_tx * desc_size);
 	stmmac_set_tx_tail_ptr(priv, priv->ioaddr, tx_q->tx_tail_addr, queue);
 	stmmac_tx_timer_arm(priv, queue);
