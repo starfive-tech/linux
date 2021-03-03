@@ -97,6 +97,13 @@ struct page {
 		};
 		struct {	/* page_pool used by netstack */
 			/**
+			 * @pp_magic: magic value to avoid recycling non
+			 * page_pool allocated pages.
+			 */
+			unsigned long pp_magic;
+			struct page_pool *pp;
+			unsigned long _pp_mapping_pad;
+			/**
 			 * @dma_addr: might require a 64-bit value on
 			 * 32-bit architectures.
 			 */
@@ -130,7 +137,10 @@ struct page {
 			};
 		};
 		struct {	/* Tail pages of compound page */
-			unsigned long compound_head;	/* Bit zero is set */
+			/* Bit zero is set
+			 * Bit one if pfmemalloc page
+			 */
+			unsigned long compound_head;
 
 			/* First tail page only */
 			unsigned char compound_dtor;
