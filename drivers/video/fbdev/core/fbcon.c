@@ -82,6 +82,15 @@
 
 #include "fbcon.h"
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#include <video/starfive_fb.h>
+#include <soc/starfive/vic7100.h>
+static inline void fbcon_flush_dcache(unsigned long start, unsigned long len)
+{
+	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + start % 64);
+}
+#endif
+
 #ifdef FBCONDEBUG
 #  define DPRINTK(fmt, args...) printk(KERN_DEBUG "%s: " fmt, __func__ , ## args)
 #else
@@ -1697,7 +1706,9 @@ static bool fbcon_scroll(struct vc_data *vc, unsigned int t, unsigned int b,
 	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
 	struct fbcon_display *p = &fb_display[vc->vc_num];
 	int scroll_partial = info->flags & FBINFO_PARTIAL_PAN_OK;
-
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
+#endif
 	if (fbcon_is_inactive(vc, info))
 		return true;
 
@@ -1725,6 +1736,10 @@ static bool fbcon_scroll(struct vc_data *vc, unsigned int t, unsigned int b,
 							(b - count)),
 				    vc->vc_video_erase_char,
 				    vc->vc_size_row * count);
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+			fbcon_flush_dcache(sf_dev->fb.fix.smem_start,
+					   sf_dev->fb.screen_size);
+#endif
 			return true;
 
 		case SCROLL_WRAP_MOVE:
@@ -1796,6 +1811,10 @@ static bool fbcon_scroll(struct vc_data *vc, unsigned int t, unsigned int b,
 							(b - count)),
 				    vc->vc_video_erase_char,
 				    vc->vc_size_row * count);
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+			fbcon_flush_dcache(sf_dev->fb.fix.smem_start,
+					   sf_dev->fb.screen_size);
+#endif
 			return true;
 		}
 		break;
@@ -1815,6 +1834,10 @@ static bool fbcon_scroll(struct vc_data *vc, unsigned int t, unsigned int b,
 							t),
 				    vc->vc_video_erase_char,
 				    vc->vc_size_row * count);
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+			fbcon_flush_dcache(sf_dev->fb.fix.smem_start,
+					   sf_dev->fb.screen_size);
+#endif
 			return true;
 
 		case SCROLL_WRAP_MOVE:
@@ -1884,6 +1907,10 @@ static bool fbcon_scroll(struct vc_data *vc, unsigned int t, unsigned int b,
 							t),
 				    vc->vc_video_erase_char,
 				    vc->vc_size_row * count);
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+			fbcon_flush_dcache(sf_dev->fb.fix.smem_start,
+					   sf_dev->fb.screen_size);
+#endif
 			return true;
 		}
 	}
