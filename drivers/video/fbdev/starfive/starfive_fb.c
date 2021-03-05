@@ -294,6 +294,13 @@ static int sf_fb_set_par(struct fb_info *info)
 			var->transp.length = 0;
 	}
 
+	if (!strcmp(sf_dev->dis_dev_name, "tda_998x_1080p")) {
+		var->red.offset   = 0;  var->red.length   = 5;
+		var->green.offset = 5;	var->green.length = 6;
+		var->blue.offset  = 11;	var->blue.length  = 5;
+		var->transp.offset = var->transp.length = 0;
+	}
+
 	return 0;
 }
 
@@ -390,6 +397,13 @@ static int sf_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			var->green.length = 8;
 			var->blue.length  = 8;
 			var->transp.length = 0;
+	}
+
+	if (!strcmp(sf_dev->dis_dev_name, "tda_998x_1080p")) {
+		var->red.offset   = 0;  var->red.length   = 5;
+		var->green.offset = 5;	var->green.length = 6;
+		var->blue.offset  = 11;	var->blue.length  = 5;
+		var->transp.offset = var->transp.length = 0;
 	}
 
 	return 0;
@@ -940,7 +954,11 @@ static int sf_fb_pp_video_mode_init(struct sf_fb_data *sf_dev, struct pp_video_m
 		src->format = sf_dev->pp[pp_id].src.format;
 		src->width = sf_dev->pp[pp_id].src.width;
 		src->height = sf_dev->pp[pp_id].src.height;
+#ifndef CONFIG_FRAMEBUFFER_CONSOLE
 		src->addr = 0xf9000000;
+#else
+		src->addr = 0xfb000000;
+#endif
 		dst->format = sf_dev->pp[pp_id].dst.format;
 		dst->width = sf_dev->pp[pp_id].dst.width;
 		dst->height = sf_dev->pp[pp_id].dst.height;
@@ -1051,8 +1069,6 @@ static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 	return ret;
 }
 
-//#define FB_BUFF_VIN
-
 static int starfive_fb_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1099,11 +1115,11 @@ static int starfive_fb_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-#if defined(CONFIG_FB_STARFIVE_VIDEO)
-/* the address 0xf9000000 is required by VIN,
- * the case used to check VIN image data path only
- * is not normal application.
- */
+#ifndef CONFIG_FRAMEBUFFER_CONSOLE
+	/*the address 0xf9000000 is required in CMA modem by VIN,
+	*the case used to check VIN image data path only
+	*is not normal application.
+	*/
 	sf_dev->fb.fix.smem_start = 0xf9000000;
 #endif
 
