@@ -169,6 +169,9 @@ struct dma_extended_desc {
 	__le32 des5;	/* Reserved */
 	__le32 des6;	/* Tx/Rx Timestamp Low */
 	__le32 des7;	/* Tx/Rx Timestamp High */
+#ifdef CONFIG_FPGA_GMAC_FLUSH_DDR
+	__le32 pad[8];  /*align to 64*/
+#endif
 };
 
 /* Enhanced descriptor for TBS */
