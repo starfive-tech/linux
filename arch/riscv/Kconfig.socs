@@ -31,6 +31,19 @@ config SOC_STARFIVE_VIC7100
 	help
 	  This enables support for StarFive VIC7100 SoC Platform Hardware.
 
+menu "StarFive VIC7100 SoC Debug Option"
+	depends on SOC_STARFIVE_VIC7100
+
+config SOC_STARFIVE_VIC7100_I2C_GPIO
+	bool "VIC7100 SOC I2C GPIO init"
+	depends on I2C_DESIGNWARE_CORE
+	depends on SOC_STARFIVE_VIC7100
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  enable VIC7100 DW I2C GPIO init in Synopsys DesignWare master driver
+
+endmenu
+
 config SOC_VIRT
 	bool "QEMU Virt Machine"
 	select CLINT_TIMER if RISCV_M_MODE
