@@ -20,6 +20,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/gpio-starfive-vic.h>
 
 #include "i2c-designware-core.h"
 
@@ -162,6 +163,48 @@ static int i2c_dw_set_timings_master(struct dw_i2c_dev *dev)
 
 	dev_dbg(dev->dev, "Bus speed: %s\n", i2c_freq_mode_string(t->bus_freq_hz));
 	return 0;
+}
+
+static void i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
+{
+#ifdef CONFIG_SOC_STARFIVE_VIC7100_I2C_GPIO
+	if((dev->scl_gpio > 0) && (dev->sda_gpio > 0)) {
+		SET_GPIO_dout_LOW(dev->scl_gpio);
+		SET_GPIO_dout_LOW(dev->sda_gpio);
+		SET_GPIO_doen_reverse_(dev->scl_gpio,1);
+		SET_GPIO_doen_reverse_(dev->sda_gpio,1);
+		switch(dev->adapter.nr) {
+		case 0:
+			SET_GPIO_doen_i2c0_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c0_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c0_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c0_pad_sda_in(dev->sda_gpio);
+			break;
+		case 1:
+			SET_GPIO_doen_i2c1_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c1_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c1_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c1_pad_sda_in(dev->sda_gpio);
+			break;
+		case 2:
+			SET_GPIO_doen_i2c2_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c2_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c2_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c2_pad_sda_in(dev->sda_gpio);
+			break;
+		case 3:
+			SET_GPIO_doen_i2c3_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c3_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c3_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c3_pad_sda_in(dev->sda_gpio);
+			break;
+		default:
+			dev_err(dev->dev, "i2c adapter number is invalid\n");
+		}
+	} else
+		dev_err(dev->dev, "scl/sda gpio number is invalid !\n");
+#endif
+	return;
 }
 
 /**
@@ -927,6 +970,7 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 		dev_err(dev->dev, "failure adding adapter: %d\n", ret);
 	pm_runtime_put_noidle(dev->dev);
 
+	i2c_dw_configure_gpio(dev);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(i2c_dw_probe_master);
