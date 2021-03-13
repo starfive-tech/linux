@@ -286,6 +286,8 @@ struct dw_i2c_dev {
 	int			(*init)(struct dw_i2c_dev *dev);
 	int			(*set_sda_hold_time)(struct dw_i2c_dev *dev);
 	int			mode;
+	int			scl_gpio;
+	int			sda_gpio;
 	struct i2c_bus_recovery_info rinfo;
 	bool			suspended;
 };

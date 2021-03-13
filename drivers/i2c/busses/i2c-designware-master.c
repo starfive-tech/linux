@@ -20,6 +20,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/gpio-starfive-vic.h>
 
 #include "i2c-designware-core.h"
 
@@ -162,6 +163,45 @@ static int i2c_dw_set_timings_master(struct dw_i2c_dev *dev)
 
 	dev_dbg(dev->dev, "Bus speed: %s\n", i2c_freq_mode_string(t->bus_freq_hz));
 	return 0;
+}
+
+static void i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
+{
+#ifdef CONFIG_SOC_STARFIVE_VIC7100_I2C_GPIO
+	if (dev->scl_gpio > 0 && dev->sda_gpio > 0) {
+		const char *name = dev_name(dev->dev);
+
+		SET_GPIO_dout_LOW(dev->scl_gpio);
+		SET_GPIO_dout_LOW(dev->sda_gpio);
+		SET_GPIO_doen_reverse_(dev->scl_gpio, 1);
+		SET_GPIO_doen_reverse_(dev->sda_gpio, 1);
+		if (!strcmp(name, "118b0000.i2c")) {
+			SET_GPIO_doen_i2c0_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c0_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c0_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c0_pad_sda_in(dev->sda_gpio);
+		} else if (!strcmp(name, "118c0000.i2c")) {
+			SET_GPIO_doen_i2c1_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c1_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c1_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c1_pad_sda_in(dev->sda_gpio);
+		} else if (!strcmp(name, "12450000.i2c")) {
+			SET_GPIO_doen_i2c2_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c2_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c2_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c2_pad_sda_in(dev->sda_gpio);
+		} else if (!strcmp(name, "12460000.i2c")) {
+			SET_GPIO_doen_i2c3_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c3_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c3_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c3_pad_sda_in(dev->sda_gpio);
+		} else {
+			dev_err(dev->dev, "unknown i2c adapter: %s\n", name);
+		}
+	} else {
+		dev_err(dev->dev, "scl/sda gpio number is invalid !\n");
+	}
+#endif
 }
 
 /**
@@ -914,6 +954,8 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 	ret = i2c_dw_init_recovery_info(dev);
 	if (ret)
 		return ret;
+
+	i2c_dw_configure_gpio(dev);
 
 	/*
 	 * Increment PM usage count during adapter registration in order to
