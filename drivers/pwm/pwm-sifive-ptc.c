@@ -167,6 +167,10 @@ static int sifive_pwm_ptc_apply(struct pwm_chip *chip, struct pwm_device *dev, s
 	printk("[sifive_pwm_ptc_config]lrc ok....\n");
 #endif
 
+	/* Clear REG_RPTC_CNTR after setting period & duty_cycle*/
+	reg_addr = REG_PTC_RPTC_CNTR(pwm->regs, dev->hwpwm);
+	iowrite32(0, reg_addr);
+
 	return 0;
 }
 
