@@ -37,8 +37,10 @@
 #include <asm/irq.h>
 #include <asm/div64.h>
 #include <asm/cacheflush.h>
+#include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/of_reserved_mem.h>
+#include <linux/of_address.h>
 #include <video/stf-vin.h>
 
 #include "starfive_fb.h"
@@ -636,18 +638,21 @@ static struct fb_ops sf_fb_ops = {
 
 static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 {
-	int  ret;
-	dma_addr_t fb_phys_addr = 0;
+	struct resource res_mem;
+	struct device_node *node;
 
-	ret = of_reserved_mem_device_init(sf_dev->dev);
-	if(ret) {
-		dev_err(sf_dev->dev, "Could not get reserved memory\n");
-		return ret;
+	node = of_parse_phandle(sf_dev->dev->of_node, "memory-region", 0);
+	if(node) {
+		of_address_to_resource(node, 0, &res_mem);
+		sf_dev->fb.screen_size = resource_size(&res_mem);
+		sf_dev->fb.fix.smem_start = res_mem.start;
+	} else {
+		dev_err(sf_dev->dev, "Could not get reserved memory.\n");
+		return -ENOMEM;
 	}
-	sf_dev->fb.screen_base = dma_alloc_coherent(sf_dev->dev, FB_MEM_SIZE, &fb_phys_addr, GFP_KERNEL);
-	sf_dev->fb.screen_size = FB_MEM_SIZE;
 
-	sf_dev->fb.fix.smem_start = fb_phys_addr;
+	sf_dev->fb.screen_base = devm_ioremap_resource(sf_dev->dev, &res_mem);
+	memset(sf_dev->fb.screen_base, 0, sf_dev->fb.screen_size);
 
 	return 0;
 }
