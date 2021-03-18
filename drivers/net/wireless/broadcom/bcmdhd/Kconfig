@@ -1,7 +1,5 @@
 config BCMDHD
 	tristate "Broadcom FullMAC wireless cards support"
-    select HIBERNATE_CALLBACKS
-    select PM_SLEEP 
 	help
 	  This module adds support for wireless adapters based on
 	  Broadcom FullMAC chipset.
