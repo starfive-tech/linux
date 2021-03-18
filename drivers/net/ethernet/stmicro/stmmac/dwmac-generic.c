@@ -16,6 +16,41 @@
 #include "stmmac.h"
 #include "stmmac_platform.h"
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+static void dwmac_fixed_speed(void *priv, unsigned int speed)
+{
+	u32	value;
+	void	*addr;
+
+	addr = ioremap(0x118001ec, 0x4);
+	value = readl(addr);
+	value &= ~(0xFF);
+
+	switch (speed) {
+		case SPEED_1000:
+			value |= 0x4;
+			break;
+		case SPEED_100:
+			value |= 0x14;
+			break;
+		case SPEED_10:
+			value |= 0xc8;
+			break;
+		default:
+			iounmap(addr);
+			return;
+	}
+
+	/*0x118001ec地址为mac的时钟分频寄存器，低8位为分频值
+	*mac的root时钟为500M,gtxclk需求的时钟如下：
+	*1000M: gtxclk为125M，分频值为500/125=0x4
+	*100M: gtxclk为25M，分频值为500/25=0x14
+	*10M:gtxclk为2.5M，分频值为500/2.5=0xc8*/
+	writel(value, addr); /*set gmac gtxclk*/
+	iounmap(addr);
+}
+#endif
+
 static int dwmac_generic_probe(struct platform_device *pdev)
 {
 	struct plat_stmmacenet_data *plat_dat;
@@ -52,6 +87,9 @@ static int dwmac_generic_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_remove_config_dt;
 	}
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	plat_dat->fix_mac_speed = dwmac_fixed_speed;
+#endif
 
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (ret)
