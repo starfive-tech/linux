@@ -9,5 +9,6 @@
 
 extern char _start[];
 extern char _start_kernel[];
+extern char __alt_start[], __alt_end[];
 
 #endif /* __ASM_SECTIONS_H */

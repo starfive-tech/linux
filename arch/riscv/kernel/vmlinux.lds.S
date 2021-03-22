@@ -52,6 +52,14 @@ SECTIONS
 		EXIT_DATA
 	}
 	PERCPU_SECTION(L1_CACHE_BYTES)
+
+	. = ALIGN(8);
+        .alternative : {
+                __alt_start = .;
+                *(.alternative)
+                __alt_end = .;
+        }
+
 	__init_end = .;
 
 	. = ALIGN(SECTION_ALIGN);
