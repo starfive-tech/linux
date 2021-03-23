@@ -1708,7 +1708,8 @@ void xhci_update_bw_info(struct xhci_hcd *xhci,
 #endif
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx, sizeof(struct xhci_input_control_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx, sizeof(struct xhci_input_control_ctx));
 #endif
 	}
 }
@@ -2250,6 +2251,9 @@ static void xhci_set_hc_event_deq(struct xhci_hcd *xhci)
 	xhci_dbg_trace(xhci, trace_xhci_dbg_init,
 			"// Write event ring dequeue pointer, "
 			"preserving EHB bit");
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(deq, sizeof(union xhci_trb));
+#endif
 	xhci_write_64(xhci, ((u64) deq & (u64) ~ERST_PTR_MASK) | temp,
 			&xhci->ir_set->erst_dequeue);
 }

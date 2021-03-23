@@ -736,6 +736,9 @@ error:
 						bDeviceProtocol))
 			((struct usb_device_descriptor *) ubuf)->
 				bDeviceProtocol = USB_HUB_PR_HS_SINGLE_TT;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(ubuf, len);
+#endif
 	}
 
 	kfree(tbuf);
@@ -1330,6 +1333,7 @@ static void hcd_free_coherent(struct usb_bus *bus, dma_addr_t *dma_handle,
 		memcpy(vaddr, *vaddr_handle, size);
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
 		cdns_virt_flush_dcache(vaddr, size);
+		cdns_virt_flush_dcache(*vaddr_handle, size);
 #endif
 	}
 	hcd_buffer_free(bus, size + sizeof(vaddr), *vaddr_handle, *dma_handle);
@@ -1492,8 +1496,8 @@ int usb_hcd_map_urb_for_dma(struct usb_hcd *hcd, struct urb *urb,
 					urb->transfer_buffer_length,
 					dir);
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-			cdns_flush_dcache(urb->setup_dma,
-					  sizeof(struct usb_ctrlrequest));
+			cdns_flush_dcache(urb->transfer_dma,
+					  urb->transfer_buffer_length + 8);
 #endif
 			if (ret == 0)
 				urb->transfer_flags |= URB_MAP_LOCAL;
@@ -2987,6 +2991,9 @@ int usb_hcd_setup_local_mem(struct usb_hcd *hcd, phys_addr_t phys_addr,
 	if (IS_ERR(local_mem))
 		return PTR_ERR(local_mem);
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(phys_addr,size);
+#endif
 	/*
 	 * Here we pass a dma_addr_t but the arg type is a phys_addr_t.
 	 * It's not backed by system memory and thus there's no kernel mapping
@@ -3000,6 +3007,9 @@ int usb_hcd_setup_local_mem(struct usb_hcd *hcd, phys_addr_t phys_addr,
 		return err;
 	}
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(dma,size);
+#endif
 	return 0;
 }
 EXPORT_SYMBOL_GPL(usb_hcd_setup_local_mem);

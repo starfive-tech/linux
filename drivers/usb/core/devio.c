@@ -266,6 +266,9 @@ static int usbdev_mmap(struct file *file, struct vm_area_struct *vma)
 		if (dma_mmap_coherent(hcd->self.sysdev, vma, mem, dma_handle,
 				      size)) {
 			dec_usb_memory_use_count(usbm, &usbm->vma_use_count);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_flush_dcache(dma_handle, size);
+#endif
 			return -EAGAIN;
 		}
 	}

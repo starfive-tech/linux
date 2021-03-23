@@ -1960,6 +1960,9 @@ static int xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 
 	ep_ctx = xhci_get_ep_ctx(xhci, virt_dev->in_ctx, ep_index);
 	trace_xhci_add_endpoint(ep_ctx);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
 
 	xhci_dbg(xhci, "add ep 0x%x, slot id %d, new drop flags = %#x, new add flags = %#x\n",
 			(unsigned int) ep->desc.bEndpointAddress,
@@ -2757,8 +2760,9 @@ static int xhci_reserve_bandwidth(struct xhci_hcd *xhci,
 					virt_dev->tt_info);
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx,
-				sizeof(struct xhci_input_control_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx,
+					       sizeof(struct xhci_input_control_ctx));
 #endif
 	}
 	/* Overwrite the information stored in the endpoints' bw_info */
@@ -2778,8 +2782,9 @@ static int xhci_reserve_bandwidth(struct xhci_hcd *xhci,
 					virt_dev->tt_info);
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx,
-				sizeof(struct xhci_input_control_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx,
+					       sizeof(struct xhci_input_control_ctx));
 #endif
 	}
 
@@ -2821,8 +2826,9 @@ static int xhci_reserve_bandwidth(struct xhci_hcd *xhci,
 					virt_dev->tt_info);
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx,
-				       sizeof(struct xhci_input_control_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx,
+					       sizeof(struct xhci_input_control_ctx));
 #endif
 		/* Revert the endpoint back to its old information */
 		memcpy(&virt_dev->eps[i].bw_info, &ep_bw_info[i],
@@ -2841,8 +2847,9 @@ static int xhci_reserve_bandwidth(struct xhci_hcd *xhci,
 					virt_dev->tt_info);
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx,
-					sizeof(struct xhci_input_control_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx,
+					       sizeof(struct xhci_input_control_ctx));
 #endif
 	}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
@@ -2908,6 +2915,7 @@ static int xhci_configure_endpoint(struct xhci_hcd *xhci,
 	trace_xhci_configure_endpoint_ctrl_ctx(ctrl_ctx);
 	trace_xhci_configure_endpoint(slot_ctx);
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_ctx, sizeof(*ctrl_ctx));
 	cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
 #endif
 
@@ -3071,7 +3079,8 @@ static int xhci_check_bandwidth(struct usb_hcd *hcd, struct usb_device *udev)
 			xhci_check_bw_drop_ep_streams(xhci, virt_dev, i);
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(ctrl_ctx, sizeof(*ctrl_ctx));
+		else
+			cdns_virt_flush_dcache(ctrl_ctx, sizeof(*ctrl_ctx));
 #endif
 	}
 	xhci_zero_in_ctx(xhci, virt_dev);
@@ -4266,7 +4275,8 @@ static int xhci_setup_device(struct usb_hcd *hcd, struct usb_device *udev,
 			goto out;
 		}
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-		cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+		else
+			cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
 #endif
 	}
 
@@ -4316,6 +4326,10 @@ static int xhci_setup_device(struct usb_hcd *hcd, struct usb_device *udev,
 #endif
 
 	trace_xhci_address_ctrl_ctx(ctrl_ctx);
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_virt_flush_dcache(ctrl_ctx, sizeof(*ctrl_ctx));
+#endif
+
 	spin_lock_irqsave(&xhci->lock, flags);
 	trace_xhci_setup_device(virt_dev);
 	ret = xhci_queue_address_device(xhci, command, virt_dev->in_ctx->dma,

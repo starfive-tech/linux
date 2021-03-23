@@ -751,6 +751,9 @@ static void xhci_unmap_td_bounce_buffer(struct xhci_hcd *xhci,
 		return;
 	}
 
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	cdns_flush_dcache(seg->bounce_dma, ring->bounce_buf_len);
+#endif
 	dma_unmap_single(dev, seg->bounce_dma, ring->bounce_buf_len,
 			 DMA_FROM_DEVICE);
 	/* for in tranfers we need to copy the data from bounce to sg */
@@ -1284,8 +1287,16 @@ static void xhci_handle_cmd_reset_ep(struct xhci_hcd *xhci, int slot_id,
 	}
 
 	/* if this was a soft reset, then restart */
-	if ((le32_to_cpu(trb->generic.field[3])) & TRB_TSP)
+	if ((le32_to_cpu(trb->generic.field[3])) & TRB_TSP) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(trb, sizeof(union xhci_trb));
+#endif
 		ring_doorbell_for_active_rings(xhci, slot_id, ep_index);
+	}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+	else
+		cdns_virt_flush_dcache(trb, sizeof(union xhci_trb));
+#endif
 }
 
 static void xhci_handle_cmd_enable_slot(struct xhci_hcd *xhci, int slot_id,
@@ -2031,7 +2042,7 @@ static int xhci_requires_manual_halt_cleanup(struct xhci_hcd *xhci,
 	/* TRB completion codes that may require a manual halt cleanup */
 	if (trb_comp_code == COMP_USB_TRANSACTION_ERROR ||
 			trb_comp_code == COMP_BABBLE_DETECTED_ERROR ||
-			trb_comp_code == COMP_SPLIT_TRANSACTION_ERROR)
+			trb_comp_code == COMP_SPLIT_TRANSACTION_ERROR) {
 		/* The 0.95 spec says a babbling control endpoint
 		 * is not halted. The 0.96 spec says it is.  Some HW
 		 * claims to be 0.95 compliant, but it halts the control
@@ -2044,6 +2055,11 @@ static int xhci_requires_manual_halt_cleanup(struct xhci_hcd *xhci,
 #endif
 			return 1;
 		}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		else
+			cdns_virt_flush_dcache(ep_ctx, sizeof(*ep_ctx));
+#endif
+	}
 
 	return 0;
 }
@@ -2474,8 +2490,15 @@ static int process_bulk_intr_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		break;
 	case COMP_USB_TRANSACTION_ERROR:
 		if ((ep_ring->err_count++ > MAX_SOFT_RETRY) ||
-		    le32_to_cpu(slot_ctx->tt_info) & TT_SLOT)
+		    le32_to_cpu(slot_ctx->tt_info) & TT_SLOT) {
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 			break;
+		}
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+		cdns_virt_flush_dcache(slot_ctx, sizeof(*slot_ctx));
+#endif
 		*status = 0;
 		xhci_cleanup_halted_endpoint(xhci, slot_id, ep_index,
 					ep_ring->stream_id, td, EP_SOFT_RESET);
@@ -3660,6 +3683,10 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
 				       trb_buff_len);
 				le64_to_cpus(&send_addr);
 				field |= TRB_IDT;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+				cdns_virt_flush_dcache(urb->transfer_buffer, trb_buff_len);
+				cdns_flush_dcache(send_addr, trb_buff_len);
+#endif
 			}
 		}
 
@@ -3815,6 +3842,12 @@ int xhci_queue_ctrl_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
 			       urb->transfer_buffer_length);
 			le64_to_cpus(&addr);
 			field |= TRB_IDT;
+#ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
+			cdns_virt_flush_dcache(urb->transfer_buffer,
+			       urb->transfer_buffer_length);
+			cdns_flush_dcache(addr,
+			       urb->transfer_buffer_length);
+#endif
 		} else {
 			addr = (u64) urb->transfer_dma;
 		}
@@ -3830,7 +3863,7 @@ int xhci_queue_ctrl_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
 			field |= TRB_DIR_IN;
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
 		cdns_virt_flush_dcache(setup, sizeof(struct usb_ctrlrequest));
-		cdns_flush_dcache(urb->transfer_dma, urb->transfer_buffer_length);
+		cdns_flush_dcache(addr, urb->transfer_buffer_length);
 #endif
 		queue_trb(xhci, ep_ring, true,
 				lower_32_bits(addr),
