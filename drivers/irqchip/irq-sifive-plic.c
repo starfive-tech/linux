@@ -82,8 +82,8 @@ struct plic_handler {
 	/* To record interrupts that are enabled before suspend. */
 	u32 enable_reg[MAX_DEVICES / 32];
 };
-static int plic_parent_irq;
-static bool plic_cpuhp_setup_done;
+static int plic_parent_irq __ro_after_init;
+static bool plic_cpuhp_setup_done __ro_after_init;
 static DEFINE_PER_CPU(struct plic_handler, plic_handlers);
 static struct plic_priv *priv_data;
 
