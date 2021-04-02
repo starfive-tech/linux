@@ -1676,7 +1676,14 @@ static inline void usb_fill_bulk_urb(struct urb *urb,
 	urb->complete = complete_fn;
 	urb->context = context;
 #ifdef CONFIG_USB_CDNS3_HOST_FLUSH_DMA
-	cdns_virt_flush_dcache(transfer_buffer, buffer_length);
+	{
+		unsigned long start = dw_virt_to_phys(transfer_buffer);
+		
+		if(!(start < CONFIG_SIFIVE_L2_FLUSH_START ||
+		     (start + buffer_length) > (CONFIG_SIFIVE_L2_FLUSH_START +
+				      CONFIG_SIFIVE_L2_FLUSH_SIZE)))
+			cdns_virt_flush_dcache(transfer_buffer, buffer_length);
+	}
 #endif
 }
 
