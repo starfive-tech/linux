@@ -172,58 +172,6 @@ out:
 	return ret;
 }
 
-static void i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
-{
-	if((dev->scl_gpio > 0) && (dev->sda_gpio > 0)) {
-		switch(dev->adapter.nr) {
-		case 0:
-			SET_GPIO_dout_LOW(dev->scl_gpio);
-			SET_GPIO_dout_LOW(dev->sda_gpio);
-			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
-			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
-			SET_GPIO_doen_i2c0_pad_sck_oe(dev->scl_gpio);
-			SET_GPIO_doen_i2c0_pad_sda_oe(dev->sda_gpio);
-			SET_GPIO_i2c0_pad_sck_in(dev->scl_gpio);
-			SET_GPIO_i2c0_pad_sda_in(dev->sda_gpio);
-			break;
-		case 1:
-			SET_GPIO_dout_LOW(dev->scl_gpio);
-			SET_GPIO_dout_LOW(dev->sda_gpio);
-			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
-			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
-			SET_GPIO_doen_i2c1_pad_sck_oe(dev->scl_gpio);
-			SET_GPIO_doen_i2c1_pad_sda_oe(dev->sda_gpio);
-			SET_GPIO_i2c1_pad_sck_in(dev->scl_gpio);
-			SET_GPIO_i2c1_pad_sda_in(dev->sda_gpio);
-			break;
-		case 2:
-			SET_GPIO_dout_LOW(dev->scl_gpio);
-			SET_GPIO_dout_LOW(dev->sda_gpio);
-			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
-			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
-			SET_GPIO_doen_i2c2_pad_sck_oe(dev->scl_gpio);
-			SET_GPIO_doen_i2c2_pad_sda_oe(dev->sda_gpio);
-			SET_GPIO_i2c2_pad_sck_in(dev->scl_gpio);
-			SET_GPIO_i2c2_pad_sda_in(dev->sda_gpio);
-			break;
-		case 3:
-			SET_GPIO_dout_LOW(dev->scl_gpio);
-			SET_GPIO_dout_LOW(dev->sda_gpio);
-			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
-			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
-			SET_GPIO_doen_i2c3_pad_sck_oe(dev->scl_gpio);
-			SET_GPIO_doen_i2c3_pad_sda_oe(dev->sda_gpio);
-			SET_GPIO_i2c3_pad_sck_in(dev->scl_gpio);
-			SET_GPIO_i2c3_pad_sda_in(dev->sda_gpio);
-			break;
-		default:
-			dev_warn(dev->dev, "NOTE: i2c adapter number is invalid\n");
-		}
-	}
-	else
-		dev_warn(dev->dev, "NOTE: scl/sda gpio number is invalid !\n");
-}
-
 /**
  * i2c_dw_init() - Initialize the designware I2C master hardware
  * @dev: device private data
@@ -763,6 +711,7 @@ static void i2c_dw_unprepare_recovery(struct i2c_adapter *adap)
 	i2c_dw_init_master(dev);
 }
 
+#ifndef CONFIG_SOC_STARFIVE_VIC7100
 static int i2c_dw_init_recovery_info(struct dw_i2c_dev *dev)
 {
 	struct i2c_bus_recovery_info *rinfo = &dev->rinfo;
@@ -790,6 +739,7 @@ static int i2c_dw_init_recovery_info(struct dw_i2c_dev *dev)
 
 	return 0;
 }
+#endif
 
 int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 {
@@ -841,11 +791,11 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 			dev->irq, ret);
 		return ret;
 	}
-
+#ifndef CONFIG_SOC_STARFIVE_VIC7100
 	ret = i2c_dw_init_recovery_info(dev);
 	if (ret)
 		return ret;
-
+#endif
 	/*
 	 * Increment PM usage count during adapter registration in order to
 	 * avoid possible spurious runtime suspend when adapter device is
@@ -857,8 +807,6 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 	if (ret)
 		dev_err(dev->dev, "failure adding adapter: %d\n", ret);
 	pm_runtime_put_noidle(dev->dev);
-
-	i2c_dw_configure_gpio(dev);
 
 	return ret;
 }
