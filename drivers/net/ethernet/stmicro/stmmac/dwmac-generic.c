@@ -16,6 +16,50 @@
 #include "stmmac.h"
 #include "stmmac_platform.h"
 
+/*
+ * GMAC_GTXCLK 为 gmac 的时钟分频寄存器，低8位为分频值
+ * bit         name                    access  default         descript
+ * [31]        clk_gmac_gtxclk enable  RW      0x0             "1:enable; 0:disable"
+ * [30]        reserved                -       0x0             reserved
+ * [29:8]      reserved                -       0x0             reserved
+ * [7:0] clk_gmac_gtxclk divide ratio  RW      0x4             divide value
+ *
+ * gmac 的 root 时钟为500M, gtxclk 需求的时钟如下：
+ * 1000M: gtxclk为125M，分频值为500/125 = 0x4
+ * 100M:  gtxclk为25M， 分频值为500/25  = 0x14
+ * 10M:   gtxclk为2.5M，分频值为500/2.5 = 0xc8
+ */
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#define CLKGEN_BASE                    0x11800000
+#define CLKGEN_GMAC_GTXCLK_OFFSET      0x1EC
+#define CLKGEN_GMAC_GTXCLK_ADDR        (CLKGEN_BASE + CLKGEN_GMAC_GTXCLK_OFFSET)
+
+#define CLKGEN_125M_DIV                0x4
+#define CLKGEN_25M_DIV                 0x14
+#define CLKGEN_2_5M_DIV                0xc8
+
+static void dwmac_fixed_speed(void *priv, unsigned int speed)
+{
+	u32 value;
+	void *addr = ioremap(CLKGEN_GMAC_GTXCLK_ADDR, sizeof(value));
+	if (!addr) {
+		pr_err("%s can't remap CLKGEN_GMAC_GTXCLK_ADDR\n", __func__);
+		return;
+	}
+
+	value = readl(addr) & (~0x000000FF);
+
+	switch (speed) {
+		case SPEED_1000: value |= CLKGEN_125M_DIV; break;
+		case SPEED_100:  value |= CLKGEN_25M_DIV;  break;
+		case SPEED_10:   value |= CLKGEN_2_5M_DIV; break;
+		default: iounmap(addr); return;
+	}
+	writel(value, addr); /*set gmac gtxclk*/
+	iounmap(addr);
+}
+#endif
+
 static int dwmac_generic_probe(struct platform_device *pdev)
 {
 	struct plat_stmmacenet_data *plat_dat;
@@ -52,6 +96,9 @@ static int dwmac_generic_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_remove_config_dt;
 	}
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	plat_dat->fix_mac_speed = dwmac_fixed_speed;
+#endif
 
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (ret)
