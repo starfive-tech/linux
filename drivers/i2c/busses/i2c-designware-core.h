@@ -80,6 +80,8 @@
 #define DW_IC_SDA_HOLD_MIN_VERS	0x3131312A
 #define DW_IC_COMP_TYPE		0xfc
 #define DW_IC_COMP_TYPE_VALUE	0x44570140
+#define DW_IC_FS_SPKLEN	0xa0
+#define DW_IC_HS_SPKLEN	0xa4
 
 #define DW_IC_INTR_RX_UNDER	0x001
 #define DW_IC_INTR_RX_OVER	0x002
@@ -178,6 +180,15 @@
 struct clk;
 struct device;
 struct reset_control;
+
+#define CONFIG_I2C_DW_CLOCK_SPEED 55//20//55//20
+
+#define I2C_STD_HCNT		(CONFIG_I2C_DW_CLOCK_SPEED * 4)//0x6//
+#define I2C_STD_LCNT		(CONFIG_I2C_DW_CLOCK_SPEED * 5)//0xf//
+#define I2C_FS_HCNT			((CONFIG_I2C_DW_CLOCK_SPEED * 6) / 8)
+#define I2C_FS_LCNT			((CONFIG_I2C_DW_CLOCK_SPEED * 7) / 8)
+#define I2C_HS_HCNT			((CONFIG_I2C_DW_CLOCK_SPEED * 6) / 8)
+#define I2C_HS_LCNT			((CONFIG_I2C_DW_CLOCK_SPEED * 7) / 8)
 
 /**
  * struct dw_i2c_dev - private i2c-designware data
@@ -284,6 +295,9 @@ struct dw_i2c_dev {
 	int			(*init)(struct dw_i2c_dev *dev);
 	int			(*set_sda_hold_time)(struct dw_i2c_dev *dev);
 	int			mode;
+	int			scl_gpio;
+	int			sda_gpio;
+	bool		auto_calc_lhcnt;
 	struct i2c_bus_recovery_info rinfo;
 	bool			suspended;
 };

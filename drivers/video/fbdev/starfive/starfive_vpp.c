@@ -15,15 +15,15 @@
 */
 
 #include <linux/module.h>
+#include <video/starfive_fb.h>
 
-#include "starfive_fb.h"
 #include "starfive_vpp.h"
 
 //#define SF_PP_DEBUG	1
 #ifdef SF_PP_DEBUG
 	#define PP_PRT(format, args...)  printk(KERN_DEBUG "[pp]: " format, ## args)
 	#define PP_INFO(format, args...) printk(KERN_INFO "[pp]: " format, ## args)
-	#define PP_ERR(format, args...)	printk(KERN_ERR "[pp]: " format, ## args)
+	#define PP_ERR(format, args...) printk(KERN_ERR "[pp]: " format, ## args)
 #else
 	#define PP_PRT(x...)  do{} while(0)
 	#define PP_INFO(x...)  do{} while(0)
@@ -32,12 +32,12 @@
 
 static u32 sf_fb_sysread32(struct sf_fb_data *sf_dev, u32 reg)
 {
-	return ioread32(sf_dev->base_sys + reg);
+	return ioread32(sf_dev->base_syscfg + reg);
 }
 
 static void sf_fb_syswrite32(struct sf_fb_data *sf_dev, u32 reg, u32 val)
 {
-	iowrite32(val, sf_dev->base_sys + reg);
+	iowrite32(val, sf_dev->base_syscfg + reg);
 }
 
 static u32 sf_fb_vppread32(struct sf_fb_data *sf_dev, int ppNum, u32 reg)
@@ -285,13 +285,13 @@ static void pp_srcfmt_set(struct sf_fb_data *sf_dev, int ppNum, struct pp_video_
             pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ARGB-COLOR_RGB888_ARGB);//0x0);
             break;
         case COLOR_RGB888_ABGR:
-            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ARGB-COLOR_RGB888_ABGR);//0x1);
+            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ABGR-COLOR_RGB888_ARGB);//0x1);
             break;
         case COLOR_RGB888_RGBA:
-            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ARGB-COLOR_RGB888_RGBA);//0x2);
+            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_RGBA-COLOR_RGB888_ARGB);//0x2);
             break;
         case COLOR_RGB888_BGRA:
-            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ARGB-COLOR_RGB888_BGRA);//0x3);
+            pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_BGRA-COLOR_RGB888_ARGB);//0x3);
             break;
         case COLOR_RGB565:
             pp_srcfmt_cfg(sf_dev, ppNum, PP_SRC_RGB565, 0x0, 0x0, 0x0, 0x0);
@@ -436,16 +436,11 @@ void pp_size_set(struct sf_fb_data *sf_dev, int ppNum, struct pp_video_mode *src
         if(src->format == COLOR_YUV420_NV21) {    //ok
             next_y_rgb_addr = srcAddr;
             next_u_addr = srcAddr+size+1;
-            next_v_addr = srcAddr+size;//0;
-
+            next_v_addr = srcAddr+size;
             y_rgb_ofst = 0;
             uofst = 0;
             v_uvofst = size;
-            //pp_srcAddr_next(ppNum, next_y_rgb_addr, next_u_addr, next_v_addr);
-            //pp_srcOffset_cfg(ppNum, y_rgb_ofst, uofst, v_uvofst);
-        }
-
-        if(src->format == COLOR_YUV420_NV12) {    //ok
+        } else if (src->format == COLOR_YUV420_NV12) {
             next_y_rgb_addr = srcAddr;
             next_u_addr = srcAddr+size;
             next_v_addr = srcAddr+size+1;
@@ -580,9 +575,8 @@ irqreturn_t vpp1_isr_handler(int this_irq, void *dev_id)
 	sf_fb_vppwrite32(sf_dev, 1, PP_INT_CLR, 0xf);
 
 	count ++;
-	if(0 == count % 60)
-		PP_PRT("=");
-		//printk("=");
+	if(0 == count % 100)
+		;//PP_PRT("=");
 
 	return IRQ_HANDLED;
 }

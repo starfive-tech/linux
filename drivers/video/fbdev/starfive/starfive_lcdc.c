@@ -15,10 +15,11 @@
 */
 
 #include <linux/module.h>
+#include <video/starfive_fb.h>
 
-#include "starfive_fb.h"
 #include "starfive_lcdc.h"
 #include "starfive_vpp.h"
+#include "starfive_comm_regs.h"
 
 //#define SF_LCDC_DEBUG	1
 #ifdef SF_LCDC_DEBUG
@@ -108,31 +109,68 @@ void lcdc_rgb_dclk_cfg(struct sf_fb_data *sf_dev, int dot_clk_sel)
 //win3, no srcSel and addrMode, 0 assigned to them
 //lcdc_win_cfgA(sf_dev, winNum, sf_dev->display_info.xres-1, sf_dev->display_info.yres-1, 0x1, 0x0, 0x0, 0x1, 0x0, 0x0);
 void lcdc_win_cfgA(struct sf_fb_data *sf_dev, int winNum, int layEn, int clorTab,
-			int colorEn, int srcSel, int addrMode, int lock)
+			int colorEn, int addrMode, int lock)
 {
+   int cfg;
    int hsize = sf_dev->display_info.xres - 1;
    int vsize = sf_dev->display_info.yres - 1;
-   int cfg = hsize | vsize << LCDC_WIN_VSIZE
-					| layEn << LCDC_WIN_EN
-					| clorTab << LCDC_CC_EN
-					| colorEn << LCDC_CK_EN
-					| srcSel << LCDC_WIN_ISSEL
-					| addrMode << LCDC_WIN_PM
-					| lock << LCDC_WIN_CLK;
+   int srcSel_v = 1;
+
+   if(sf_dev->pp_conn_lcdc < 0)
+		srcSel_v = 0;
+
+   cfg = hsize | vsize << LCDC_WIN_VSIZE | layEn << LCDC_WIN_EN |
+	 clorTab << LCDC_CC_EN | colorEn << LCDC_CK_EN |
+	 srcSel_v << LCDC_WIN_ISSEL | addrMode << LCDC_WIN_PM |
+	 lock << LCDC_WIN_CLK;
 
    sf_fb_lcdcwrite32(sf_dev, LCDC_WIN0_CFG_A + winNum * 0xC, cfg);
    LCDC_PRT("LCDC Win%d H-Size: %d, V-Size: %d, layEn: %d, Src: %d, AddrMode: %d\n",
 		winNum, hsize, vsize, layEn, srcSel, addrMode);
 }
 
-void lcdc_win_cfgB(struct sf_fb_data *sf_dev, int winNum, int xpos, int ypos, int pixbpp, int argbOrd)
+static int ppfmt_to_lcdcfmt(enum COLOR_FORMAT ppfmt)
 {
-  int cfg = xpos | ypos << LCDC_WIN_VPOS
-					| pixbpp << LCDC_WIN_FMT
-					| argbOrd << LCDC_WIN_ARGB_ORDER;
+	int lcdcfmt = 0;
 
-  sf_fb_lcdcwrite32(sf_dev, LCDC_WIN0_CFG_B + winNum * 0xC, cfg);
-  LCDC_PRT("LCDC Win%d Xpos: %d, Ypos: %d, pixBpp: 0x%x, ARGB Order: 0x%x\n",winNum, xpos, ypos, pixbpp, argbOrd);
+	if(COLOR_RGB888_ARGB == ppfmt) {
+		lcdcfmt = WIN_FMT_xRGB8888;
+	} else if (COLOR_RGB888_ABGR == ppfmt) {
+		LCDC_PRT("COLOR_RGB888_ABGR(%d) not map\n", ppfmt);
+	} else if (COLOR_RGB888_RGBA == ppfmt) {
+		LCDC_PRT("COLOR_RGB888_RGBA(%d) not map\n", ppfmt);
+	} else if (COLOR_RGB888_BGRA == ppfmt) {
+		LCDC_PRT("COLOR_RGB888_BGRA(%d) not map\n", ppfmt);
+	} else if (COLOR_RGB565 == ppfmt) {
+		lcdcfmt = WIN_FMT_RGB565;
+	}
+
+	return lcdcfmt;
+}
+
+void lcdc_win_cfgB(struct sf_fb_data *sf_dev, int winNum, int xpos, int ypos, int argbOrd)
+{
+	int win_format = 0;
+
+	if(sf_dev->pp_conn_lcdc < 0) { //ddr -> lcdc
+		win_format = sf_dev->ddr_format;
+		LCDC_PRT("LCDC win_format: 0x%x\n",win_format);
+	} else { //ddr -> pp -> lcdc
+		win_format = ppfmt_to_lcdcfmt(sf_dev->pp[sf_dev->pp_conn_lcdc].dst.format);
+    }
+
+	if (!strcmp(sf_dev->dis_dev_name, "tda_998x_1080p"))
+		argbOrd=0;
+	if (!strcmp(sf_dev->dis_dev_name, "seeed_5_inch"))
+		argbOrd=1;
+	//argbOrd=3;
+
+	int cfg = xpos | ypos << LCDC_WIN_VPOS | win_format << LCDC_WIN_FMT
+		       | argbOrd << LCDC_WIN_ARGB_ORDER;
+
+	sf_fb_lcdcwrite32(sf_dev, LCDC_WIN0_CFG_B + winNum * 0xC, cfg);
+	LCDC_PRT("LCDC Win%d Xpos: %d, Ypos: %d, win_format: 0x%x, ARGB Order: 0x%x\n",
+		 winNum, xpos, ypos, win_format, argbOrd);
 }
 
 //? Color key
@@ -191,6 +229,14 @@ void lcdc_panel_cfg(struct sf_fb_data *sf_dev, int buswid, int depth, int txcycl
 		buswid, depth, txcycle, pixpcycle, rgb565sel, rgb888sel);
 }
 
+//winNum: 0-2
+void lcdc_win02Addr_cfg(struct sf_fb_data *sf_dev, int addr0, int addr1)
+{
+   sf_fb_lcdcwrite32(sf_dev, LCDC_WIN0STARTADDR0 + sf_dev->winNum * 0x8, addr0);
+   sf_fb_lcdcwrite32(sf_dev, LCDC_WIN0STARTADDR1 + sf_dev->winNum * 0x8, addr1);
+   LCDC_PRT("LCDC Win%d Start Addr0: 0x%8x, Addr1: 0x%8x\n", sf_dev->winNum, addr0, addr1);
+}
+
 void lcdc_enable_intr(struct sf_fb_data *sf_dev)
 {
 	int cfg;
@@ -214,6 +260,7 @@ int lcdc_win_sel(struct sf_fb_data *sf_dev, enum lcdc_in_mode sel)
 	switch(sel)
 	{
 	case LCDC_IN_LCD_AXI:
+		winNum = LCDC_WIN_0;
 		break;
 	case LCDC_IN_VPP2:
 		winNum = LCDC_WIN_0;
@@ -235,6 +282,21 @@ int lcdc_win_sel(struct sf_fb_data *sf_dev, enum lcdc_in_mode sel)
 }
 EXPORT_SYMBOL(lcdc_win_sel);
 
+void lcdc_dsi_sel(struct sf_fb_data *sf_dev)
+{
+  int temp;
+  u32 lcdcEn = 0x1;
+  u32 workMode = 0x1;
+  u32 cfg = lcdcEn | workMode << LCDC_WORK_MODE;
+
+  sf_fb_lcdcwrite32(sf_dev, LCDC_GCTRL, cfg);
+
+  temp = sf_fb_rstread32(sf_dev, SRST_ASSERT0);
+  temp &= ~(0x1<<BIT_RST_DSI_DPI_PIX);
+  sf_fb_rstwrite32(sf_dev, SRST_ASSERT0, temp);
+}
+EXPORT_SYMBOL(lcdc_dsi_sel);
+
 irqreturn_t lcdc_isr_handler(int this_irq, void *dev_id)
 {
 	struct sf_fb_data *sf_dev = (struct sf_fb_data *)dev_id;
@@ -245,9 +307,8 @@ irqreturn_t lcdc_isr_handler(int this_irq, void *dev_id)
 	sf_fb_lcdcwrite32(sf_dev, LCDC_INT_CLR, 0xffffffff);
 
 	count ++;
-	//if(0 == count % 100)
-	//LCDC_PRT("++++\n");
-		//printk("+ count = %d, intr_status = 0x%x\n", count, intr_status);
+	if(0 == count % 100)
+		;//printk("lcdc count = %d, intr_status = 0x%x\n", count, intr_status);
 	return IRQ_HANDLED;
 }
 EXPORT_SYMBOL(lcdc_isr_handler);
@@ -271,8 +332,17 @@ void lcdc_config(struct sf_fb_data *sf_dev, int winNum)
 	lcdc_desize_cfg(sf_dev);
 	lcdc_rgb_dclk_cfg(sf_dev, 0x1);
 
-	lcdc_win_cfgA(sf_dev, winNum, 0x1, 0x0, 0x0, 0x1, 0x0, 0x0);
-	lcdc_win_cfgB(sf_dev, winNum, 0x0, 0x0, 0x7, 0x0);
+	if(sf_dev->pp_conn_lcdc < 0) { //ddr->lcdc
+		if (sf_dev->fb.fix.smem_start)
+			lcdc_win02Addr_cfg(sf_dev, sf_dev->fb.fix.smem_start, 0x0);
+	    else {
+			lcdc_win02Addr_cfg(sf_dev, 0xfb000000, 0x0);
+			dev_err(sf_dev->dev, "smem_start is not RIGHT\n");
+	    }
+	}
+
+	lcdc_win_cfgA(sf_dev, winNum, 0x1, 0x0, 0x0, 0x0, 0x0);
+	lcdc_win_cfgB(sf_dev, winNum, 0x0, 0x0, 0x0);
 	lcdc_win_cfgC(sf_dev, winNum, 0xffffff);
 
 	lcdc_win_srcSize(sf_dev, winNum);

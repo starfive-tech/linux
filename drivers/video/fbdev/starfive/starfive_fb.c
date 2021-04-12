@@ -37,14 +37,17 @@
 #include <asm/irq.h>
 #include <asm/div64.h>
 #include <asm/cacheflush.h>
+#include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/of_reserved_mem.h>
+#include <linux/of_address.h>
 #include <video/stf-vin.h>
+#include <video/starfive_fb.h>
 
-#include "starfive_fb.h"
 #include "starfive_lcdc.h"
 #include "starfive_vpp.h"
 #include "starfive_display_dev.h"
+#include "starfive_mipi_tx.h"
 
 static struct sf_fb_data *stf_dev = NULL;
 
@@ -63,6 +66,7 @@ static DEFINE_MUTEX(stf_mutex);
 
 static const struct res_name mem_res_name[] = {
 	{"lcdc"},
+	{"dsitx"},
 	{"vpp0"},
 	{"vpp1"},
 	{"vpp2"},
@@ -90,6 +94,12 @@ static int sf_fb_lcdc_clk_cfg(struct sf_fb_data *sf_dev)
 		case 640:
 			dev_warn(sf_dev->dev, "640 do nothing! need to set clk\n");
 			break;
+		case 800:
+			tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
+			tmp_val &= ~(0x3F);
+			tmp_val |= (54 & 0x3F);
+			sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
+			break;
 		case 1280:
 			dev_warn(sf_dev->dev, "1280 do nothing! need to set clk\n");
 			break;
@@ -107,6 +117,7 @@ static int sf_fb_lcdc_clk_cfg(struct sf_fb_data *sf_dev)
 	return ret;
 }
 
+#if defined(CONFIG_VIDEO_STF_VIN)
 static int vin_frame_complete_notify(struct notifier_block *nb,
 				      unsigned long val, void *v)
 {
@@ -115,16 +126,15 @@ static int vin_frame_complete_notify(struct notifier_block *nb,
 	unsigned int address;
 	unsigned int u_addr, v_addr, size;
 	unsigned int y_rgb_offset, u_offset, v_offset;
-	int i = 0;
 
-	address = psy->paddr;
+	address = (unsigned int)psy->paddr;
 
 	if(NULL == sf_dev) {
 		return NOTIFY_OK;
 	}
 
 	if(sf_dev->pp_conn_lcdc < 0) {
-		dev_warn(sf_dev->dev, "%s NO use PPx\n",__func__);
+		//dev_warn(sf_dev->dev, "%s NO use PPx\n",__func__);
 	} else {
 		if(sf_dev->pp[sf_dev->pp_conn_lcdc].src.format >= COLOR_RGB888_ARGB) {
 	        u_addr = 0;
@@ -133,11 +143,12 @@ static int vin_frame_complete_notify(struct notifier_block *nb,
 	        u_offset = 0;
 	        v_offset = 0;
 		} else if (COLOR_YUV420_NV21 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) {
-            u_addr = address + size + 1;
-            v_addr = address + size;
-            y_rgb_offset = 0;
-            u_offset = 0;
-            v_offset = size;
+			size = sf_dev->display_info.xres * sf_dev->display_info.yres;
+			u_addr = address + size + 1;
+			v_addr = address + size;
+			y_rgb_offset = 0;
+			u_offset = 0;
+			v_offset = size;
 		} else {
 			dev_err(sf_dev->dev, "format %d not SET\n", sf_dev->pp[sf_dev->pp_conn_lcdc].src.format);
 			return -EINVAL;
@@ -149,6 +160,7 @@ static int vin_frame_complete_notify(struct notifier_block *nb,
 
 	return NOTIFY_OK;
 }
+#endif
 
 static int sf_get_mem_res(struct platform_device *pdev, struct sf_fb_data *sf_dev)
 {
@@ -167,6 +179,8 @@ static int sf_get_mem_res(struct platform_device *pdev, struct sf_fb_data *sf_de
 
 		if(!strcmp(name, "lcdc")) {
 			sf_dev->base_lcdc = regs;
+		} else if (!strcmp(name, "dsitx")) {
+			sf_dev->base_dsitx = regs;
 		} else if (!strcmp(name, "vpp0")) {
 			sf_dev->base_vpp0 = regs;
 		} else if (!strcmp(name, "vpp1")) {
@@ -178,7 +192,7 @@ static int sf_get_mem_res(struct platform_device *pdev, struct sf_fb_data *sf_de
 		} else if (!strcmp(name, "rst")) {
 			sf_dev->base_rst = regs;
 		} else if (!strcmp(name, "sys")) {
-			sf_dev->base_sys = regs;
+			sf_dev->base_syscfg = regs;
 		} else {
 			dev_err(&pdev->dev, "Could not match resource name\n");
 		}
@@ -192,6 +206,12 @@ static void sf_fb_get_var(struct fb_var_screeninfo *var, struct sf_fb_data *sf_d
 	var->xres		= sf_dev->display_info.xres;
 	var->yres		= sf_dev->display_info.yres;
 	var->bits_per_pixel	= sf_dev->display_dev->bpp;
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+	if(24 == var->bits_per_pixel)
+	{
+		var->bits_per_pixel	= 16;//as vpp&lcdc miss support rgb888 ,config fb_console src format as rgb565 
+	}
+#endif
 	var->pixclock		= 1000000 / (sf_dev->pixclock / 1000000);
 	var->hsync_len		= sf_dev->display_info.hsync_len;
 	var->vsync_len		= sf_dev->display_info.vsync_len;
@@ -276,6 +296,13 @@ static int sf_fb_set_par(struct fb_info *info)
 			var->transp.length = 0;
 	}
 
+	if (!strcmp(sf_dev->dis_dev_name, "tda_998x_1080p")) {
+		var->red.offset   = 0;  var->red.length   = 5;
+		var->green.offset = 5;	var->green.length = 6;
+		var->blue.offset  = 11;	var->blue.length  = 5;
+		var->transp.offset = var->transp.length = 0;
+	}
+
 	return 0;
 }
 
@@ -307,7 +334,7 @@ static int sf_fb_release(struct fb_info *info, int user)
 
 static int sf_fb_ioctl(struct fb_info *info, unsigned cmd, unsigned long arg)
 {
-	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
+//	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
 	return 0;
@@ -372,6 +399,13 @@ static int sf_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			var->green.length = 8;
 			var->blue.length  = 8;
 			var->transp.length = 0;
+	}
+
+	if (!strcmp(sf_dev->dis_dev_name, "tda_998x_1080p")) {
+		var->red.offset   = 0;  var->red.length   = 5;
+		var->green.offset = 5;	var->green.length = 6;
+		var->blue.offset  = 11;	var->blue.length  = 5;
+		var->transp.offset = var->transp.length = 0;
 	}
 
 	return 0;
@@ -474,8 +508,15 @@ static int sf_fb_set_addr(struct sf_fb_data *sf_dev, struct fb_var_screeninfo *v
 			y_rgb_offset = 0;
 			u_offset = 0;
 			v_offset = size;
+		} else if (COLOR_YUV420_NV12 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) {
+			u_addr = address + size ;
+			v_addr = address + size + 1;
+			y_rgb_offset = 0;
+			u_offset = 0;
+			v_offset = size;
 		} else {
-			dev_err(sf_dev->dev, "format %d not SET\n", sf_dev->pp[sf_dev->pp_conn_lcdc].src.format);
+			dev_err(sf_dev->dev, "format %d not SET\n",
+				sf_dev->pp[sf_dev->pp_conn_lcdc].src.format);
 			return -EINVAL;
 		}
 		pp_srcAddr_next(sf_dev, sf_dev->pp_conn_lcdc, address, u_addr, v_addr);
@@ -544,7 +585,7 @@ static int sf_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 //	vma->vm_flags |= VM_IO | VM_RESERVED;
 	vma->vm_flags |= VM_IO;
 
-//	if (!(layer->parent->pdata->flags & COMIPFB_CACHED_BUFFER))
+//	if (!(layer->parent->pdata->flags & FB_CACHED_BUFFER))
 //		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
@@ -597,18 +638,21 @@ static struct fb_ops sf_fb_ops = {
 
 static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 {
-	int  ret;
-	dma_addr_t fb_phys_addr = 0;
+	struct resource res_mem;
+	struct device_node *node;
 
-	ret = of_reserved_mem_device_init(sf_dev->dev);
-	if(ret) {
-		dev_err(sf_dev->dev, "Could not get reserved memory\n");
-		return ret;
+	node = of_parse_phandle(sf_dev->dev->of_node, "memory-region", 0);
+	if(node) {
+		of_address_to_resource(node, 0, &res_mem);
+		sf_dev->fb.screen_size = resource_size(&res_mem);
+		sf_dev->fb.fix.smem_start = res_mem.start;
+	} else {
+		dev_err(sf_dev->dev, "Could not get reserved memory.\n");
+		return -ENOMEM;
 	}
-	sf_dev->fb.screen_base = dma_alloc_coherent(sf_dev->dev, 0x1000000, &fb_phys_addr, GFP_KERNEL);
-	sf_dev->fb.screen_size = 0x1000000;
 
-	sf_dev->fb.fix.smem_start = fb_phys_addr;
+	sf_dev->fb.screen_base = devm_ioremap_resource(sf_dev->dev, &res_mem);
+	memset(sf_dev->fb.screen_base, 0, sf_dev->fb.screen_size);
 
 	return 0;
 }
@@ -676,7 +720,6 @@ static int sf_fb_init(struct sf_fb_data *sf_dev)
 	return 0;
 }
 
-
 static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 {
 	struct sf_fb_display_dev *display_dev = NULL;
@@ -709,10 +752,33 @@ static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 				sf_dev->display_info.lower_margin = display_dev->timing.mipi.videomode_info.vfp;
 				sf_dev->display_info.hsync_len = display_dev->timing.mipi.videomode_info.hsync;
 				sf_dev->display_info.vsync_len = display_dev->timing.mipi.videomode_info.vsync;
-				if (display_dev->timing.mipi.videomode_info.sync_pol == COMIPFB_HSYNC_HIGH_ACT)
+				if (display_dev->timing.mipi.videomode_info.sync_pol == FB_HSYNC_HIGH_ACT)
 					sf_dev->display_info.sync = FB_SYNC_HOR_HIGH_ACT;
-				if (display_dev->timing.mipi.videomode_info.sync_pol == COMIPFB_VSYNC_HIGH_ACT)
+				if (display_dev->timing.mipi.videomode_info.sync_pol == FB_VSYNC_HIGH_ACT)
 					sf_dev->display_info.sync = FB_SYNC_VERT_HIGH_ACT;
+
+				sf_dev->panel_info.name = display_dev->name;
+				sf_dev->panel_info.w = display_dev->xres;
+				sf_dev->panel_info.h = display_dev->yres;
+				sf_dev->panel_info.bpp = display_dev->bpp;
+				sf_dev->panel_info.fps = display_dev->timing.mipi.fps;
+				sf_dev->panel_info.dpi_pclk = display_dev->pclk;
+				sf_dev->panel_info.dpi_hsa = display_dev->timing.mipi.videomode_info.hsync;
+				sf_dev->panel_info.dpi_hbp = display_dev->timing.mipi.videomode_info.hbp;
+				sf_dev->panel_info.dpi_hfp = display_dev->timing.mipi.videomode_info.hfp;
+				sf_dev->panel_info.dpi_vsa = display_dev->timing.mipi.videomode_info.vsync;
+				sf_dev->panel_info.dpi_vbp = display_dev->timing.mipi.videomode_info.vbp;
+				sf_dev->panel_info.dpi_vfp = display_dev->timing.mipi.videomode_info.vfp;
+				sf_dev->panel_info.dphy_lanes = display_dev->timing.mipi.no_lanes;
+				sf_dev->panel_info.dphy_bps = display_dev->timing.mipi.dphy_bps;
+				sf_dev->panel_info.dsi_burst_mode = display_dev->timing.mipi.dsi_burst_mode;
+				sf_dev->panel_info.dsi_sync_pulse = display_dev->timing.mipi.dsi_sync_pulse;
+				sf_dev->panel_info.dsi_hsa = display_dev->timing.mipi.dsi_hsa;
+				sf_dev->panel_info.dsi_hbp = display_dev->timing.mipi.dsi_hbp;
+				sf_dev->panel_info.dsi_hfp = display_dev->timing.mipi.dsi_hfp;
+				sf_dev->panel_info.dsi_vsa = display_dev->timing.mipi.dsi_vsa;
+				sf_dev->panel_info.dsi_vbp = display_dev->timing.mipi.dsi_vbp;
+				sf_dev->panel_info.dsi_vfp = display_dev->timing.mipi.dsi_vfp;
 			}else if (display_dev->timing.mipi.display_mode == MIPI_COMMAND_MODE){
 				sf_dev->display_info.name = display_dev->name;
 				sf_dev->display_info.xres = display_dev->xres;
@@ -728,6 +794,23 @@ static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 			}
 			break;
 		case STARFIVEFB_RGB_IF:
+				sf_dev->refresh_en = 1;
+				display_dev->refresh_en = 1;
+				sf_dev->display_info.name = display_dev->name;
+				sf_dev->display_info.xres = display_dev->xres;
+				sf_dev->display_info.yres = display_dev->yres;
+				sf_dev->display_info.pixclock = 1000000 / (sf_dev->pixclock / 1000000);
+				sf_dev->display_info.sync = 0;
+				sf_dev->display_info.left_margin = display_dev->timing.rgb.videomode_info.hbp;
+				sf_dev->display_info.right_margin = display_dev->timing.rgb.videomode_info.hfp;
+				sf_dev->display_info.upper_margin = display_dev->timing.rgb.videomode_info.vbp;
+				sf_dev->display_info.lower_margin = display_dev->timing.rgb.videomode_info.vfp;
+				sf_dev->display_info.hsync_len = display_dev->timing.rgb.videomode_info.hsync;
+				sf_dev->display_info.vsync_len = display_dev->timing.rgb.videomode_info.vsync;
+				if (display_dev->timing.rgb.videomode_info.sync_pol == FB_HSYNC_HIGH_ACT)
+					sf_dev->display_info.sync = FB_SYNC_HOR_HIGH_ACT;
+				if (display_dev->timing.rgb.videomode_info.sync_pol == FB_VSYNC_HIGH_ACT)
+					sf_dev->display_info.sync = FB_SYNC_VERT_HIGH_ACT;
 			break;
 		default:
 			break;
@@ -778,7 +861,7 @@ static const struct vm_operations_struct mmap_mem_ops = {
 
 static int stfb_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	struct sf_fb_data *sf_dev = file->private_data;
+//	struct sf_fb_data *sf_dev = file->private_data;
 	size_t size = vma->vm_end - vma->vm_start;
 	//unsigned long pfn = sf_dev->fb.fix.smem_start + 0x1000000;
 	unsigned long pfn = 0xfc000000;
@@ -849,7 +932,11 @@ static int sf_fb_lcdc_init(struct sf_fb_data *sf_dev) {
 
 	pp_id = sf_dev->pp_conn_lcdc;
 	if (pp_id < 0) {
-		dev_warn(sf_dev->dev, "NO pp connect to LCDC\n");
+		dev_info(sf_dev->dev, "DDR to LCDC\n");
+		lcd_in_pp = LCDC_IN_LCD_AXI;
+		winNum = lcdc_win_sel(sf_dev, lcd_in_pp);
+		sf_dev->winNum = winNum;
+		lcdc_config(sf_dev, winNum);
 	} else {
 		lcd_in_pp = (pp_id == 0) ? LCDC_IN_VPP0 : ((pp_id == 1) ? LCDC_IN_VPP1 : LCDC_IN_VPP2);
 		winNum = lcdc_win_sel(sf_dev, lcd_in_pp);
@@ -873,7 +960,6 @@ static int sf_fb_pp_video_mode_init(struct sf_fb_data *sf_dev, struct pp_video_m
 		src->width = sf_dev->pp[pp_id].src.width;
 		src->height = sf_dev->pp[pp_id].src.height;
 		src->addr = 0xf9000000;
-
 		dst->format = sf_dev->pp[pp_id].dst.format;
 		dst->width = sf_dev->pp[pp_id].dst.width;
 		dst->height = sf_dev->pp[pp_id].dst.height;
@@ -905,6 +991,19 @@ static int sf_fb_pp_init(struct sf_fb_data *sf_dev) {
 	return ret;
 }
 
+static int sf_fb_pp_run(struct sf_fb_data *sf_dev) {
+	int pp_id;
+	int ret = 0;
+
+	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
+		if(1 == sf_dev->pp[pp_id].inited) {
+			pp_run(sf_dev, pp_id, PP_RUN);
+		}
+	}
+
+	return ret;
+}
+
 static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 	int ret;
 	struct device_node *np = dev->of_node;
@@ -919,6 +1018,15 @@ static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 		dev_err(dev,"allocate memory for platform data failed\n");
 		return -ENOMEM;
 	}
+
+	if (of_property_read_u32(np, "ddr-format", &sf_dev->ddr_format)) {
+		dev_err(dev,"Missing src-format property in the DT.\n");
+		ret = -EINVAL;
+	}
+
+#ifndef CONFIG_FB_STARFIVE_VIDEO
+    return ret;
+#endif
 
 	for_each_child_of_node(np, child) {
 		if (of_property_read_u32(child, "pp-id", &pp_num)) {
@@ -962,8 +1070,6 @@ static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 	return ret;
 }
 
-//#define FB_BUFF_VIN
-
 static int starfive_fb_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -983,14 +1089,25 @@ static int starfive_fb_probe(struct platform_device *pdev)
 
 	ret = sf_fb_parse_dt(dev, sf_dev);
 
+#if defined(CONFIG_VIDEO_STF_VIN)
 	sf_dev->vin.notifier_call = vin_frame_complete_notify;
 	sf_dev->vin.priority = 0;
 	ret = vin_notifier_register(&sf_dev->vin);
 	if (ret) {
 		return ret;
 	}
+#endif
 
+#if defined(CONFIG_FB_STARFIVE_HDMI_TDA998X)
+	sf_dev->dis_dev_name = "tda_998x_1080p";
+#elif defined(CONFIG_FB_STARFIVE_HDMI_ADV7513)
 	sf_dev->dis_dev_name = "adv_7513_1080p";
+#elif defined(CONFIG_FB_STARFIVE_SEEED5INCH)
+	sf_dev->dis_dev_name = "seeed_5_inch";
+#else
+	dev_err(dev, "no dev name matched\n");
+	return -EINVAL;
+#endif
 	sf_dev->cmap_inverse = 0;
 	sf_dev->cmap_static = 0;
 	sf_dev->dev = &pdev->dev;
@@ -999,11 +1116,12 @@ static int starfive_fb_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-#ifdef FB_BUFF_VIN
-	/*the address 0xf9000000 is required in CMA modem by VIN,
-	*the case used to check VIN image data path only
-	*is not normal application.
-	*/
+#if defined(CONFIG_FB_STARFIVE_VIDEO)
+/* the address 0xf9000000 is required by VIN,
+ * the case used to check VIN image data path only
+ * is not normal application.
+ */
+    printk("defined CONFIG_FB_STARFIVE_VIDEO\n");
 	sf_dev->fb.fix.smem_start = 0xf9000000;
 #endif
 
@@ -1042,12 +1160,19 @@ static int starfive_fb_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+
+    if(STARFIVEFB_MIPI_IF == sf_dev->display_dev->interface_info){
+		printk("STARFIVEFB_MIPI_IF interface_info\n");
+		lcdc_dsi_sel(sf_dev);
+		sf_mipi_init(sf_dev);
+    }
 	if (sf_fb_pp_init(sf_dev)) {
 		dev_err(dev, "pp init fail\n");
 		return -ENODEV;
 	}
-	pp_run(sf_dev, PP_ID_1, PP_RUN);
+	//pp_run(sf_dev, PP_ID_1, PP_RUN);
 	//pp_run(sf_dev, PP_ID_0, PP_RUN);
+	sf_fb_pp_run(sf_dev);
 
 	if (sf_fb_lcdc_clk_cfg(sf_dev)) {
 		dev_err(dev, "lcdc clock configure fail\n");
@@ -1077,10 +1202,24 @@ static int starfive_fb_probe(struct platform_device *pdev)
 	ret = misc_register(&sf_dev->stfbcdev);
 	if (ret) {
 		dev_err(dev, "creare stfbcdev FAIL!\n");
+		return ret;
 	}
 
 	lcdc_enable_intr(sf_dev);
 	sf_fb_pp_enable_intr(sf_dev, PP_INTR_ENABLE);
+
+	return 0;
+}
+
+static int starfive_fb_remove(struct platform_device *pdev)
+{
+	struct sf_fb_data *sf_dev = platform_get_drvdata(pdev);
+
+	if(NULL == sf_dev) {
+		dev_err(&pdev->dev,"get sf_dev fail\n");
+	}
+
+	misc_deregister(&sf_dev->stfbcdev);
 
 	return 0;
 }
@@ -1099,7 +1238,7 @@ static struct of_device_id starfive_fb_dt_match[] = {
 
 static struct platform_driver starfive_fb_driver = {
 	.probe		= starfive_fb_probe,
-	//.remove		= comipfb_remove,
+	.remove		= starfive_fb_remove,
 	.shutdown	= starfive_fb_shutdown,
 	.driver		= {
 		.name	= "starfive,vpp-lcdc",

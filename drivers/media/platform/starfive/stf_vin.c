@@ -19,6 +19,7 @@
 #include <linux/of_device.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/of_graph.h>
+#include <linux/of_address.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -28,9 +29,25 @@
 #include <linux/uaccess.h>
 #include <video/stf-vin.h>
 #include "stf_isp.h"
+#include "stf_csi.h"
+
+
+static const struct reg_name mem_reg_name[] = {
+	{"mipi0"},
+	{"vclk"},
+	{"vrst"},
+	{"mipi1"},
+	{"sctrl"},
+	{"isp0"},
+	{"isp1"},
+	{"tclk"},
+	{"trst"},
+	{"iopad"}
+};
 
 static DEFINE_MUTEX(vin_mutex);
-static void __iomem *isp0_base;
+
+
 
 static inline u32 reg_read(void __iomem * base, u32 reg)
 {
@@ -79,7 +96,7 @@ static int vin_open(struct inode *inode, struct file *file)
 	dev=container_of(inode->i_cdev, struct stf_vin_dev, vin_cdev);
 
 	file->private_data = dev;
-out:
+//out:
 	mutex_unlock(&vin_mutex);
 	return ret;
 }
@@ -156,6 +173,49 @@ static const struct file_operations vin_fops = {
 	.mmap = vin_mmap,
 };
 
+static int vin_get_mem_res(struct platform_device *pdev, struct stf_vin_dev *vin)
+{
+	struct device *dev = &pdev->dev;
+	struct resource	*res;
+	void __iomem *regs;
+	char *name;
+	int i;
+
+	for (i = 0; i < sizeof(mem_reg_name)/sizeof(struct reg_name); i++) {
+	    name = (char *)(& mem_reg_name[i]);
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
+		regs = devm_ioremap_resource(dev, res);
+		if (IS_ERR(regs))
+			return PTR_ERR(regs);
+
+		if(!strcmp(name, "mipi0")) {
+			vin->mipi0_base = regs;
+		} else if (!strcmp(name, "vclk")) {
+			vin->clkgen_base = regs;
+		} else if (!strcmp(name, "vrst")) {
+			vin->rstgen_base = regs;
+		} else if (!strcmp(name, "mipi1")) {
+			vin->mipi1_base = regs;
+		} else if (!strcmp(name, "sctrl")) {
+			vin->sysctrl_base = regs;
+		} else if (!strcmp(name, "isp0")) {
+			vin->isp_isp0_base = regs;
+		} else if (!strcmp(name, "isp1")) {
+			vin->isp_isp1_base = regs;
+		} else if (!strcmp(name, "tclk")) {
+			vin->vin_top_clkgen_base = regs;
+		} else if (!strcmp(name, "trst")) {
+			vin->vin_top_rstgen_base = regs;
+		}else if (!strcmp(name, "iopad")) {
+			vin->vin_top_iopad_base = regs;
+		}else {
+			dev_err(&pdev->dev, "Could not match resource name\n");
+		}
+	}
+
+	return 0;
+}
+
 /*-------------------------------------------------------*/
 /*
  * NOTE:
@@ -164,38 +224,50 @@ static const struct file_operations vin_fops = {
  * TODO: vic clk driver
  *
  */
-static int vin_clk_reset(void)
+static int vin_clk_reset(struct stf_vin_dev *vin)
 {
-	void __iomem *vin_clk_gen_base
-	    = ioremap(VIN_CLKGEN_BASE_ADDR, 0x1000);
 	//disable clk
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_VIN_SRC_CTRL);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_ISP0_AXI_CTRL);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_ISP0NOC_AXI_CTRL);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_ISPSLV_AXI_CTRL);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_ISP1_AXI_CTRL);
-	reg_clear_highest_bit(vin_clk_gen_base,CLK_ISP1NOC_AXI_CTRL);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_VIN_AXI);
-    reg_clear_highest_bit(vin_clk_gen_base,CLK_VINNOC_AXI);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_SRC_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0_AXI_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0NOC_AXI_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_ISPSLV_AXI_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1_AXI_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1NOC_AXI_CTRL);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_AXI);
+	reg_clear_highest_bit(vin->vin_top_clkgen_base,CLK_VINNOC_AXI);
 
 	//enable clk
-    reg_set_highest_bit(vin_clk_gen_base,CLK_VIN_SRC_CTRL);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_ISP0_AXI_CTRL);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_ISP0NOC_AXI_CTRL);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_ISPSLV_AXI_CTRL);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_ISP1_AXI_CTRL);
-	reg_set_highest_bit(vin_clk_gen_base,CLK_ISP1NOC_AXI_CTRL);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_VIN_AXI);
-    reg_set_highest_bit(vin_clk_gen_base,CLK_VINNOC_AXI);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_SRC_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0NOC_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISPSLV_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1NOC_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_AXI);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VINNOC_AXI);
+	return 0;
+}
+
+static int isp_rstgen_assert_reset(struct stf_vin_dev *vin)
+{
+	 u32 val;
+	 u32 val_reg_reset_config = 0x19f807;
+
+	 val = ioread32(vin->rstgen_base + SOFTWARE_RESET_ASSERT0);
+	 val |= val_reg_reset_config;
+	 iowrite32(val, vin->rstgen_base + SOFTWARE_RESET_ASSERT0);
+
+	 val = ioread32(vin->rstgen_base + SOFTWARE_RESET_ASSERT0);
+	 val &= ~(val_reg_reset_config);
+
+	 iowrite32(val, vin->rstgen_base + SOFTWARE_RESET_ASSERT0);
 
 	return 0;
 }
 
-static int vin_rstgen_assert_reset(void)
+static int vin_rstgen_assert_reset(struct stf_vin_dev *vin)
 {
 	u32 val;
-	void __iomem *vin_rst_gen_base
-	    = ioremap(VIN_RSTGEN_BASE_ADDR, 0x1000);
 	/*
 	 *      Software_RESET_assert1 (0x11840004)
 	 *      ------------------------------------
@@ -211,60 +283,94 @@ static int vin_rstgen_assert_reset(void)
 	 */
 	u32 val_reg_reset_config = 0x7f8000;
 
-	val = ioread32(vin_rst_gen_base + SOFTWARE_RESET_ASSERT1);
+	val = ioread32(vin->vin_top_rstgen_base + SOFTWARE_RESET_ASSERT1);
 	val |= val_reg_reset_config;
-	iowrite32(val, vin_rst_gen_base + SOFTWARE_RESET_ASSERT1);
+	iowrite32(val, vin->vin_top_rstgen_base + SOFTWARE_RESET_ASSERT1);
 
-	val = ioread32(vin_rst_gen_base + SOFTWARE_RESET_ASSERT1);
+	val = ioread32(vin->vin_top_rstgen_base + SOFTWARE_RESET_ASSERT1);
 	val &= ~(val_reg_reset_config);
 
-	iowrite32(val, vin_rst_gen_base + SOFTWARE_RESET_ASSERT1);
+	iowrite32(val, vin->vin_top_rstgen_base + SOFTWARE_RESET_ASSERT1);
 
 	return 0;
 }
 
 /*
- * TODO: should replace with DTS pinctrl
+ * vin_get_pixel_size:
  *
+ * size = (width * height * 4)/(cnfg_axiwr_pix_ct / 2)
  */
-
-static void dvp_io_pad_func_shared_config(void)
+static int vin_get_axiwr_pixel_size(struct stf_vin_dev *vin)
 {
-	void __iomem *vin_rst_gen_base
-	    = ioremap(VIN_IOPAD_BASE_ADDR, 0x1000);
+	u32 value;
+	int cnfg_axiwr_pix_ct;
+
+	value = reg_read(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL) & 0x3;
+	if (value == 0)
+		cnfg_axiwr_pix_ct = 2;
+	else if (value == 1)
+		cnfg_axiwr_pix_ct = 4;
+	else if (value == 2)
+		cnfg_axiwr_pix_ct = 8;
+	else
+		return 0;
+
+	return (vin->frame.height * vin->frame.width * 4) / (cnfg_axiwr_pix_ct /
+							     2);
+}
+
+static int vin_update_buf_size(struct stf_vin_dev *vin)
+{
+	u32 size;
+	if (vin->format.format == SRC_DVP_SENSOR_VIN_OV5640) //ov5640 out rgb565
+		size = vin->frame.height*vin->frame.width*2;
+	else
+		size = vin_get_axiwr_pixel_size(vin); //out raw data
+
+	if (size == 0) {
+		dev_err(vin->dev, "size is 0");
+		return -EINVAL;
+	}
+
+	vin->buf.size = size;
+
+	return 0;
+}
+
+
+static void dvp_io_pad_func_shared_config(struct stf_vin_dev *vin)
+{
 	/*
 	 * pin: 49 ~ 57
 	 * offset: 0x144 ~ 0x164
 	 * SCFG_funcshare_pad_ctrl
 	 */
 	u32 val_scfg_funcshare_config = 0x800080;
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG81);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG82);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG83);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG84);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG85);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG86);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG87);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG88);
-	iowrite32(val_scfg_funcshare_config, vin_rst_gen_base + IOPAD_REG89);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG81);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG82);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG83);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG84);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG85);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG86);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG87);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG88);
+	iowrite32(val_scfg_funcshare_config, vin->vin_top_iopad_base + IOPAD_REG89);
 }
 
 static int vin_rstgen_clkgen(struct stf_vin_dev *vin)
 {
-	void __iomem *rstgen_base = vin->base + VIN_RSTGEN_OFFSET;
-	void __iomem *clkgen_base = vin->base + VIN_CLKGEN_OFFSET;
 	u32 val_vin_axi_wr_ctrl_reg = 0x02000000;
 
 	/* rst disable */
-	reg_write(rstgen_base, SOFTWARE_RESET_ASSERT0, 0xFFFFFFFF);
+	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0xFFFFFFFF);
 
 	/* rst enable */
-	reg_write(rstgen_base, SOFTWARE_RESET_ASSERT0, 0x0);
+	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0x0);
 
 	switch (vin->format.format) {
 	case SRC_DVP_SENSOR_VIN_OV5640:
 	case SRC_DVP_SENSOR_VIN:
-		reg_write(clkgen_base, CLK_VIN_AXI_WR_CTRL, val_vin_axi_wr_ctrl_reg);
+		reg_write(vin->clkgen_base, CLK_VIN_AXI_WR_CTRL, val_vin_axi_wr_ctrl_reg);
 		break;
 
 	case SRC_COLORBAR_VIN_ISP:
@@ -283,11 +389,10 @@ static int vin_rstgen_clkgen(struct stf_vin_dev *vin)
 
 static int get_vin_axiwr_pix_ct(struct stf_vin_dev *vin)
 {
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
 	u32 value;
 	int cnfg_axiwr_pix_ct = 0;
 
-	value = reg_read(sysctrl_base, SYSCTRL_REG14) & 0x3;
+	value = reg_read(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL) & 0x3;
 	if (value == 0)
 		cnfg_axiwr_pix_ct = 2;
 	else if (value == 1)
@@ -302,48 +407,46 @@ static int get_vin_axiwr_pix_ct(struct stf_vin_dev *vin)
 
 static void set_vin_wr_pix_total(struct stf_vin_dev *vin)
 {
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
 	int val, pix_ct;
 	pix_ct = get_vin_axiwr_pix_ct(vin);
 	val = (vin->frame.width / pix_ct) - 1;
-	reg_write(sysctrl_base, SYSCTRL_REG12, val);
-}
-
-static int stf_vin_clk_init(struct stf_vin_dev *vin)
-{
-	int ret=0;
-	ret = vin_clk_reset();
-	ret |= vin_rstgen_assert_reset();
-	ret |= vin_rstgen_clkgen(vin);
-	return ret;
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_WR_PIX_TOTAL, val);
 }
 
 static void dvp_vin_ddr_addr_config(struct stf_vin_dev *vin)
 {
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
 	u32 val_vin_axi_ctrl_reg = 0x00000003;
 	dev_dbg(vin->dev, "%d: addr: 0x%lx, size: 0x%lx\n", __LINE__,
 		(long)vin->buf.paddr, (long)(vin->buf.paddr + vin->buf.size));
 	/* set the start address of vin and enable */
-	reg_write(sysctrl_base, SYSCTRL_REG10, (long)vin->buf.paddr);
-	reg_write(sysctrl_base, SYSCTRL_REG11, (long)(vin->buf.paddr + vin->buf.size));
-	reg_write(sysctrl_base, SYSCTRL_REG6, val_vin_axi_ctrl_reg);
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_WR_START_ADDR, (long)vin->buf.paddr);
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_END_ADDR, (long)(vin->buf.paddr + vin->buf.size));
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_AXI_CTRL, val_vin_axi_ctrl_reg);
 }
 
 static int stf_vin_config_set(struct stf_vin_dev *vin)
 {
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
-	u32 val_vin_rd_pix_total_reg ;
-	u32 val_vin_rd_vblank_reg ;
-	u32 val_vin_rd_vend_reg ;
-	u32 val_vin_rd_hblank_reg ;
-	u32 val_vin_rd_hend_reg ;
-	u32 val_vin_rw_ctrl_reg ;
-	u32 val_vin_src_channel_reg ;
-	u32 val_vin_axi_ctrl_reg ;
-	u32 val_vin_rw_start_addr_reg ;
-	u32 val_vin_rd_end_addr_reg ;
-	u32 val_vin_wr_pix_reg ;
+	u32  val_vin_rd_pix_total_reg,val_vin_rd_vblank_reg,val_vin_rd_vend_reg;
+	u32  val_vin_rd_hblank_reg,val_vin_rd_hend_reg,val_vin_rw_ctrl_reg;
+	u32  val_vin_src_channel_reg,val_vin_axi_ctrl_reg,val_vin_rw_start_addr_reg;
+	u32  val_vin_rd_end_addr_reg,val_vin_wr_pix_reg,reset_val;
+//	int ret;
+	csi2rx_dphy_cfg_t dphy_rx_cfg = {
+			.dlane_nb		= vin->csi_fmt.lane,
+			.dlane_map		= {vin->csi_fmt.dlane_swap[0],	  vin->csi_fmt.dlane_swap[1],	 vin->csi_fmt.dlane_swap[2],	vin->csi_fmt.dlane_swap[3]},
+			.dlane_pn_swap	= {vin->csi_fmt.dlane_pn_swap[0], vin->csi_fmt.dlane_pn_swap[1], vin->csi_fmt.dlane_pn_swap[2], vin->csi_fmt.dlane_pn_swap[3]},
+			.dlane_en		= {vin->csi_fmt.lane>0,   vin->csi_fmt.lane>1,   vin->csi_fmt.lane>2, 	vin->csi_fmt.lane>3},
+			.clane_nb		= 1,
+			.clane_map		= {vin->csi_fmt.clane_swap, 	5},
+			.clane_pn_swap	= {vin->csi_fmt.clane_pn_swap,	0},
+	};
+	csi2rx_cfg_t csi2rx_cfg = {
+				.lane_nb	= vin->csi_fmt.lane,//lane count
+				.dlane_map	= {1,2,3,4},
+				.dt 		= vin->csi_fmt.dt,
+				.hsize		= vin->csi_fmt.w,
+				.vsize		= vin->csi_fmt.h,
+	};
 
 	switch (vin->format.format) {
 	case SRC_COLORBAR_VIN_ISP:
@@ -357,21 +460,21 @@ static int stf_vin_config_set(struct stf_vin_dev *vin)
 		val_vin_src_channel_reg = 0x00000088;
 		val_vin_axi_ctrl_reg = 0x00000004;
 
-		reg_write(sysctrl_base, SYSCTRL_REG13, val_vin_rd_pix_total_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG17, val_vin_rd_vblank_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG18, val_vin_rd_vend_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG19, val_vin_rd_hblank_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG20, val_vin_rd_hend_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG14, val_vin_rw_ctrl_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG15, val_vin_src_channel_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG6, val_vin_axi_ctrl_reg);
-		isp_base_addr_config(vin);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_PIX_TOTAL, val_vin_rd_pix_total_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_VBLANK, val_vin_rd_vblank_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_VEND, val_vin_rd_vend_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_HBLANK, val_vin_rd_hblank_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_HEND, val_vin_rd_hend_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL, val_vin_rw_ctrl_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_SRC_CHAN_SEL, val_vin_src_channel_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_AXI_CTRL, val_vin_axi_ctrl_reg);
+
 		if(vin->isp0||vin->isp1)
 			isp_ddr_config(vin);
 		break;
 
 	case SRC_DVP_SENSOR_VIN:
-		dvp_io_pad_func_shared_config();
+		dvp_io_pad_func_shared_config(vin);
 		/*
 		 * NOTE:
 		 * 0x38: [13:12]
@@ -379,37 +482,42 @@ static int stf_vin_config_set(struct stf_vin_dev *vin)
 		 * 01: pix_data[9:2]
 		 */
 	    val_vin_rw_ctrl_reg = 0x00010301;
-		reg_write(sysctrl_base, SYSCTRL_REG14, val_vin_rw_ctrl_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL, val_vin_rw_ctrl_reg);
 
 		set_vin_wr_pix_total(vin);
 	break;
 
 	case SRC_DVP_SENSOR_VIN_OV5640:
-		dvp_io_pad_func_shared_config();
-	    val_vin_rw_start_addr_reg = FB_FIRST_ADDR;
-		val_vin_rd_end_addr_reg = FB_FIRST_ADDR+0x3f4800;
+		dvp_io_pad_func_shared_config(vin);
+	    val_vin_rw_start_addr_reg = vin->buf.paddr;
+		val_vin_rd_end_addr_reg = vin->buf.paddr+vin->frame.width*vin->frame.height*2;
 		val_vin_wr_pix_reg = 0x000001df;
 		val_vin_rw_ctrl_reg = 0x00001202;
 		val_vin_axi_ctrl_reg = 0x00000003;
-		reg_write(sysctrl_base, SYSCTRL_REG10, val_vin_rw_start_addr_reg);	// First frame address
-		reg_write(sysctrl_base, SYSCTRL_REG11, val_vin_rd_end_addr_reg);	//4bytes 0x887e9000 2bytes 0x883f4800, 1byte 0x881FA400
-		reg_write(sysctrl_base, SYSCTRL_REG12, val_vin_wr_pix_reg);	//       0x000003bf        0x000001df        0x000000ef
-		reg_write(sysctrl_base, SYSCTRL_REG14, val_vin_rw_ctrl_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG6,  val_vin_axi_ctrl_reg);
-		break;
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_WR_START_ADDR, val_vin_rw_start_addr_reg);	// First frame address
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RD_END_ADDR, val_vin_rd_end_addr_reg);	//4bytes 0x887e9000 2bytes 0x883f4800, 1byte 0x881FA400
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_WR_PIX_TOTAL, val_vin_wr_pix_reg);	// 0x000003bf        0x000001df        0x000000ef
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL, val_vin_rw_ctrl_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_AXI_CTRL,  val_vin_axi_ctrl_reg);
+	break;
 
 	case SRC_DVP_SENSOR_VIN_ISP:
-		dvp_io_pad_func_shared_config();
+		dvp_io_pad_func_shared_config(vin);
 	    val_vin_rw_ctrl_reg = 0x00011300;
 	    val_vin_src_channel_reg = 0x00001100;
-		reg_write(sysctrl_base, SYSCTRL_REG14, val_vin_rw_ctrl_reg);
-		reg_write(sysctrl_base, SYSCTRL_REG15, val_vin_src_channel_reg);
-		isp_base_addr_config(vin);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_RW_CTRL, val_vin_rw_ctrl_reg);
+		reg_write(vin->sysctrl_base, SYSCTRL_VIN_SRC_CHAN_SEL, val_vin_src_channel_reg);
 		if(vin->isp0||vin->isp1)
 			isp_ddr_config(vin);
 	break;
 
 	case SRC_CSI2RX_VIN_ISP:
+		isp_config(vin, 0);
+		csi2rx_dphy_config(vin,&dphy_rx_cfg);
+		csi2rx_config(vin,0, &csi2rx_cfg);
+		reset_val = reg_read(vin->rstgen_base, 0x00);
+		reset_val &= ~(1<<17);
+		reg_write(vin->rstgen_base, 0x00, reset_val);
 	break;
 
 	default:
@@ -420,65 +528,12 @@ static int stf_vin_config_set(struct stf_vin_dev *vin)
 	return 0;
 }
 
-/*
- * vin_get_pixel_size:
- *
- * size = (width * height * 4)/(cnfg_axiwr_pix_ct / 2)
- */
-static int vin_get_axiwr_pixel_size(struct stf_vin_dev *vin)
-{
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
-	u32 value;
-	int cnfg_axiwr_pix_ct;
-
-	value = reg_read(sysctrl_base, SYSCTRL_REG14) & 0x3;
-
-	if (value == 0)
-		cnfg_axiwr_pix_ct = 2;
-	else if (value == 1)
-		cnfg_axiwr_pix_ct = 4;
-	else if (value == 2)
-		cnfg_axiwr_pix_ct = 8;
-	else
-		return 0;
-
-	return (vin->frame.height * vin->frame.width * 4) / (cnfg_axiwr_pix_ct /
-							     2);
-}
-
-static int vin_alloc_buf(struct stf_vin_dev *vin)
-{
-	struct vin_buf *buf = &vin->buf;
-	u32 size;
-	if (vin->format.format == SRC_DVP_SENSOR_VIN_OV5640)
-		size = vin->frame.height*vin->frame.width*2;
-	else
-		size = vin_get_axiwr_pixel_size(vin);
-
-	if (size == 0) {
-		dev_err(vin->dev, "size is 0");
-		return -EINVAL;
-	}
-
-	buf->vaddr = dma_alloc_coherent(vin->dev, 2 * size, &buf->paddr,
-					GFP_KERNEL);
-	if (!buf->vaddr) {
-		dev_err(vin->dev,
-			"Failed to allocate buffer of size 0x%x\n", size);
-		return -ENOMEM;
-	}
-
-	buf->size = size;
-
-	return 0;
-}
 
 static void vin_free_buf(struct stf_vin_dev *vin)
 {
 	struct vin_buf *buf = &vin->buf;
 
 	if (buf->vaddr) {
-		dma_free_coherent(vin->dev, buf->size, buf->vaddr, buf->paddr);
 		buf->vaddr = NULL;
 		buf->size = 0;
 	}
@@ -486,8 +541,8 @@ static void vin_free_buf(struct stf_vin_dev *vin)
 
 static void vin_intr_clear(void __iomem * sysctrl_base)
 {
-	reg_write(sysctrl_base, SYSCTRL_REG21, 0x1);
-	reg_write(sysctrl_base, SYSCTRL_REG21, 0x0);
+	reg_write(sysctrl_base, SYSCTRL_VIN_INTP_CTRL, 0x1);
+	reg_write(sysctrl_base, SYSCTRL_VIN_INTP_CTRL, 0x0);
 }
 
 static irqreturn_t vin_wr_irq_handler(int irq, void *priv)
@@ -496,10 +551,7 @@ static irqreturn_t vin_wr_irq_handler(int irq, void *priv)
 	static int wtimes = 0;
 	struct stf_vin_dev *vin = priv;
 
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
-
-	/*clear interrupt */
-	vin_intr_clear(sysctrl_base);
+	vin_intr_clear(vin->sysctrl_base);
 
 	wtimes = wtimes % 2;
 	if (wtimes == 0)
@@ -519,11 +571,11 @@ static irqreturn_t vin_wr_irq_handler(int irq, void *priv)
 	return IRQ_HANDLED;
 }
 
-void vin_isp0_intr_clear(void)
+void vin_isp0_intr_clear(struct stf_vin_dev *vin)
 {
 	u32 value;
-	value = reg_read(isp0_base, 0xA00);
-	reg_write(isp0_base, 0xA00, value);
+	value = reg_read(vin->isp_isp0_base, 0xA00);
+	reg_write(vin->isp_isp0_base, 0xA00, value);
 }
 
 static irqreturn_t vin_isp0_irq_handler(int irq, void *priv)
@@ -533,19 +585,19 @@ static irqreturn_t vin_isp0_irq_handler(int irq, void *priv)
 	struct stf_vin_dev *vin = priv;
 
 	/*clear interrupt */
-	vin_isp0_intr_clear();
+	vin_isp0_intr_clear(vin);
 
 	wtimes = wtimes % 2;
-	if (wtimes == 0) {
-		params.paddr = (void *)FB_FIRST_ADDR;
-		reg_write(isp0_base, ISP_REG_Y_PLANE_START_ADDR,  FB_FIRST_ADDR);	// Unscaled Output Image Y Plane Start Address Register
-		reg_write(isp0_base, ISP_REG_UV_PLANE_START_ADDR, FB_FIRST_ADDR+(vin->frame.width*vin->frame.height));	// Unscaled Output Image UV Plane Start Address Register
-		reg_write(isp0_base, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
+	if (wtimes == 1) {
+		params.paddr = (void *)vin->buf.paddr+vin->buf.size;
+		reg_write(vin->isp_isp0_base, ISP_REG_Y_PLANE_START_ADDR,  vin->buf.paddr);	// Unscaled Output Image Y Plane Start Address Register
+		reg_write(vin->isp_isp0_base, ISP_REG_UV_PLANE_START_ADDR, vin->buf.paddr+(vin->frame.width*vin->frame.height));	// Unscaled Output Image UV Plane Start Address Register
+		reg_write(vin->isp_isp0_base, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
 	} else {
-		params.paddr = (void *)FB_SECOND_ADDR;
-		reg_write(isp0_base, ISP_REG_Y_PLANE_START_ADDR,  FB_SECOND_ADDR);	// Unscaled Output Image Y Plane Start Address Register
-		reg_write(isp0_base, ISP_REG_UV_PLANE_START_ADDR, FB_SECOND_ADDR+(vin->frame.width*vin->frame.height));	// Unscaled Output Image UV Plane Start Address Register
-		reg_write(isp0_base, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
+		params.paddr = (void *)vin->buf.paddr;
+		reg_write(vin->isp_isp0_base, ISP_REG_Y_PLANE_START_ADDR,  vin->buf.paddr+vin->buf.size);	// Unscaled Output Image Y Plane Start Address Register
+		reg_write(vin->isp_isp0_base, ISP_REG_UV_PLANE_START_ADDR, vin->buf.paddr+vin->buf.size+(vin->frame.width*vin->frame.height));	// Unscaled Output Image UV Plane Start Address Register
+		reg_write(vin->isp_isp0_base, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
 	}
 
 	params.size = vin->buf.size;
@@ -564,38 +616,156 @@ static void vin_irq_disable(struct stf_vin_dev *vin)
 {
 	unsigned int mask_value = 0, value = 0;
 
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
-
 	/* mask and clear vin interrupt */
 	mask_value = (0x1 << 4) | (0x1 << 20);
 
-	value = 0x1 | (0x1 << 0x16) | mask_value;
-	reg_write(sysctrl_base, SYSCTRL_REG21, value);
+	value = 0x1 | (0x1 << 16) | mask_value;
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_INTP_CTRL, value);
 
 	value = mask_value;
-	reg_write(sysctrl_base, SYSCTRL_REG21, value);
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_INTP_CTRL, value);
 }
 
 static void vin_irq_enable(struct stf_vin_dev *vin)
 {
 	unsigned int value = 0;
 
-	void __iomem *sysctrl_base = vin->base + VIN_SYSCONTROLLER_OFFSET;
-
 	value = ~((0x1 << 4) | (0x1 << 20));
 
-	reg_write(sysctrl_base, SYSCTRL_REG21, value);
+	reg_write(vin->sysctrl_base, SYSCTRL_VIN_INTP_CTRL, value);
+}
+
+static int vin_sys_init(struct stf_vin_dev *vin)
+{
+	u32 val;
+
+	val = ioread32(vin->vin_top_clkgen_base + 0x124)>>24;
+	val &= 0x1;
+	if (val != 0) {
+        val = ioread32(vin->vin_top_clkgen_base + 0x124)>>24;
+	    val &= ~(0x1<<24);
+	    val |= (0x0&0x1)<<24;
+		iowrite32(val, vin->vin_top_clkgen_base + 0x124);
+    } else {
+        printk("nne bus clk src is already clk_cpu_axi\n");
+    }
+	//enable clk
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_SRC_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP0NOC_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISPSLV_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_ISP1NOC_AXI_CTRL);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VIN_AXI);
+	reg_set_highest_bit(vin->vin_top_clkgen_base,CLK_VINNOC_AXI);
+
+	vin_rstgen_assert_reset(vin);
+
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP0_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP0_2X_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP0_MIPI_CTRL);
+
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP1_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP1_2X_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_ISP1_MIPI_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_SYS0_CTRL);
+	reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_SYS1_CTRL);
+
+	isp_rstgen_assert_reset(vin);
+
+    // hold vin resets for sub modules before csi2rx controller get configed
+    reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0xffffffff);
+    mdelay(10);
+
+    // clear reset for all vin submodules except dphy-rx (follow lunhai's advice)
+    reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 1<<17);
+    return 0;
+}
+
+static int vin_parse_dt(struct device *dev, struct stf_vin_dev *vin)
+{
+	int ret=0;
+	struct device_node *np = dev->of_node;
+
+	if(!np)
+		return -EINVAL;
+
+	if (of_property_read_u32(np, "format", &vin->format.format)) {
+		dev_err(dev,"Missing format property in the DT.\n");
+		ret = -EINVAL;
+	}
+	dev_info(dev,"vin->format.format = %d ,in the DT.\n",vin->format.format);
+
+	if (of_property_read_u32(np, "frame-width", &vin->frame.width)) {
+		dev_err(dev,"Missing frame-width property in the DT.\n");
+		ret = -EINVAL;
+	}
+
+	if (of_property_read_u32(np, "frame-height", &vin->frame.height)) {
+		dev_err(dev,"Missing frame.height property in the DT.\n");
+		ret = -EINVAL;
+	}
+
+	vin->isp0 = of_property_read_bool(np, "isp0_enable");
+	vin->isp1 = of_property_read_bool(np, "isp1_enable");
+
+	of_property_read_u8_array(np, "csi-dlane-swaps", vin->csi_fmt.dlane_swap, 4);
+
+	of_property_read_u8_array(np, "csi-dlane-pn-swaps", vin->csi_fmt.dlane_pn_swap, 4);
+
+	of_property_read_u8(np, "csi-clane-swap", &vin->csi_fmt.clane_swap);
+
+	of_property_read_u8(np, "csi-clane-pn-swap", &vin->csi_fmt.clane_pn_swap);
+
+	of_property_read_u32(np, "csi-mipiID", &vin->csi_fmt.mipi_id);
+
+	of_property_read_u32(np, "csi-width", &vin->csi_fmt.w);
+
+	of_property_read_u32(np, "csi-height", &vin->csi_fmt.h);
+
+	of_property_read_u32(np, "csi-dt", &vin->csi_fmt.dt);
+
+	of_property_read_u32(np, "csi-lane", &vin->csi_fmt.lane);
+
+	return ret;
+}
+
+static int stf_vin_clk_init(struct stf_vin_dev *vin)
+{
+	int ret=0;
+	switch (vin->format.format) {
+	case SRC_COLORBAR_VIN_ISP:
+	case SRC_DVP_SENSOR_VIN:
+	case SRC_DVP_SENSOR_VIN_OV5640:
+	case SRC_DVP_SENSOR_VIN_ISP:
+		 ret =  vin_clk_reset(vin);
+	     ret |= vin_rstgen_assert_reset(vin);
+	     ret |= vin_rstgen_clkgen(vin);
+	break;
+
+	case SRC_CSI2RX_VIN_ISP:
+		 ret =vin_sys_init(vin);
+	break;
+
+	default:
+		pr_err("unknown format\n");
+		return -EINVAL;
+	}
+
+	return ret;
 }
 
 static int stf_vin_probe(struct platform_device *pdev)
 {
 	struct stf_vin_dev *vin;
-	struct resource *mem;
 	int irq;
 	dev_t devid;
 	struct class *vin_cls;
 	int major = 0;
 	int ret = 0;
+	struct device_node *node;
+	struct resource res_mem;
+
 	dev_info(&pdev->dev, "vin probe enter!\n");
 
 	vin = devm_kzalloc(&pdev->dev, sizeof(struct stf_vin_dev), GFP_KERNEL);
@@ -614,23 +784,10 @@ static int stf_vin_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	isp0_base = ioremap(VIN_ISP0_BASE_ADDR, 0x30000);
-	if (IS_ERR(isp0_base)) {
-		dev_err(&pdev->dev, "Could not map registers\n");
-		return PTR_ERR(isp0_base);
-	}
-
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "Could not get resource\n");
-		return -ENODEV;
-	}
-
-	vin->base = devm_ioremap(&pdev->dev, mem->start,
-					 resource_size(mem));
-	if (IS_ERR(vin->base)) {
-		dev_err(&pdev->dev, "Could not map registers\n");
-		return PTR_ERR(vin->base);
+	ret = vin_get_mem_res(pdev,vin);
+	if (ret) {
+			dev_err(&pdev->dev, "Could not map registers\n");
+			goto out;
 	}
 
 	spin_lock_init(&vin->irqlock);
@@ -654,18 +811,21 @@ static int stf_vin_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	ret = of_reserved_mem_device_init(&pdev->dev);
-	if (ret) {
+	node = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);
+	if (node) {
+		of_address_to_resource(node, 0, &res_mem);
+		vin->buf.paddr = res_mem.start;
+	} else {
 		dev_err(&pdev->dev, "Could not get reserved memory\n");
-		goto out;
+		return -ENOMEM;
 	}
 
-	/* default config */
-	vin->format.format = SRC_DVP_SENSOR_VIN_OV5640;
-	vin->frame.height = VD_HEIGHT_1080P;
-	vin->frame.width = VD_WIDTH_1080P;
-	vin->isp0 = false;
-	vin->isp1 = false;
+	vin->buf.vaddr = devm_ioremap_resource(&pdev->dev, &res_mem);
+	memset(vin->buf.vaddr, 0, RESERVED_MEM_SIZE);
+
+	ret = vin_parse_dt(&pdev->dev, vin);
+	if (ret)
+		goto out;
 
 	vin->condition = false;
 	init_waitqueue_head(&vin->wq);
@@ -687,7 +847,7 @@ static int stf_vin_probe(struct platform_device *pdev)
 		goto out;
 	}
 
-	ret = vin_alloc_buf(vin);
+	ret = vin_update_buf_size(vin);
 	if (ret)
 		goto out;
 
@@ -747,6 +907,7 @@ static struct platform_driver stf_vin_driver = {
 
 static int __init stf_vin_init(void)
 {
+    printk("stf_vin_init vin vin !!!!!!!\n");
 	return platform_driver_register(&stf_vin_driver);
 }
 

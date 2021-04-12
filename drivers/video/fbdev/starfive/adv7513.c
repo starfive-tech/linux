@@ -146,6 +146,7 @@ static int adv7513_probe(struct i2c_client *client, const struct i2c_device_id *
 	struct device *dev = &client->dev;
     u8 value;
 	int ret = 0;
+	dev_info(dev,"adv7513_probe enter \n");
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_warn(&client->dev,
@@ -166,7 +167,10 @@ static int adv7513_probe(struct i2c_client *client, const struct i2c_device_id *
 	i2c_set_clientdata(client, adv7513);
 
 	adv7513_read(client, 0x00, &value);
-	dev_info(&client->dev, "%s[%d],version = 0x%x\n",__func__,__LINE__,value);
+	if (value != 0x13) {
+		dev_info(&client->dev, "%s[%d],version = 0x%x(NOT 0x13), not find device !\n",__func__,__LINE__,value);
+		return -ENODEV;
+	}
 
 	adv7513_I2CWriteField8(client, 0x41, 0x40, 0x6, 0x00);
 	adv7513_I2CWriteField8(client, 0x98, 0xFF, 0x0, 0x03);
@@ -209,6 +213,7 @@ static int adv7513_probe(struct i2c_client *client, const struct i2c_device_id *
 		default:
 			dev_err(dev,"not support width %d \n",adv7513->def_width);
 	}
+	dev_info(dev,"adv7513_probe done \n");
 
 	return ret;
 }

@@ -77,6 +77,33 @@ static int build_dev_list(struct sf_fb_data *fb_data)
 	return rc;
 }
 
+struct sf_fb_display_dev* sf_fb_display_dev_get_by_name(char *dev_name)
+{
+	struct sf_fb_display_dev_data *display_dev;
+	struct sf_fb_display_dev *dev = NULL;
+	char *connect_panel_name;
+
+	connect_panel_name = dev_name;
+	mutex_lock(&sf_fb_display_dev_lock);
+	list_for_each_entry(display_dev, &sf_fb_display_dev_list, list) {
+		if(!strcmp(connect_panel_name, display_dev->dev->name)) {
+			dev = display_dev->dev;
+			printk(KERN_INFO "select displayer: %s\n", dev->name);
+			break;
+		}
+	}
+
+	if (!dev) {
+			display_dev = list_first_entry(&sf_fb_display_dev_list, typeof(*display_dev), list);
+			dev = display_dev->dev;
+			printk(KERN_INFO "default get first displayer(%s)! \n", display_dev->dev->name);
+	}
+	mutex_unlock(&sf_fb_display_dev_lock);
+
+	return dev;
+}
+EXPORT_SYMBOL(sf_fb_display_dev_get_by_name);
+
 struct sf_fb_display_dev* sf_fb_display_dev_get(struct sf_fb_data *fb_data)
 {
 	struct sf_fb_display_dev_data *display_dev;
@@ -100,6 +127,8 @@ struct sf_fb_display_dev* sf_fb_display_dev_get(struct sf_fb_data *fb_data)
 			dev = display_dev->dev;
 			dev_info(fb_data->dev,"default get first displayer(%s)! \n", display_dev->dev->name);
 	}
+
+	mutex_unlock(&sf_fb_display_dev_lock);
 
 	return dev;
 }

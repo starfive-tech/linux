@@ -24,11 +24,15 @@
 #include <linux/errno.h>
 #include <linux/platform_device.h>
 #include <linux/err.h>
+#include <video/starfive_fb.h>
 
-#include "starfive_fb.h"
 #include "starfive_display_dev.h"
 
+#ifdef _ALIGN_UP
+#undef _ALIGN_UP
 #define _ALIGN_UP(addr, size) (((addr)+((size)-1))&(~((typeof(addr))(size)-1)))
+#endif
+
 #define DSI_CMD_LEN(hdr)	(sizeof(*hdr) + (hdr)->dlen)
 
 static int sf_displayer_reset(struct sf_fb_data *fbi)
@@ -115,13 +119,13 @@ static int of_parse_video_mode(struct device_node *np,
 	}
 	videomode_info->vfp = temp_val;
 
-	videomode_info->sync_pol = COMIPFB_VSYNC_HIGH_ACT;
+	videomode_info->sync_pol = FB_VSYNC_HIGH_ACT;
 	data = of_get_property(np, "sync_pol", NULL);
 	if (data) {
 		if (!strcmp(data, "vsync_high_act"))
-			videomode_info->sync_pol = COMIPFB_VSYNC_HIGH_ACT;
+			videomode_info->sync_pol = FB_VSYNC_HIGH_ACT;
 		else if (!strcmp(data, "hsync_high_act"))
-			videomode_info->sync_pol = COMIPFB_HSYNC_HIGH_ACT;
+			videomode_info->sync_pol = FB_HSYNC_HIGH_ACT;
 	}
 
 	videomode_info->lp_cmd_en = of_property_read_bool(np,
@@ -380,6 +384,86 @@ static int of_parse_mipi_timing(struct device_node *np,
 	}
 	mipi_timing->no_lanes= temp_val;
 
+	rc = of_property_read_u32(np, "fps", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, fps not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->fps = temp_val;
+
+	rc = of_property_read_u32(np, "dphy_bps", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dphy_bps not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dphy_bps = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_burst_mode", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_burst_mode not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_burst_mode = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_sync_pulse", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_sync_pulse not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_sync_pulse = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_hsa", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_hsa not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_hsa = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_hbp", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_hbp not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_hbp = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_hfp", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_hfp not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_hfp = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_vsa", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_vsa not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_vsa = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_vbp", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_vbp not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_vbp = temp_val;
+
+	rc = of_property_read_u32(np, "dsi_vfp", &temp_val);
+	if (rc) {
+		pr_err("%s:%d, dsi_vfp not specified\n",
+						__func__, __LINE__);
+		return -EINVAL;
+	}
+	mipi_timing->dsi_vfp = temp_val;
+
 	/*default use video mode*/
 	mipi_timing->display_mode = MIPI_VIDEO_MODE;
 	data = of_get_property(np, "display_mode", NULL);
@@ -392,7 +476,7 @@ static int of_parse_mipi_timing(struct device_node *np,
 
 	mipi_timing->auto_stop_clklane_en = of_property_read_bool(np,
 							"auto_stop_clklane_en");
-	mipi_timing->auto_stop_clklane_en = of_property_read_bool(np,
+	mipi_timing->im_pin_val = of_property_read_bool(np,
 							"im_pin_val");
 
 	rc = of_property_read_u32(np, "color_bits", &temp_val);
@@ -421,6 +505,20 @@ static int of_parse_mipi_timing(struct device_node *np,
 
 	return 0;
 }
+
+static int of_parse_rgb_timing(struct device_node *np,
+			struct sf_fb_timing_rgb *rgb_timing)
+{
+	int ret;
+
+	ret = of_parse_video_mode(np, &rgb_timing->videomode_info);
+	if (ret) {
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 
 static int of_parse_rd_cmd_info(struct device_node *np,
                           struct sf_fb_id_info *rd_id_info, const char *key)
@@ -715,8 +813,11 @@ static int sf_displayer_parse_dt(struct device *dev,
 		pandev->flags |= RESUME_WITH_CE;
 
 	pandev->init_last = of_property_read_bool(np, "init_last");
-	/*mipi info parse*/
-	of_parse_mipi_timing(np, &pandev->timing.mipi);
+
+	if(STARFIVEFB_MIPI_IF == pandev->interface_info)
+		of_parse_mipi_timing(np, &pandev->timing.mipi);	/*mipi info parse*/
+	else if (STARFIVEFB_RGB_IF == pandev->interface_info)
+		of_parse_rgb_timing(np, &pandev->timing.rgb);
 
 	of_parse_rd_cmd_info(np, &pandev->panel_id_info, "id_read_cmd_info");
 	if (of_find_property(np, "pre_id_cmd", NULL))

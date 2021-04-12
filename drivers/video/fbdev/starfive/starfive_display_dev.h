@@ -12,13 +12,12 @@
 #include <linux/fb.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
-
-#include "starfive_fb.h"
+#include <video/starfive_fb.h>
 
 #define RST_SEQ_LEN		16
 
-#define COMIPFB_HSYNC_HIGH_ACT		(0x03)
-#define COMIPFB_VSYNC_HIGH_ACT		(0x04)
+#define FB_HSYNC_HIGH_ACT		(0x03)
+#define FB_VSYNC_HIGH_ACT		(0x04)
 
 #define MIPI_VIDEO_MODE 		(0x05)
 #define MIPI_COMMAND_MODE 		(0x06)
@@ -172,6 +171,16 @@ struct te_info {
 struct sf_fb_timing_mipi {
 	unsigned int hs_freq; /*PHY output freq, bytes KHZ*/
 	unsigned int lp_freq; /*default is 10MHZ*/
+	unsigned int fps;
+	unsigned int dphy_bps;
+	unsigned int dsi_burst_mode;
+	unsigned int dsi_sync_pulse;
+	unsigned int dsi_hsa;
+	unsigned int dsi_hbp;
+	unsigned int dsi_hfp;
+	unsigned int dsi_vsa;
+	unsigned int dsi_vbp;
+	unsigned int dsi_vfp;
 	unsigned int no_lanes; /*lane numbers*/
 	unsigned int display_mode; //video mode or command mode.
 	unsigned int auto_stop_clklane_en;
@@ -182,6 +191,10 @@ struct sf_fb_timing_mipi {
 	struct phy_time_info phytime_info;
 	struct te_info teinfo;
 	struct external_info ext_info;
+};
+
+struct sf_fb_timing_rgb {
+	struct video_mode_info videomode_info;
 };
 
 struct rd_cmd_hdr {
@@ -224,7 +237,9 @@ struct sf_fb_display_dev {
 	unsigned int flags;		/* Device flags. */
 	unsigned int auto_fps;		/* auto adjust frame rate flag*/
 	unsigned int send_suspend_cmd_in_hs_mode;   /* send suspend cmd is hs mode */
-	union {
+
+	struct {
+		struct sf_fb_timing_rgb rgb;
 		//struct comipfb_dev_timing_rgb rgb;
 		struct sf_fb_timing_mipi mipi;
 	} timing;
@@ -252,6 +267,7 @@ struct sf_fb_display_dev {
 
 extern int sf_fb_display_dev_register(struct sf_fb_display_dev* dev);
 extern int sf_fb_display_dev_unregister(struct sf_fb_display_dev* dev);
+extern struct sf_fb_display_dev* sf_fb_display_dev_get_by_name(char *dev_name);
 extern struct sf_fb_display_dev* sf_fb_display_dev_get(struct sf_fb_data *fb_data);
 
-#endif /*__COMIPFB_DEV_H_*/
+#endif /*__SF_FB_DISPLAY_DEV_H_*/

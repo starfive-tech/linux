@@ -415,6 +415,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ArySize = ARRAY_SIZE(ov5640_setting_30fps_1080P_1920_1080);
 	retval = ov5640_download_firmware(pModeSetting, ArySize);
 
+	printk("ov5640_probe done\n");
     return 0;
 }
 

@@ -26,6 +26,13 @@ enum lcdc_win_num{
 	LCDC_WIN_5,
 };
 
+enum WIN_FMT{
+    WIN_FMT_RGB565 = 4,
+    WIN_FMT_xRGB1555,
+    WIN_FMT_xRGB4444,
+    WIN_FMT_xRGB8888,
+};
+
 #define LCDC_STOP	0
 #define LCDC_RUN	1
 
@@ -60,6 +67,9 @@ enum lcdc_win_num{
 #define LCDC_WIN67_HSIZE		0x009C
 #define LCDC_ALPHA_VALUE		0x00A0
 #define LCDC_PANELDATAFMT		0x00A4
+#define LCDC_WIN0STARTADDR0		0x00B8
+#define LCDC_WIN0STARTADDR1		0x00BC
+
 
 /* Definition controller bit for LCDC registers */
 //for LCDC_SWITCH
@@ -136,6 +146,7 @@ extern irqreturn_t lcdc_isr_handler(int this_irq, void *dev_id);
 extern void lcdc_int_cfg(struct sf_fb_data *sf_dev, int mask);
 extern void lcdc_config(struct sf_fb_data *sf_dev, int winNum);
 extern int lcdc_win_sel(struct sf_fb_data *sf_dev, enum lcdc_in_mode sel);
+extern void lcdc_dsi_sel(struct sf_fb_data *sf_dev);
 extern void lcdc_run(struct sf_fb_data *sf_dev, uint32_t winMode, uint32_t lcdTrig);
 
 #endif

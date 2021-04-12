@@ -224,6 +224,7 @@ static const struct dmi_system_id dw_i2c_hwmon_class_dmi[] = {
 static int dw_i2c_plat_probe(struct platform_device *pdev)
 {
 	struct dw_i2c_platform_data *pdata = dev_get_platdata(&pdev->dev);
+	struct device_node *np = pdev->dev.of_node;
 	struct i2c_adapter *adap;
 	struct dw_i2c_dev *dev;
 	struct i2c_timings *t;
@@ -240,6 +241,9 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 	dev->flags = (uintptr_t)device_get_match_data(&pdev->dev);
 	dev->dev = &pdev->dev;
 	dev->irq = irq;
+	dev->scl_gpio = of_get_named_gpio(np, "scl-gpio", 0);
+	dev->sda_gpio = of_get_named_gpio(np, "sda-gpio", 0);
+	dev->auto_calc_lhcnt = of_property_read_bool(np, "auto_calc_scl_lhcnt");
 	platform_set_drvdata(pdev, dev);
 
 	ret = dw_i2c_plat_request_regs(dev);

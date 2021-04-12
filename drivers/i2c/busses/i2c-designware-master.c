@@ -21,6 +21,7 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/gpio-starfive-vic.h>
+//#include <linux/gpio-vic.h>
 
 #include "i2c-designware-core.h"
 
@@ -172,6 +173,166 @@ out:
 	return ret;
 }
 
+static int i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
+{
+	if((dev->scl_gpio > 0) && (dev->sda_gpio > 0))
+	{
+		switch(dev->adapter.nr) {
+		case 0:
+			SET_GPIO_dout_LOW(dev->scl_gpio);
+			SET_GPIO_dout_LOW(dev->sda_gpio);
+			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
+			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
+			SET_GPIO_doen_i2c0_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c0_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c0_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c0_pad_sda_in(dev->sda_gpio);
+			break;
+		case 1:
+			SET_GPIO_dout_LOW(dev->scl_gpio);
+			SET_GPIO_dout_LOW(dev->sda_gpio);
+			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
+			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
+			SET_GPIO_doen_i2c1_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c1_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c1_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c1_pad_sda_in(dev->sda_gpio);
+			break;
+		case 2:
+			SET_GPIO_dout_LOW(dev->scl_gpio);
+			SET_GPIO_dout_LOW(dev->sda_gpio);
+			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
+			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
+			SET_GPIO_doen_i2c2_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c2_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c2_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c2_pad_sda_in(dev->sda_gpio);
+			break;
+		case 3:
+			SET_GPIO_dout_LOW(dev->scl_gpio);
+			SET_GPIO_dout_LOW(dev->sda_gpio);
+			SET_GPIO_doen_reverse_(dev->scl_gpio,1);
+			SET_GPIO_doen_reverse_(dev->sda_gpio,1);
+			SET_GPIO_doen_i2c3_pad_sck_oe(dev->scl_gpio);
+			SET_GPIO_doen_i2c3_pad_sda_oe(dev->sda_gpio);
+			SET_GPIO_i2c3_pad_sck_in(dev->scl_gpio);
+			SET_GPIO_i2c3_pad_sda_in(dev->sda_gpio);
+			break;
+		default:
+			dev_warn(dev->dev, "NOTE: i2c adapter number is invalid\n");
+		}
+	}
+	else
+		dev_warn(dev->dev, "NOTE: scl/sda gpio number is invalid !\n");
+	return 0;
+}
+
+
+static int i2c_dw_cal_scl_lhcnt(struct dw_i2c_dev *dev)
+{
+	u32	value = 0U;
+	u32	rc = 0U;
+    int ret;
+	/* Make sure we have a supported speed for the DesignWare model */
+	/* and have setup the clock frequency and speed mode */
+
+	switch (i2c_dw_clk_rate(dev)) {
+	case 100:
+		/* Following the directions on DW spec page 59, IC_SS_SCL_LCNT
+		 * must have register values larger than IC_FS_SPKLEN + 7
+		 */
+		ret = regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+		if (I2C_STD_LCNT <= (value + 7)) {
+			regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+			value = value + 8;
+		} else {
+			value = I2C_STD_LCNT;
+		}
+
+		dev->ss_lcnt = value;
+
+		/* Following the directions on DW spec page 59, IC_SS_SCL_HCNT
+		 * must have register values larger than IC_FS_SPKLEN + 5
+		 */
+
+		ret = regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+		if (I2C_STD_HCNT <= (value + 5)) {
+			regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+			value = value + 6;
+		} else {
+			value = I2C_STD_HCNT;
+		}
+
+		dev->ss_hcnt = value;
+		break;
+		/* fall through */
+	case 400:
+	case 1000:
+		/*
+		 * Following the directions on DW spec page 59, IC_FS_SCL_LCNT
+		 * must have register values larger than IC_FS_SPKLEN + 7
+		 */
+
+	    ret = regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+		if (I2C_FS_LCNT <= (value + 7)) {
+			regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+			value = value + 8;
+
+		} else {
+			value = I2C_FS_LCNT;
+		}
+
+		dev->fs_lcnt = value;
+		dev->fp_lcnt = value;
+
+		/*
+		 * Following the directions on DW spec page 59, IC_FS_SCL_HCNT
+		 * must have register values larger than IC_FS_SPKLEN + 5
+		 */
+		ret = regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+		if (I2C_FS_HCNT <= (value + 5)) {
+			regmap_read(dev->map, DW_IC_FS_SPKLEN, &value);
+			value = value + 6;
+
+		} else {
+			value = I2C_FS_HCNT;
+		}
+
+		dev->fs_hcnt = value;
+		dev->fp_hcnt = value;
+		break;
+	case 3400:
+		ret = regmap_read(dev->map, DW_IC_HS_SPKLEN, &value);
+		if (I2C_HS_LCNT <= (value + 7)) {
+			regmap_read(dev->map, DW_IC_HS_SPKLEN, &value);
+			value = value + 8;
+		} else {
+			value = I2C_HS_LCNT;
+		}
+
+		dev->hs_lcnt = value;
+		ret = regmap_read(dev->map, DW_IC_HS_SPKLEN, &value);
+		if (I2C_HS_HCNT <= (value + 5)) {
+		    regmap_read(dev->map, DW_IC_HS_SPKLEN, &value);
+			value = value + 6;
+		} else {
+			value = I2C_HS_HCNT;
+		}
+
+		dev->hs_hcnt = value;
+		break;
+	default:
+		/* TODO change */
+		rc = -1;
+	}
+
+	/*
+	 * Clear any interrupts currently waiting in the controller
+	 */
+	return rc;
+}
+
+
 /**
  * i2c_dw_init() - Initialize the designware I2C master hardware
  * @dev: device private data
@@ -190,6 +351,9 @@ static int i2c_dw_init_master(struct dw_i2c_dev *dev)
 
 	/* Disable the adapter */
 	__i2c_dw_disable(dev);
+
+	if (true == dev->auto_calc_lhcnt)
+		i2c_dw_cal_scl_lhcnt(dev);
 
 	/* Write standard speed timing parameters */
 	regmap_write(dev->map, DW_IC_SS_SCL_HCNT, dev->ss_hcnt);
@@ -807,6 +971,7 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 	if (ret)
 		dev_err(dev->dev, "failure adding adapter: %d\n", ret);
 	pm_runtime_put_noidle(dev->dev);
+	i2c_dw_configure_gpio(dev);
 
 	return ret;
 }
