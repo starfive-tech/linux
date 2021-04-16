@@ -659,7 +659,6 @@ static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 
 static int sf_fb_init(struct sf_fb_data *sf_dev)
 {
-
 	INIT_LIST_HEAD(&sf_dev->fb.modelist);
 	sf_dev->fb.device = sf_dev->dev;
 	sf_dev->fb.fbops = &sf_fb_ops;
@@ -1121,7 +1120,6 @@ static int starfive_fb_probe(struct platform_device *pdev)
  * the case used to check VIN image data path only
  * is not normal application.
  */
-    printk("defined CONFIG_FB_STARFIVE_VIDEO\n");
 	sf_dev->fb.fix.smem_start = 0xf9000000;
 #endif
 
@@ -1162,10 +1160,10 @@ static int starfive_fb_probe(struct platform_device *pdev)
 
 
     if(STARFIVEFB_MIPI_IF == sf_dev->display_dev->interface_info){
-		printk("STARFIVEFB_MIPI_IF interface_info\n");
 		lcdc_dsi_sel(sf_dev);
 		sf_mipi_init(sf_dev);
     }
+
 	if (sf_fb_pp_init(sf_dev)) {
 		dev_err(dev, "pp init fail\n");
 		return -ENODEV;

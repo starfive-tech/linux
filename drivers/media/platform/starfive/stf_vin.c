@@ -916,7 +916,12 @@ static void __exit stf_vin_cleanup(void)
 	platform_driver_unregister(&stf_vin_driver);
 }
 
+#if defined(CONFIG_VIN_SENSOR_SC2235) || defined(CONFIG_VIN_SENSOR_OV5640)
 fs_initcall(stf_vin_init);
+#elif defined(CONFIG_VIN_SENSOR_OV4689)
+subsys_initcall(stf_vin_init);
+#endif
+
 module_exit(stf_vin_cleanup);
 
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");

@@ -136,7 +136,7 @@ void sifive_l2_flush64_range(unsigned long start, unsigned long len)
 	unsigned long line;
 
 	if(!l2_base) {
-		pr_warn("L2CACHE: base addr invalid, skipping flush\n");
+		pr_debug("L2CACHE: base addr invalid, skipping flush\n");
 		return;
 	}
 

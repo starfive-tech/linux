@@ -163,7 +163,10 @@ void lcdc_win_cfgB(struct sf_fb_data *sf_dev, int winNum, int xpos, int ypos, in
 		argbOrd=0;
 	if (!strcmp(sf_dev->dis_dev_name, "seeed_5_inch"))
 		argbOrd=1;
-	//argbOrd=3;
+#if defined(CONFIG_VIN_SENSOR_OV4689) 
+		argbOrd=0;
+#endif
+
 
 	int cfg = xpos | ypos << LCDC_WIN_VPOS | win_format << LCDC_WIN_FMT
 		       | argbOrd << LCDC_WIN_ARGB_ORDER;
