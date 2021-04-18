@@ -759,6 +759,41 @@ static int ksz9031_config_init(struct phy_device *phydev)
 		}
 	}
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	/*
+	 * set to speed in bit [6, 13] of Register 0h – Basic Control
+	 * [1,1] = Reserved
+	 * [1,0] = 1000 Mbps
+	 * [0,1] = 100 Mbps
+	 * [0,0] = 10 Mbps
+	*/
+	result = phy_read(phydev, MII_BMCR);
+	result &= ~(BIT(6) | BIT(13));
+#if defined(CONFIG_FPGA_GMAC_SPEED10)
+	/* nothing to do */
+#elif defined(CONFIG_FPGA_GMAC_SPEED100)
+	result |= BIT(13);
+#else
+	result |= BIT(6);
+	/* Enable auto-negotiation process 0.12*/
+	result |= BIT(12);
+#endif
+	result = phy_write(phydev, MII_BMCR, result);
+	if (result < 0)
+		goto err_force_master;
+
+#if defined(CONFIG_FPGA_GMAC_SPEED10) || defined(CONFIG_FPGA_GMAC_SPEED100)
+	/* disable Auto-Negotiation advertisements
+	 * for 1000 Mbps full/half-duplex in Register 9h – 1000BASE-T Control
+	 */
+	result = phy_read(phydev, MII_CTRL1000);
+	result &= ~(ADVERTISE_1000FULL | ADVERTISE_1000HALF);
+	result = phy_write(phydev, MII_CTRL1000, result);
+	if (result < 0)
+		goto err_force_master;
+#endif
+
+#endif
 	return ksz9031_center_flp_timing(phydev);
 
 err_force_master:
