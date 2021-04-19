@@ -475,7 +475,7 @@ EXPORT_SYMBOL(mmc_alloc_host);
  *	prepared to start servicing requests before this function
  *	completes.
  */
-struct mmc_host *primary_sdio_host;
+struct mmc_host *primary_sdio_host = NULL;
 
 int mmc_add_host(struct mmc_host *host)
 {
@@ -497,8 +497,8 @@ int mmc_add_host(struct mmc_host *host)
 	mmc_start_host(host);
 	mmc_register_pm_notifier(host);
 
-	//if (host->restrict_caps & RESTRICT_CARD_TYPE_SDIO)
-	primary_sdio_host = host;
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		primary_sdio_host = host;
 
 	return 0;
 }

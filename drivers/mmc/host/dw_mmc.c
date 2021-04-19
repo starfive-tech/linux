@@ -1224,6 +1224,7 @@ static void dw_mci_setup_bus(struct dw_mci_slot *slot, bool force_clkinit)
 		sdmmc_cmd_bits |= SDMMC_CMD_VOLT_SWITCH;
 
 	slot->mmc->actual_clock = 0;
+
 	if (!clock) {
 		mci_writel(host, CLKENA, 0);
 		mci_send_cmd(slot, sdmmc_cmd_bits, 0);
@@ -1597,8 +1598,8 @@ static int dw_mci_set_sdio_status(struct mmc_host *mmc, int val)
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
 
-	//	if (!(mmc->restrict_caps & RESTRICT_CARD_TYPE_SDIO))
-	//	return 0;
+	if (!(mmc->caps & MMC_CAP_NONREMOVABLE))
+		return 0;
 	printk("this is debug %s %s %d\n",__FILE__,__func__,__LINE__);
 	spin_lock_bh(&host->lock);
 
