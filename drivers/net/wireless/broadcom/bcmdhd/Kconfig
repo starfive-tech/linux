@@ -1,6 +1,5 @@
 config BCMDHD
 	tristate "Broadcom FullMAC wireless cards support"
-	select PM_SLEEP
 	select CFG80211
 	select RFKILL
 	help
