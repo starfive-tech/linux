@@ -407,7 +407,9 @@ do {									\
 /* TODO: even in upstream linux(v5.0), FT-1X-SHA384 isn't defined and supported yet.
  * need to revisit here to sync correct name later.
  */
+#ifndef WLAN_AKM_SUITE_FT_8021X_SHA384
 #define WLAN_AKM_SUITE_FT_8021X_SHA384		0x000FAC0D
+#endif
 
 #define WL_AKM_SUITE_SHA256_1X  0x000FAC05
 #define WL_AKM_SUITE_SHA256_PSK 0x000FAC06
