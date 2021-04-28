@@ -103,9 +103,9 @@ extern unsigned long pfn_base;
 #define ARCH_PFN_OFFSET		(PAGE_OFFSET >> PAGE_SHIFT)
 #endif /* CONFIG_MMU */
 
-#ifdef CONFIG_64BIT
 extern unsigned long kernel_virt_addr;
 
+#ifdef CONFIG_64BIT
 #define linear_mapping_pa_to_va(x)	((void *)((unsigned long)(x) + va_pa_offset))
 #define kernel_mapping_pa_to_va(x)	((void *)((unsigned long)(x) + va_kernel_pa_offset))
 #define __pa_to_va_nodebug(x)		linear_mapping_pa_to_va(x)
