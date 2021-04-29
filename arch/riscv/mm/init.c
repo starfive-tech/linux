@@ -591,7 +591,7 @@ asmlinkage void __init setup_vm(uintptr_t dtb_pa)
 #endif
 }
 
-#ifdef CONFIG_64BIT
+#if defined(CONFIG_64BIT) && defined(CONFIG_STRICT_KERNEL_RWX)
 void protect_kernel_linear_mapping_text_rodata(void)
 {
 	unsigned long text_start = (unsigned long)lm_alias(_start);
