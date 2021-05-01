@@ -356,7 +356,6 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
-	struct axi_dma_desc *desc;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	u32 reg, irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
@@ -406,19 +405,23 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
 
-    /*flush all the desc */
+	/* flush all the desc */
 #ifdef CONFIG_SOC_STARFIVE_VIC7100
 	if(chan->chip->flag->need_flush) {
-		/*flush fisrt desc*/
-		starfive_flush_dcache(first->vd.tx.phys, sizeof(*first));
+		int count = atomic_read(&chan->descs_allocated);
+		int i;
 
-		list_for_each_entry(desc, &first->xfer_list, xfer_list) {
-			starfive_flush_dcache(desc->vd.tx.phys, sizeof(*desc));
+		for (i = 0; i < count; i++) {
+			starfive_flush_dcache(first->hw_desc[i].llp,
+					      sizeof(*first->hw_desc[i].lli));
 
 			dev_dbg(chan->chip->dev,
 				"sar:%#llx dar:%#llx llp:%#llx ctl:0x%x:%08x\n",
-				desc->lli.sar, desc->lli.dar, desc->lli.llp,
-				desc->lli.ctl_hi, desc->lli.ctl_lo);
+				first->hw_desc[i].lli->sar,
+				first->hw_desc[i].lli->dar,
+				first->hw_desc[i].lli->llp,
+				first->hw_desc[i].lli->ctl_hi,
+				first->hw_desc[i].lli->ctl_lo);
 		}
 	}
 #endif
