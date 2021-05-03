@@ -561,7 +561,7 @@ int dsitx_dcs_write(struct sf_fb_data *sf_dev, int n, ...)
 
     wbuf.len = 0;
     wbuf.val32 = 0;
-    va_start(ap, cmd_size);
+    va_start(ap, n);
     for (i = 0; i < cmd_size; i++) {
         wbuf.val8[wbuf.len++] = (char)va_arg(ap, int);
         if (((i + 1) & 0x3) == 0) {
