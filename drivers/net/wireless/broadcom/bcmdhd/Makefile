@@ -26,7 +26,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                 \
 	-DPOWERUP_MAX_RETRY=0 -DIFACE_HANG_FORCE_DEV_CLOSE -DWAIT_DEQUEUE     \
 	-DWL_EXT_IAPSTA -DWL_ESCAN -DCCODE_LIST                               \
 	-DENABLE_INSMOD_NO_FW_LOAD                                            \
-	-Idrivers/net/wireless/broadcom/bcmdhd -Idrivers/net/wireless/broadcom/bcmdhd/include
+	-I$(srctree)/drivers/net/wireless/broadcom/bcmdhd -I$(srctree)/drivers/net/wireless/broadcom/bcmdhd/include
 
 DHDOFILES = aiutils.o siutils.o sbutils.o bcmutils.o bcmwifi_channels.o   \
 	dhd_linux.o dhd_linux_platdev.o dhd_linux_sched.o dhd_pno.o           \
