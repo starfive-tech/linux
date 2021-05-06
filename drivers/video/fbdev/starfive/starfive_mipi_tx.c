@@ -542,7 +542,7 @@ void dsi_main_cfg(struct sf_fb_data *sf_dev)
 	MIPITX_PRT("DSI TVG main ctrl 0xfc: 0x%x\n", tvg_cfg);
 }
 
-int dsitx_dcs_write(struct sf_fb_data *sf_dev, int n, ...)
+int dsitx_dcs_write(struct sf_fb_data *sf_dev, int cmd_size, ...)
 {
     int ret = 0;
 	u32 exp_sts_mask = 0x2; // [1]write complete
@@ -553,7 +553,6 @@ int dsitx_dcs_write(struct sf_fb_data *sf_dev, int n, ...)
 	va_list ap;
 
     // dcs cmd config
-    int cmd_size = n;
     int cmd_head = (cmd_size < 2 ? CMD_HEAD_WRITE_0 :
                         (cmd_size < 3 ? CMD_HEAD_WRITE_1 :
                             CMD_HEAD_WRITE_N));
