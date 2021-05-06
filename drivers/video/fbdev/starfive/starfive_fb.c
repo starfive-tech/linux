@@ -640,25 +640,32 @@ static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 {
 	struct resource res_mem;
 	struct device_node *node;
+	int ret;
 
 	node = of_parse_phandle(sf_dev->dev->of_node, "memory-region", 0);
-	if(node) {
-		of_address_to_resource(node, 0, &res_mem);
-		sf_dev->fb.screen_size = resource_size(&res_mem);
-		sf_dev->fb.fix.smem_start = res_mem.start;
-	} else {
+	if (!node) {
 		dev_err(sf_dev->dev, "Could not get reserved memory.\n");
 		return -ENOMEM;
 	}
 
-	sf_dev->fb.screen_base = devm_ioremap_resource(sf_dev->dev, &res_mem);
-	memset(sf_dev->fb.screen_base, 0, sf_dev->fb.screen_size);
+	ret = of_address_to_resource(node, 0, &res_mem);
+	if (ret)
+		return ret;
 
+	sf_dev->fb.screen_size = resource_size(&res_mem);
+	sf_dev->fb.fix.smem_start = res_mem.start;
+
+	sf_dev->fb.screen_base = devm_ioremap_resource(sf_dev->dev, &res_mem);
+	if (IS_ERR(sf_dev->fb.screen_base))
+		return PTR_ERR(sf_dev->fb.screen_base);
+
+	memset(sf_dev->fb.screen_base, 0, sf_dev->fb.screen_size);
 	return 0;
 }
 
 static int sf_fb_init(struct sf_fb_data *sf_dev)
 {
+	int ret;
 
 	INIT_LIST_HEAD(&sf_dev->fb.modelist);
 	sf_dev->fb.device = sf_dev->dev;
@@ -710,9 +717,10 @@ static int sf_fb_init(struct sf_fb_data *sf_dev)
 
 	sf_dev->fb.fix.smem_len = sf_dev->buf_size * sf_dev->buf_num;
 
-	if (sf_fb_map_video_memory(sf_dev)) {
+	ret = sf_fb_map_video_memory(sf_dev);
+	if (ret) {
 		dev_err(sf_dev->dev, "Fail to allocate video RAM\n");
-		return -ENOMEM;
+		return ret;
 	}
 
 	//layer->buf_addr = layer->map_dma;
@@ -723,9 +731,10 @@ static int sf_fb_init(struct sf_fb_data *sf_dev)
 static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 {
 	struct sf_fb_display_dev *display_dev = NULL;
+	int ret;
 
 	display_dev = sf_fb_display_dev_get(sf_dev);
-	if (NULL == display_dev) {
+	if (!display_dev) {
 		dev_err(sf_dev->dev, "Could not get display dev\n");
 	}
 	sf_dev->display_dev = display_dev;
@@ -816,9 +825,10 @@ static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 			break;
 	}
 
-	if (sf_fb_init(sf_dev)) {
+	ret = sf_fb_init(sf_dev);
+	if (ret) {
 		dev_err(sf_dev->dev, "starfive fb init fail\n");
-		return -ENOMEM;
+		return ret;
 	}
 
 	return 0;
@@ -1115,9 +1125,10 @@ static int starfive_fb_probe(struct platform_device *pdev)
 	sf_dev->cmap_inverse = 0;
 	sf_dev->cmap_static = 0;
 	sf_dev->dev = &pdev->dev;
-	if (sf_fbinfo_init(&pdev->dev, sf_dev)) {
+	ret = sf_fbinfo_init(&pdev->dev, sf_dev);
+	if (ret) {
 		dev_err(dev, "fb info init FAIL\n");
-		return -ENODEV;
+		return ret;
 	}
 
 #ifndef CONFIG_FRAMEBUFFER_CONSOLE
