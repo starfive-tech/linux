@@ -69,7 +69,7 @@
 #define BIT_RST_DSI_DPI_PIX		17
 
 
-static u32 sf_fb_cfgread32(struct sf_fb_data *sf_dev, u32 reg)
+static inline u32 sf_fb_cfgread32(struct sf_fb_data *sf_dev, u32 reg)
 {
 	return ioread32(sf_dev->base_syscfg + reg);
 }
@@ -84,7 +84,7 @@ static inline u32 sf_fb_rstread32(struct sf_fb_data *sf_dev, u32 reg)
 	return ioread32(sf_dev->base_rst + reg);
 }
 
-static void sf_fb_rstwrite32(struct sf_fb_data *sf_dev, u32 reg, u32 val)
+static inline void sf_fb_rstwrite32(struct sf_fb_data *sf_dev, u32 reg, u32 val)
 {
 	iowrite32(val, sf_dev->base_rst + reg);
 }
