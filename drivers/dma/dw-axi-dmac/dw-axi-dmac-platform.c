@@ -350,6 +350,20 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 
 	reg = (DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 	       DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
+
+	if (chan->hw_handshake_num) {
+		switch (chan->direction) {
+		case DMA_MEM_TO_DEV:
+			reg |= chan->hw_handshake_num << CH_CFG_L_DST_PER_POS;
+			break;
+		case DMA_DEV_TO_MEM:
+			reg |= chan->hw_handshake_num << CH_CFG_L_SRC_PER_POS;
+			break;
+		default:
+			break;
+		}
+	}
+
 	axi_chan_iowrite32(chan, CH_CFG_L, reg);
 
 	reg = (DWAXIDMAC_TT_FC_MEM_TO_MEM_DMAC << CH_CFG_H_TT_FC_POS |
@@ -1040,7 +1054,6 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 			axi_chan_handle_err(chan, status);
 		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
-			dev_info(chip->dev, "axi_chan_block_xfer_complete.\n");
 	}
 	}
 
