@@ -32,8 +32,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <drm/drm.h>
+#include <drm/drm_device.h>
+#include <drm/drm_drv.h>
+#include <drm/drm_gem.h>
 #include <drm/drm_gem_cma_helper.h>
+
+#include <linux/dma-mapping.h>
+#include <linux/dma-map-ops.h>
 
 #include <nvdla_linux.h>
 #include <nvdla_ioctl.h>
@@ -205,7 +210,7 @@ nvdla_gem_create_with_handle(struct drm_file *file_priv,
 	if (ret)
 		goto free_drm_object;
 
-	drm_gem_object_unreference_unlocked(dobj);
+	drm_gem_object_put(dobj);
 
 	return nobj;
 
@@ -329,7 +334,7 @@ int32_t nvdla_gem_dma_addr(struct drm_device *dev, struct drm_file *file,
 
 	*addr = nobj->dma_addr;
 
-	drm_gem_object_put_unlocked(dobj);
+	drm_gem_object_put(dobj);
 
 	return 0;
 }
@@ -352,7 +357,7 @@ static int32_t nvdla_gem_map_offset(struct drm_device *drm, void *data,
 	args->offset = drm_vma_node_offset_addr(&dobj->vma_node);
 
 out:
-	drm_gem_object_unreference_unlocked(dobj);
+	drm_gem_object_put(dobj);
 
 	return 0;
 }
@@ -387,7 +392,7 @@ static const struct drm_ioctl_desc nvdla_drm_ioctls[] = {
 };
 
 static struct drm_driver nvdla_drm_driver = {
-	.driver_features = DRIVER_GEM | DRIVER_PRIME | DRIVER_RENDER,
+	.driver_features = DRIVER_GEM | DRIVER_RENDER,
 
 	.gem_vm_ops = &drm_gem_cma_vm_ops,
 
@@ -417,7 +422,6 @@ static struct drm_driver nvdla_drm_driver = {
 
 int32_t nvdla_drm_probe(struct nvdla_device *nvdla_dev)
 {
-	int32_t dma;
 	int32_t err;
 	struct drm_device *drm;
 	struct drm_driver *driver = &nvdla_drm_driver;
@@ -436,19 +440,18 @@ int32_t nvdla_drm_probe(struct nvdla_device *nvdla_dev)
 	 * TODO Register separate driver for memory and use DT node to
 	 * read memory range
 	 */
-	dma = dma_declare_coherent_memory(drm->dev, 0xC0000000, 0xC0000000,
-			0x40000000, DMA_MEMORY_EXCLUSIVE);
+	err = dma_declare_coherent_memory(drm->dev, 0xD0000000, 0xD0000000,
+			0x28000000);
 
 	return 0;
 
 unref:
-	drm_dev_unref(drm);
+	drm_dev_put(drm);
 	return err;
 }
 
 void nvdla_drm_remove(struct nvdla_device *nvdla_dev)
 {
 	drm_dev_unregister(nvdla_dev->drm);
-	dma_release_declared_memory(&nvdla_dev->pdev->dev);
-	drm_dev_unref(nvdla_dev->drm);
+	drm_dev_put(nvdla_dev->drm);
 }
