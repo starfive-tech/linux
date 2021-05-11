@@ -64,51 +64,50 @@ static struct nvdla_config nvdla_config_os_initial = {
 };
 
 static struct nvdla_config nvdla_config_small = {
-	//.atom_size = 8,
-	.atom_size = 32,  // nv_large config
+	.atom_size = 8,
 	.bdma_enable = false,
 	.rubik_enable = false,
 	.weight_compress_support = false,
 };
 
+static struct nvdla_config nvdla_config_large = {
+	.atom_size = 32,
+	.bdma_enable = false,
+	.rubik_enable = false,
+	.weight_compress_support = false,
+};
+
+
 void dla_debug(const char *str, ...)
 {
-    /*
 	va_list args;
 	va_start(args, str);
 	vprintk(pr_fmt(str), args);
 	va_end(args);
-	*/
 }
 
 void dla_info(const char *str, ...)
 {
-    /*
 	va_list args;
 	va_start(args, str);
 	vprintk(str, args);
 	va_end(args);
-	*/
 }
 
 void dla_warn(const char *str, ...)
 {
-    /*
 	va_list args;
 	va_start(args, str);
 	vprintk(str, args);
 	va_end(args);
-	*/
 }
 
 void dla_error(const char *str, ...)
 {
-    /*
 	va_list args;
 	va_start(args, str);
 	vprintk(str, args);
 	va_end(args);
-	*/
 }
 
 void *dla_memset(void *src, int ch, uint64_t len)
@@ -313,7 +312,6 @@ int32_t nvdla_task_submit(struct nvdla_device *nvdla_dev, struct nvdla_task *tas
 	int32_t err = 0;
 	uint32_t task_complete = 0;
 
-	//trace_printk("__nvdla_task_submit_entry\n");
 	nvdla_dev->task = task;
 
 	err = dla_execute_task(nvdla_dev->engine_context, (void *)task, nvdla_dev->config_data);
@@ -341,7 +339,6 @@ int32_t nvdla_task_submit(struct nvdla_device *nvdla_dev, struct nvdla_task *tas
 
 	pr_debug("Task complete\n");
 	dla_clear_task(nvdla_dev->engine_context);
-	//trace_printk("__nvdla_task_submit_exit\n");
 
 	return err;
 }
@@ -353,8 +350,12 @@ static const struct of_device_id nvdla_of_match[] = {
 		.data = &nvdla_config_os_initial,
 	},
 	{
-		.compatible = "nvidia,nvdla_2",
+		.compatible = "nvidia,nv_small",
 		.data = &nvdla_config_small,
+	},
+	{
+		.compatible = "nvidia,nv_large",
+		.data = &nvdla_config_large,
 	},
 	{ },
 };
@@ -375,6 +376,8 @@ static int32_t nvdla_probe(struct platform_device *pdev)
 		pr_err("Missing DT entry!\n");
 		return -EINVAL;
 	}
+
+	pr_err("Probe NVDLA config %s\n", match->compatible);
 
 	nvdla_dev = devm_kzalloc(dev, sizeof(*nvdla_dev), GFP_KERNEL);
 	if (!nvdla_dev)
