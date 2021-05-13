@@ -133,3 +133,7 @@ struct sf_fb_display_dev* sf_fb_display_dev_get(struct sf_fb_data *fb_data)
 	return dev;
 }
 EXPORT_SYMBOL(sf_fb_display_dev_get);
+
+MODULE_AUTHOR("StarFive Technology Co., Ltd.");
+MODULE_DESCRIPTION("framebuffer device for StarFive");
+MODULE_LICENSE("GPL");
