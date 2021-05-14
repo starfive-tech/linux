@@ -2213,7 +2213,7 @@ static int tda998x_probe(struct i2c_client *client, const struct i2c_device_id *
 {
 	int ret;
 	struct sf_fb_display_dev *display_dev = NULL;
-
+	printk("lqw tda998x_probe\n");
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_warn(&client->dev, "adapter does not support I2C\n");
 		return -EIO;
