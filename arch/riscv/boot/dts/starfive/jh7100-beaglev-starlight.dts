@@ -85,6 +85,14 @@
 };
 
 &i2c0 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	scl-gpio = <&gpio 62 0>;
+	sda-gpio = <&gpio 61 0>;
+	status = "okay";
+
 	imx219@10 {
 		compatible = "imx219";
 		reg = <0x10>;
@@ -110,7 +118,25 @@
 	};
 };
 
+&i2c1 {
+	clock-frequency = <400000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <100>;
+	i2c-scl-falling-time-ns = <100>;
+	scl-gpio = <&gpio 47 0>;
+	sda-gpio = <&gpio 48 0>;
+	status = "okay";
+};
+
 &i2c2 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <500>;
+	i2c-scl-falling-time-ns = <500>;
+	scl-gpio = <&gpio 60 0>;
+	sda-gpio = <&gpio 59 0>;
+	status = "okay";
+
 	seeed_plane_i2c@45 {
 		compatible = "seeed_panel";
 		reg = <0x45>;

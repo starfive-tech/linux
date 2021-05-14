@@ -276,12 +276,7 @@
 			reg = <0x0 0x118b0000 0x0 0x10000>;
 			interrupts = <96>;
 			clocks = <&clkgen JH7100_CLK_I2C0>;
-			clock-frequency = <100000>;
-			i2c-sda-hold-time-ns = <300>;
-			i2c-sda-falling-time-ns = <500>;
-			i2c-scl-falling-time-ns = <500>;
-			scl-gpio = <&gpio 62 0>;
-			sda-gpio = <&gpio 61 0>;
+			status = "disabled";
 		};
 
 		i2c1: i2c@118c0000 {
@@ -292,12 +287,7 @@
 			reg = <0x0 0x118c0000 0x0 0x10000>;
 			interrupts = <97>;
 			clocks = <&clkgen JH7100_CLK_I2C0>;
-			clock-frequency = <400000>;
-			i2c-sda-hold-time-ns = <300>;
-			i2c-sda-falling-time-ns = <100>;
-			i2c-scl-falling-time-ns = <100>;
-			scl-gpio = <&gpio 47 0>;
-			sda-gpio = <&gpio 48 0>;
+			status = "disabled";
 		};
 
 		i2c2: i2c@12450000 {
@@ -308,12 +298,18 @@
 			reg = <0x0 0x12450000 0x0 0x10000>;
 			interrupts = <74>;
 			clocks = <&clkgen JH7100_CLK_I2C2>;
-			clock-frequency = <100000>;
-			i2c-sda-hold-time-ns = <300>;
-			i2c-sda-falling-time-ns = <500>;
-			i2c-scl-falling-time-ns = <500>;
-			scl-gpio = <&gpio 60 0>;
-			sda-gpio = <&gpio 59 0>;
+			status = "disabled";
+		};
+
+		i2c3: i2c@12460000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#clock-cells = <0>;
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x12460000 0x0 0x10000>;
+			interrupts = <75>;
+			clocks = <&clkgen JH7100_CLK_I2C2>;
+			status = "disabled";
 		};
 
 		trng: trng@118d0000 {
