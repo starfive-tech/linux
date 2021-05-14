@@ -210,6 +210,8 @@
 };
 
 &sfivefb {
+	status = "okay";
+
 	/*
 	pp1 {
 		pp-id = <1>;
