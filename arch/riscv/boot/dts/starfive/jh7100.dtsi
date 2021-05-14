@@ -419,12 +419,11 @@
 			spi-max-frequency = <250000000>;
 		};
 
-		/*
 		spi0: spi@11890000 {
 			compatible = "snps,dw-apb-ssi";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			interrupts = <FIXME>;
+			interrupts = <94>;
 			reg = <0x0 0x11890000 0x0 0x10000>;
 			clocks = <&clkgen JH7100_CLK_SPI>;
 			status = "disabled";
@@ -434,12 +433,11 @@
 			compatible = "snps,dw-apb-ssi";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			interrupts = <FIXME>;
+			interrupts = <95>;
 			reg = <0x0 0x118a0000 0x0 0x10000>;
 			clocks = <&clkgen JH7100_CLK_SPI>;
 			status = "disabled";
 		};
-		*/
 
 		spi2: spi@12410000 {
 			compatible = "snps,dw-apb-ssi";
@@ -447,6 +445,16 @@
 			#size-cells = <0>;
 			interrupts = <70>;
 			reg = <0x0 0x12410000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_SPI>;
+			status = "disabled";
+		};
+
+		spi3: spi@12420000 {
+			compatible = "snps,dw-apb-ssi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <71>;
+			reg = <0x0 0x12420000 0x0 0x10000>;
 			clocks = <&clkgen JH7100_CLK_SPI>;
 			status = "disabled";
 		};
