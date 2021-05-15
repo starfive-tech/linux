@@ -541,9 +541,10 @@ static int sf_fb_pan_display(struct fb_var_screeninfo *var,
 	switch(sf_dev->display_dev->interface_info) {
 		case STARFIVEFB_MIPI_IF:
 		case STARFIVEFB_HDMI_IF:
-			//lcdc_run(sf_dev,0x2, 0x1);
+			lcdc_run(sf_dev,0x2, 0x1);
 			break;
 		case STARFIVEFB_RGB_IF:
+			lcdc_run(sf_dev,0x2, 0x1);
 			break;
 		default:
 			break;
