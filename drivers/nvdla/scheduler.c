@@ -1100,6 +1100,7 @@ dla_execute_task(void *engine_context, void *task_data, void *config_data)
 	if (ret)
 		goto complete;
 
+	nvdla_flush_dcache(dw_virt_to_phys((void *)engine), sizeof(*engine));
 	dla_debug_address_info(engine->task);
 
 	/**

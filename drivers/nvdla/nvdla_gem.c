@@ -39,10 +39,12 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/dma-map-ops.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 
 #include <nvdla_linux.h>
 #include <nvdla_ioctl.h>
-
+#include <opendla.h>
 #define to_nvdla_obj(x) container_of(x, struct nvdla_gem_object, object)
 
 struct nvdla_gem_object {
@@ -78,6 +80,7 @@ static int32_t nvdla_fill_task_desc(struct nvdla_ioctl_submit_task *local_task,
 
 	task->address_list = handles;
 
+	nvdla_flush_dcache(dw_virt_to_phys((void *)(task)),sizeof(*task));
 	return 0;
 }
 
@@ -425,6 +428,8 @@ int32_t nvdla_drm_probe(struct nvdla_device *nvdla_dev)
 	int32_t err;
 	struct drm_device *drm;
 	struct drm_driver *driver = &nvdla_drm_driver;
+	struct resource res_cma;
+	struct device_node *node;
 
 	drm = drm_dev_alloc(driver, &nvdla_dev->pdev->dev);
 	if (IS_ERR(drm))
@@ -440,8 +445,19 @@ int32_t nvdla_drm_probe(struct nvdla_device *nvdla_dev)
 	 * TODO Register separate driver for memory and use DT node to
 	 * read memory range
 	 */
-	err = dma_declare_coherent_memory(drm->dev, 0xD0000000, 0xD0000000,
-			0x28000000);
+	node = of_parse_phandle(drm->dev->of_node, "memory-region", 0);
+	if(node ){
+		dev_info(drm->dev, "Get mem from memory-region\n");
+		of_address_to_resource(node, 0, &res_cma);
+		err = dma_declare_coherent_memory(drm->dev, res_cma.start, res_cma.start,resource_size(&res_cma));
+	} else {
+		dev_info(drm->dev, "NVDLA using the default mem.\n");
+		err = dma_declare_coherent_memory(drm->dev, 0xC0000000, 0xC0000000, 0x40000000);
+	}
+
+	if (err < 0) {
+		goto unref;
+	}
 
 	return 0;
 

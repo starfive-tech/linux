@@ -133,6 +133,7 @@ processor_bdma_program_slot(struct dla_bdma_surface_desc *bdma_surface,
 	uint64_t destination_addr = 0;
 	uint32_t high, low, reg;
 	uint8_t  bdma_free_slots = 0;
+	uint64_t bdma_len = 0;
 	struct dla_engine *engine = dla_get_engine();
 
 	dla_debug("Enter: %s\n", __func__);
@@ -196,6 +197,14 @@ processor_bdma_program_slot(struct dla_bdma_surface_desc *bdma_surface,
 	bdma_reg_write(CFG_DST_SURF, transfer->destination_surface);
 	bdma_reg_write(CFG_OP, FIELD_ENUM(BDMA_CFG_OP_0, EN, ENABLE));
 
+#ifdef CONFIG_NVDLA_NEED_FLUSH
+	bdma_len = (transfer->surface_repeat) * (transfer->source_surface); //???
+	nvdla_flush_dcache((unsigned long)source_addr,bdma_len);
+	nvdla_flush_dcache((unsigned long)destination_addr,bdma_len);
+	dla_info("%s():surface_repeat:%#x,source_surface:%#x  bdmalen:%#llx\n",__func__,transfer->surface_repeat,transfer->source_surface,bdma_len);
+	dla_info("%s():dma_src_addr:%#llx,dma_dst_addr:%#llx \n",__func__,source_addr,destination_addr);
+#endif
+	
 	dla_debug("Exit: %s\n", __func__);
 
 exit:

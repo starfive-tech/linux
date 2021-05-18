@@ -146,6 +146,9 @@ dla_get_op_desc(struct dla_task *task, int16_t index,
 	}
 
 exit:
+    if (desc) {
+        nvdla_flush_dcache(dw_virt_to_phys((void *)desc), sizeof(*desc));
+    }
 	return desc;
 }
 

@@ -55,6 +55,7 @@
 #include <nvdla_interface.h>
 #include <nvdla_linux.h>
 #include <nvdla_ioctl.h>
+#include <opendla.h>
 
 static struct nvdla_config nvdla_config_os_initial = {
 	.atom_size = 32,
@@ -76,7 +77,6 @@ static struct nvdla_config nvdla_config_large = {
 	.rubik_enable = false,
 	.weight_compress_support = false,
 };
-
 
 void dla_debug(const char *str, ...)
 {
@@ -112,7 +112,9 @@ void dla_error(const char *str, ...)
 
 void *dla_memset(void *src, int ch, uint64_t len)
 {
-	return memset(src, ch, len);
+	memset(src, ch, len);
+	nvdla_flush_dcache(dw_virt_to_phys(src),len);
+	return src;
 }
 
 void *dla_memcpy(void *dest, const void *src, uint64_t len)
@@ -228,7 +230,9 @@ int32_t dla_data_write(void *driver_context, void *task_data,
 	struct dma_buf *buf;
 	struct nvdla_mem_handle *handles;
 	struct nvdla_task *task = (struct nvdla_task *)task_data;
+	uint64_t dma_addr = 0;
 
+	dla_get_dma_address(driver_context, task_data,dst, (void *)&dma_addr, DESTINATION_DMA); 
 	handles = task->address_list;
 	buf = dma_buf_get(handles[dst].handle);
 	if (IS_ERR(buf)) {
@@ -250,7 +254,9 @@ int32_t dla_data_write(void *driver_context, void *task_data,
 	}
 
 
+	nvdla_flush_dcache(dw_virt_to_phys(src),size);
 	memcpy((void *)((uint8_t *)ptr + offset), src, size);
+	nvdla_flush_dcache(dma_addr+offset,size);
 
 	dma_buf_vunmap(buf, ptr);
 
@@ -272,7 +278,9 @@ int32_t dla_data_read(void *driver_context, void *task_data,
 	struct dma_buf *buf;
 	struct nvdla_mem_handle *handles;
 	struct nvdla_task *task = (struct nvdla_task *)task_data;
+	uint64_t dma_addr = 0;
 
+	dla_get_dma_address(driver_context, task_data, src, (void *)&dma_addr, DESTINATION_DMA);
 	handles = task->address_list;
 
 	buf = dma_buf_get(handles[src].handle);
@@ -294,7 +302,9 @@ int32_t dla_data_read(void *driver_context, void *task_data,
 		goto end_cpu_access;
 	}
 
+	nvdla_flush_dcache(dma_addr+offset,size);
 	memcpy(dst, (void *)(((uint8_t *)ptr) + offset), size);
+	nvdla_flush_dcache(dw_virt_to_phys(dst),size);
 
 	dma_buf_vunmap(buf, ptr);
 

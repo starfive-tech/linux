@@ -29,10 +29,20 @@
 #ifndef __OPENDLA_H_
 #define __OPENDLA_H_
 
+#define DLA_2_CONFIG
+#define CONFIG_NVDLA_NEED_FLUSH
+
 #ifdef DLA_2_CONFIG
 #include <opendla_small.h>
 #else
 #include <opendla_initial.h>
+#endif
+
+#ifdef CONFIG_NVDLA_NEED_FLUSH
+#include <soc/starfive/vic7100.h>
+#define nvdla_flush_dcache starfive_flush_dcache
+#else
+#define nvdla_flush_dcache
 #endif
 
 #endif

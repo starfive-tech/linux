@@ -36,7 +36,9 @@
 #include "engine_debug.h"
 
 #define MAX_SPLIT_NUM	64
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a[0])))
+#endif
 
 static const uint8_t map_ram[] = {
 	FIELD_ENUM(PDP_RDMA_D_SRC_RAM_CFG_0, SRC_RAM_TYPE, MC),
