@@ -656,7 +656,8 @@ static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 	sf_dev->fb.screen_size = resource_size(&res_mem);
 	sf_dev->fb.fix.smem_start = res_mem.start;
 
-	sf_dev->fb.screen_base = devm_ioremap_resource(sf_dev->dev, &res_mem);
+	sf_dev->fb.screen_base = devm_ioremap(sf_dev->dev, res_mem.start,
+					      resource_size(&res_mem));
 	if (IS_ERR(sf_dev->fb.screen_base))
 		return PTR_ERR(sf_dev->fb.screen_base);
 
