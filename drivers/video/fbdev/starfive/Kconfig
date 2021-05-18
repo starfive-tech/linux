@@ -16,6 +16,7 @@ config FB_STARFIVE_HDMI_ADV7513
 
 config FB_STARFIVE_HDMI_TDA998X
 	bool "HDMI TDA998X displayer support"
+	depends on DRM_FBDEV_EMULATION
 	help
 	  Say Y here if you want to have support for TDA998X displayer
 
