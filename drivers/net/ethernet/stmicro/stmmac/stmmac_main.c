@@ -5245,7 +5245,7 @@ read_again:
 					priv->dma_buf_sz);
 
 			/* Data payload appended into SKB */
-			page_pool_release_page(rx_q->page_pool, buf->page);
+			skb_mark_for_recycle(skb, buf->page, rx_q->page_pool);
 			buf->page = NULL;
 		}
 
@@ -5257,7 +5257,7 @@ read_again:
 					priv->dma_buf_sz);
 
 			/* Data payload appended into SKB */
-			page_pool_release_page(rx_q->page_pool, buf->sec_page);
+			skb_mark_for_recycle(skb, buf->sec_page, rx_q->page_pool);
 			buf->sec_page = NULL;
 		}
 
