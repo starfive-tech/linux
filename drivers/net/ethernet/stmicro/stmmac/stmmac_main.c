@@ -1453,7 +1453,7 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 {
 	struct stmmac_rx_queue *rx_q = &priv->rx_queue[queue];
 	struct stmmac_rx_buffer *buf = &rx_q->buf_pool[i];
-	gfp_t gfp = (GFP_ATOMIC | __GFP_NOWARN);
+	gfp_t gfp = (GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
 
 	if (priv->dma_cap.addr64 <= 32)
 		gfp |= GFP_DMA32;
@@ -4501,7 +4501,7 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv, u32 queue)
 	struct stmmac_rx_queue *rx_q = &priv->rx_queue[queue];
 	int dirty = stmmac_rx_dirty(priv, queue);
 	unsigned int entry = rx_q->dirty_rx;
-	gfp_t gfp = (GFP_ATOMIC | __GFP_NOWARN);
+	gfp_t gfp = (GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
 
 	if (priv->dma_cap.addr64 <= 32)
 		gfp |= GFP_DMA32;
