@@ -1617,9 +1617,8 @@ static inline void cdns_flush_dcache(unsigned long start, unsigned long len)
 
 static inline void cdns_virt_flush_dcache(void *virt_start, unsigned long len)
 {
-	unsigned long start = dw_virt_to_phys(virt_start);
-
-	starfive_flush_dcache(_ALIGN_DOWN(start, 64), len + (start & 63));
+	if (virt_start != NULL)
+		cdns_flush_dcache(dw_virt_to_phys(virt_start), len);
 }
 #endif
 /* ----------------------------------------------------------------------- */
