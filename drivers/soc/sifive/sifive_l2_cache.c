@@ -143,8 +143,8 @@ void sifive_l2_flush64_range(unsigned long start, unsigned long len)
 	if(start < CONFIG_SIFIVE_L2_FLUSH_START ||
 	   (start + len) > (CONFIG_SIFIVE_L2_FLUSH_START +
 			     CONFIG_SIFIVE_L2_FLUSH_SIZE)) {
-		pr_warn("L2CACHE: flush64 out of range: %lx(%lx), skip flush\n",
-			start, len);
+		WARN(1, "L2CACHE: flush64 out of range: %lx(%lx), skip flush\n",
+		     start, len);
 		return;
 	}
 
