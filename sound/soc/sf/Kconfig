@@ -1,0 +1,49 @@
+config SND_SF_SOUND_CARD
+	tristate "starfive sound card"
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for codecs attached to the
+	  I2S interface on VIC vic_starlight board. You will also need to select
+	  the drivers for the rest of VIC audio subsystem.
+	  
+config SND_SF_MULTI_DAI
+	tristate "starfive multi dai"
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for codecs attached to the
+	  I2S interface on VIC vic_starlight board. You will also need to select
+	  the drivers for the rest of VIC audio subsystem.
+	  
+config SND_SF_SPDIF
+	tristate "starfive spdif"
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for codecs attached to the
+	  I2S interface on VIC vic_starlight board. You will also need to select
+	  the drivers for the rest of VIC audio subsystem.
+	  
+config SND_SF_SPDIF_PCM
+	bool "PCM PIO extension for spdif driver"
+	depends on SND_SF_SPDIF
+	help
+	 Say Y or N if you want to add a custom ALSA extension that registers
+	 a PCM and uses PIO to transfer data.
+	 
+config SND_SF_PWMDAC
+	tristate "starfive pwmdac Device Driver"
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	help
+	 Say Y or M if you want to add support for sf pwmdac driver.
+
+config SND_SF_PWMDAC_PCM
+	bool "PCM PIO extension for pwmdac driver"
+	depends on SND_SF_PWMDAC
+	help
+	 Say Y or N if you want to add a custom ALSA extension that registers
+	 a PCM and uses PIO to transfer data.
+	 
+config SND_SF_PDM
+	tristate "starfive pdm Device Driver"
+	select REGMAP_MMIO
+	help
+	 Say Y or M if you want to add support for sf pdm driver.
