@@ -918,7 +918,7 @@ static void __exit stf_vin_cleanup(void)
 
 #if defined(CONFIG_VIN_SENSOR_SC2235) || defined(CONFIG_VIN_SENSOR_OV5640)
 fs_initcall(stf_vin_init);
-#elif defined(CONFIG_VIN_SENSOR_OV4689)
+#elif defined(CONFIG_VIN_SENSOR_OV4689) || defined(CONFIG_VIDEO_STARFIVE_VIN_SENSOR_IMX219)
 subsys_initcall(stf_vin_init);
 #endif
 

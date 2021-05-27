@@ -5,5 +5,6 @@
 
 obj-$(CONFIG_VIN_SENSOR_OV5640) += ov5640_dvp.o
 obj-$(CONFIG_VIN_SENSOR_SC2235) += sc2235.o
+obj-$(CONFIG_VIDEO_STARFIVE_VIN_SENSOR_IMX219) += imx219_mipi.o
 obj-$(CONFIG_VIN_SENSOR_OV4689) += ov4689_mipi.o
 obj-$(CONFIG_VIDEO_STF_VIN) += stf_vin.o stf_event.o stf_isp.o stf_csi.o
