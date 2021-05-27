@@ -56,7 +56,7 @@ properties:
 
   dma-channels:
     minimum: 1
-    maximum: 8
+    maximum: 16
 
   resets:
     minItems: 1
@@ -80,14 +80,14 @@ properties:
       Channel priority specifier associated with the DMA channels.
     $ref: /schemas/types.yaml#/definitions/uint32-array
     minItems: 1
-    maxItems: 8
+    maxItems: 16
 
   snps,block-size:
     description: |
       Channel block size specifier associated with the DMA channels.
     $ref: /schemas/types.yaml#/definitions/uint32-array
     minItems: 1
-    maxItems: 8
+    maxItems: 16
 
   snps,axi-max-burst-len:
     description: |
