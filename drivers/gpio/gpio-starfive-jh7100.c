@@ -47,8 +47,6 @@
 
 #define MAX_GPIO	 64
 
-#define PROC_VIC "vic_gpio"
-
 struct starfive_gpio {
 	raw_spinlock_t		lock;
 	void __iomem		*base;
@@ -304,7 +302,7 @@ static void starfive_irq_disable(struct irq_data *d)
 }
 
 static struct irq_chip starfive_irqchip = {
-	.name		= "starfive-gpio",
+	.name		= "starfive-jh7100-gpio",
 	.irq_set_type	= starfive_irq_set_type,
 	.irq_mask	= starfive_irq_mask,
 	.irq_unmask	= starfive_irq_unmask,
@@ -541,7 +539,7 @@ static const struct of_device_id starfive_gpio_match[] = {
 static struct platform_driver starfive_gpio_driver = {
 	.probe	= starfive_gpio_probe,
 	.driver	= {
-		.name = "starfive_gpio",
+		.name = "gpio_starfive_jh7100",
 		.of_match_table = of_match_ptr(starfive_gpio_match),
 	},
 };
@@ -560,4 +558,4 @@ module_exit(starfive_gpio_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Huan Feng <huan.feng@starfivetech.com>");
-MODULE_DESCRIPTION("Starfive VIC GPIO generator driver");
+MODULE_DESCRIPTION("StarFive JH7100 GPIO driver");
