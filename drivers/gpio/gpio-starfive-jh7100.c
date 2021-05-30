@@ -52,15 +52,15 @@ struct starfive_gpio {
 	void __iomem		*base;
 	struct gpio_chip	gc;
 	unsigned long		enabled;
-	unsigned		trigger[MAX_GPIO];
+	unsigned int		trigger[MAX_GPIO];
 	unsigned int		irq_parent[MAX_GPIO];
 };
 
 static DEFINE_SPINLOCK(sfg_lock);
 
-static void __iomem *gpio_base = NULL;
+static void __iomem *gpio_base;
 
-static int starfive_direction_input(struct gpio_chip *gc, unsigned offset)
+static int starfive_direction_input(struct gpio_chip *gc, unsigned int offset)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
 	unsigned long flags;
@@ -75,7 +75,7 @@ static int starfive_direction_input(struct gpio_chip *gc, unsigned offset)
 	return 0;
 }
 
-static int starfive_direction_output(struct gpio_chip *gc, unsigned offset, int value)
+static int starfive_direction_output(struct gpio_chip *gc, unsigned int offset, int value)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
 	unsigned long flags;
@@ -91,7 +91,7 @@ static int starfive_direction_output(struct gpio_chip *gc, unsigned offset, int 
 	return 0;
 }
 
-static int starfive_get_direction(struct gpio_chip *gc, unsigned offset)
+static int starfive_get_direction(struct gpio_chip *gc, unsigned int offset)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
 
@@ -101,7 +101,7 @@ static int starfive_get_direction(struct gpio_chip *gc, unsigned offset)
 	return readl_relaxed(chip->base + GPIO_DOEN_X_REG + offset * 8) & 0x1;
 }
 
-static int starfive_get_value(struct gpio_chip *gc, unsigned offset)
+static int starfive_get_value(struct gpio_chip *gc, unsigned int offset)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
 	int value;
@@ -111,14 +111,16 @@ static int starfive_get_value(struct gpio_chip *gc, unsigned offset)
 
 	if (offset < 32) {
 		value = readl_relaxed(chip->base + GPIO_DIN_LOW);
-		return (value >> offset) & 0x1;
+		value = (value >> offset) & 0x1;
 	} else {
 		value = readl_relaxed(chip->base + GPIO_DIN_HIGH);
-		return (value >> (offset - 32)) & 0x1;
+		value = (value >> (offset - 32)) & 0x1;
 	}
+
+	return value;
 }
 
-static void starfive_set_value(struct gpio_chip *gc, unsigned offset, int value)
+static void starfive_set_value(struct gpio_chip *gc, unsigned int offset, int value)
 {
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
 	unsigned long flags;
@@ -146,12 +148,12 @@ static void starfive_set_ie(struct starfive_gpio *chip, int offset)
 	}
 	raw_spin_lock_irqsave(&chip->lock, flags);
 	old_value = readl_relaxed(chip->base + GPIO_IE_LOW + reg_offset);
-	new_value = old_value | ( 1 << index);
+	new_value = old_value | (1 << index);
 	writel_relaxed(new_value, chip->base + GPIO_IE_LOW + reg_offset);
 	raw_spin_unlock_irqrestore(&chip->lock, flags);
 }
 
-static int starfive_irq_set_type(struct irq_data *d, unsigned trigger)
+static int starfive_irq_set_type(struct irq_data *d, unsigned int trigger)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct starfive_gpio *chip = gpiochip_get_data(gc);
@@ -333,10 +335,7 @@ static irqreturn_t starfive_irq_handler(int irq, void *gc)
 			writel_relaxed(BIT(index), chip->base + GPIO_IC_LOW +
 					reg_offset);
 
-		/*
-		generic_handle_irq(irq_find_mapping(chip->gc.irq.domain,
-					offset));
-		*/
+		/* generic_handle_irq(irq_find_mapping(chip->gc.irq.domain, offset)); */
 		raw_spin_unlock_irqrestore(&chip->lock, flags);
 	}
 
@@ -447,7 +446,7 @@ void sf_vic_gpio_manual(int offset, int v)
 	unsigned int value;
 
 	if (!gpio_base)
-		return ;
+		return;
 
 	spin_lock(&sfg_lock);
 	value = ioread32(gpio_base + offset);
@@ -467,10 +466,8 @@ static int starfive_gpio_probe(struct platform_device *pdev)
 	int irq, ret, ngpio;
 
 	chip = devm_kzalloc(dev, sizeof(*chip), GFP_KERNEL);
-	if (!chip) {
-		dev_err(dev, "out of memory\n");
+	if (!chip)
 		return -ENOMEM;
-	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	chip->base = devm_ioremap_resource(dev, res);
@@ -478,7 +475,7 @@ static int starfive_gpio_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to allocate device memory\n");
 		return PTR_ERR(chip->base);
 	}
-	gpio_base = chip->base ;
+	gpio_base = chip->base;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
