@@ -516,7 +516,7 @@ static int starfive_gpio_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id starfive_gpio_match[] = {
-	{ .compatible = "starfive,gpio0", },
+	{ .compatible = "starfive,jh7100-gpio", },
 	{ },
 };
 
