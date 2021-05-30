@@ -343,7 +343,7 @@
 		};
 
 		gpio: gpio@11910000 {
-			compatible = "starfive,gpio0";
+			compatible = "starfive,jh7100-gpio";
 			interrupts = <32>;
 			reg = <0x0 0x11910000 0x0 0x10000>;
 			reg-names = "control";
