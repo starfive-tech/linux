@@ -347,13 +347,12 @@
 
 		gpio: gpio@11910000 {
 			compatible = "starfive,jh7100-gpio";
-			interrupts = <32>;
 			reg = <0x0 0x11910000 0x0 0x10000>;
-			reg-names = "control";
-			interrupt-controller;
-			#interrupt-cells = <2>;
 			gpio-controller;
 			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			interrupts = <32>;
 		};
 
 		i2c0: i2c@118b0000 {
