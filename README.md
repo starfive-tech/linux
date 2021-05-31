@@ -61,7 +61,7 @@ arch/riscv/boot/Image
 ```
 You'll also need the matching device tree at
 ```shell
-arch/riscv/boot/dts/starfive/jh7100-starlight.dtb
+arch/riscv/boot/dts/starfive/beaglev-starlight-jh7100.dtb
 ```
 These two files should be copied to the boot partition on the SD card. That is
 onto the same file system that contains the `extlinux/extlinux.conf`. On the
@@ -71,7 +71,7 @@ Now add the following entry to the `extlinux/extlinux.conf` file:
 ```
 label My New Kernel
 kernel /Image
-fdt /jh7100-starlight.dtb
+fdt /beaglev-starlight-jh7100.dtb
 append earlycon console=ttyS0,115200n8 root=/dev/mmcblk0p2 rootwait stmmac.chain_mode=1
 ```
 
