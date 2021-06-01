@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: (GPL-2.0 OR MIT) */
+/*
+ * Copyright (C) 2021 Glider bv
+ */
+#ifndef __DT_BINDINGS_CLOCK_STARFIVE_JH7100_CLOCK_H__
+#define __DT_BINDINGS_CLOCK_STARFIVE_JH7100_CLOCK_H__
+
+/* StarFive JH7100 clocks FIXME PRELIMINARY */
+#define JH7100_CLK_AXI		0
+#define JH7100_CLK_AHB0		1
+#define JH7100_CLK_AHB2		2
+#define JH7100_CLK_APB1		3
+#define JH7100_CLK_APB2		4
+#define JH7100_CLK_VPU		5
+#define JH7100_CLK_JPU		6
+#define JH7100_CLK_PWM		7
+#define JH7100_CLK_DWMMC_BIU	8
+#define JH7100_CLK_DWMMC_CIU	9
+#define JH7100_CLK_UART		10
+#define JH7100_CLK_HS_UART	11
+#define JH7100_CLK_I2C0		12
+#define JH7100_CLK_I2C2		13
+#define JH7100_CLK_QSPI		14
+#define JH7100_CLK_SPI		15
+#define JH7100_CLK_GMAC		16
+#define JH7100_CLK_HF		17
+#define JH7100_CLK_RTC		18
+
+#endif /* __DT_BINDINGS_CLOCK_STARFIVE_JH7100_CLOCK_H__ */
