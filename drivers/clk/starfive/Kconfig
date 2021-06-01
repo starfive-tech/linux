@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config CLK_STARFIVE_JH7100
+	bool "StarFive JH7100 clock support"
+	depends on SOC_STARFIVE_VIC7100 || COMPILE_TEST
+	default y if SOC_STARFIVE_VIC7100
+	help
+	  Say yes here to support the clock controller on the StarFive JH7100
+	  SoC.
