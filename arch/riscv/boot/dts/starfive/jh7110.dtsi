@@ -502,6 +502,18 @@
 			status = "disabled";
 		};
 
+		sfctemp: temperature-sensor@120e0000 {
+			compatible = "starfive,jh7110-temp";
+			reg = <0x0 0x120e0000 0x0 0x10000>;
+			clocks = <&syscrg JH7110_SYSCLK_TEMP_CORE>,
+				 <&syscrg JH7110_SYSCLK_TEMP_APB>;
+			clock-names = "sense", "bus";
+			resets = <&syscrg JH7110_SYSRST_TEMP_CORE>,
+				 <&syscrg JH7110_SYSRST_TEMP_APB>;
+			reset-names = "sense", "bus";
+			#thermal-sensor-cells = <0>;
+		};
+
 		qspi: spi@13010000 {
 			compatible = "starfive,jh7110-qspi", "cdns,qspi-nor";
 			#address-cells = <1>;
