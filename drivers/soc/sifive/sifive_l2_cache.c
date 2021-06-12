@@ -5,12 +5,14 @@
  * Copyright (C) 2018-2019 SiFive, Inc.
  *
  */
+#include <linux/align.h>
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/device.h>
 #include <asm/cacheinfo.h>
+#include <asm/page.h>
 #include <soc/sifive/sifive_l2_cache.h>
 
 #define SIFIVE_L2_DIRECCFIX_LOW 0x100
@@ -29,11 +31,15 @@
 #define SIFIVE_L2_DATECCFAIL_HIGH 0x164
 #define SIFIVE_L2_DATECCFAIL_COUNT 0x168
 
+#define SIFIVE_L2_FLUSH64 0x200
+#define SIFIVE_L2_FLUSH32 0x240
+
 #define SIFIVE_L2_CONFIG 0x00
 #define SIFIVE_L2_WAYENABLE 0x08
 #define SIFIVE_L2_ECCINJECTERR 0x40
 
 #define SIFIVE_L2_MAX_ECCINTR 4
+#define SIFIVE_L2_LINE_SIZE 64
 
 static void __iomem *l2_base;
 static int g_irq[SIFIVE_L2_MAX_ECCINTR];
@@ -116,6 +122,47 @@ int unregister_sifive_l2_error_notifier(struct notifier_block *nb)
 	return atomic_notifier_chain_unregister(&l2_err_chain, nb);
 }
 EXPORT_SYMBOL_GPL(unregister_sifive_l2_error_notifier);
+
+#ifdef CONFIG_RISCV_DMA_NONCOHERENT
+static phys_addr_t uncached_offset;
+DEFINE_STATIC_KEY_FALSE(sifive_l2_handle_noncoherent_key);
+
+void sifive_l2_flush_range(phys_addr_t start, size_t len)
+{
+	phys_addr_t end = start + len;
+	phys_addr_t line;
+
+	if (!len)
+		return;
+
+	mb();
+	for (line = ALIGN_DOWN(start, SIFIVE_L2_LINE_SIZE); line < end;
+			line += SIFIVE_L2_LINE_SIZE) {
+#ifdef CONFIG_32BIT
+		writel(line >> 4, l2_base + SIFIVE_L2_FLUSH32);
+#else
+		writeq(line, l2_base + SIFIVE_L2_FLUSH64);
+#endif
+		mb();
+	}
+}
+EXPORT_SYMBOL_GPL(sifive_l2_flush_range);
+
+void *sifive_l2_set_uncached(void *addr, size_t size)
+{
+	phys_addr_t phys_addr = __pa(addr) + uncached_offset;
+	void *mem_base;
+
+	mem_base = memremap(phys_addr, size, MEMREMAP_WT);
+	if (!mem_base) {
+		pr_err("%s memremap failed for addr %p\n", __func__, addr);
+		return ERR_PTR(-EINVAL);
+	}
+
+	return mem_base;
+}
+EXPORT_SYMBOL_GPL(sifive_l2_set_uncached);
+#endif /* CONFIG_RISCV_DMA_NONCOHERENT */
 
 static int l2_largest_wayenabled(void)
 {
@@ -200,6 +247,7 @@ static int __init sifive_l2_init(void)
 	int i, rc, intr_num;
 	const struct of_device_id *match;
 	unsigned long broken_irqs;
+	u64 __maybe_unused offset;
 
 	np = of_find_matching_node_and_match(NULL, sifive_l2_ids, &match);
 	if (!np)
@@ -233,6 +281,13 @@ static int __init sifive_l2_init(void)
 		}
 	}
 
+#ifdef CONFIG_RISCV_DMA_NONCOHERENT
+	if (!of_property_read_u64(np, "uncached-offset", &offset)) {
+		uncached_offset = offset;
+		static_branch_enable(&sifive_l2_handle_noncoherent_key);
+	}
+#endif
+
 	l2_config_read();
 
 	l2_cache_ops.get_priv_group = l2_get_priv_group;
@@ -243,4 +298,4 @@ static int __init sifive_l2_init(void)
 #endif
 	return 0;
 }
-device_initcall(sifive_l2_init);
+arch_initcall_sync(sifive_l2_init);
