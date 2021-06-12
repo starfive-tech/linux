@@ -206,6 +206,20 @@ config PGTABLE_LEVELS
 config LOCKDEP_SUPPORT
 	def_bool y
 
+config RISCV_UNCACHED_OFFSET
+	hex "Base address of uncached alias"
+	default 0xF80000000 if ARCH_HAS_DMA_SET_UNCACHED && SOC_STARFIVE_VIC7100
+	default 0 if !ARCH_HAS_DMA_SET_UNCACHED
+
+config RISCV_DMA_NONCOHERENT
+	bool
+	select ARCH_HAS_DMA_PREP_COHERENT
+	select ARCH_HAS_SYNC_DMA_FOR_DEVICE
+	select ARCH_HAS_SYNC_DMA_FOR_CPU
+	select ARCH_HAS_DMA_SET_UNCACHED
+	select ARCH_HAS_DMA_CLEAR_UNCACHED
+	select ARCH_HAS_SETUP_DMA_OPS
+
 source "arch/riscv/Kconfig.socs"
 source "arch/riscv/Kconfig.erratas"
 
