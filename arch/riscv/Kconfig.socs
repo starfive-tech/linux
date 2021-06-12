@@ -28,6 +28,7 @@ config SOC_STARFIVE_VIC7100
 	select DW_AXI_DMAC_STARFIVE
 	select PINCTRL
 	select PINCTRL_STARFIVE
+	select RISCV_DMA_NONCOHERENT
 	help
 	  This enables support for StarFive VIC7100 SoC Platform Hardware.
 
