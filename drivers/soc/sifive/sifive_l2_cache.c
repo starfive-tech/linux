@@ -139,6 +139,9 @@ void sifive_l2_flush64_range(unsigned long start, unsigned long len)
 		return;
 	}
 
+	len = len + (start % SIFIVE_L2_FLUSH64_LINE_LEN);
+	start = ALIGN_DOWN(start, SIFIVE_L2_FLUSH64_LINE_LEN);
+
 	/* make sure the address is in the range */
 	if(start < CONFIG_SIFIVE_L2_FLUSH_START ||
 	   (start + len) > (CONFIG_SIFIVE_L2_FLUSH_START +
