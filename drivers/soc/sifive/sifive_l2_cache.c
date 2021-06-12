@@ -5,6 +5,7 @@
  * Copyright (C) 2018-2019 SiFive, Inc.
  *
  */
+#include <linux/align.h>
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -12,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/property.h>
 #include <asm/cacheinfo.h>
+#include <asm/page.h>
 #include <soc/sifive/sifive_l2_cache.h>
 
 #define SIFIVE_L2_DIRECCFIX_LOW 0x100
@@ -30,15 +32,21 @@
 #define SIFIVE_L2_DATECCFAIL_HIGH 0x164
 #define SIFIVE_L2_DATECCFAIL_COUNT 0x168
 
+#define SIFIVE_L2_FLUSH64 0x200
+#define SIFIVE_L2_FLUSH32 0x240
+
 #define SIFIVE_L2_CONFIG 0x00
 #define SIFIVE_L2_WAYENABLE 0x08
 #define SIFIVE_L2_ECCINJECTERR 0x40
 
 #define SIFIVE_L2_MAX_ECCINTR 4
+#define SIFIVE_L2_LINE_SIZE 64
 
 static void __iomem *l2_base;
 static int g_irq[SIFIVE_L2_MAX_ECCINTR];
 static struct riscv_cacheinfo_ops l2_cache_ops;
+static phys_addr_t uncached_offset;
+DEFINE_STATIC_KEY_FALSE(sifive_l2_handle_noncoherent_key);
 
 enum {
 	DIR_CORR = 0,
@@ -110,6 +118,42 @@ int unregister_sifive_l2_error_notifier(struct notifier_block *nb)
 	return atomic_notifier_chain_unregister(&l2_err_chain, nb);
 }
 EXPORT_SYMBOL_GPL(unregister_sifive_l2_error_notifier);
+
+void sifive_l2_flush_range(phys_addr_t start, size_t len)
+{
+	phys_addr_t end = start + len;
+	phys_addr_t line;
+
+	if (!len)
+		return;
+
+	mb();
+	for (line = ALIGN_DOWN(start, SIFIVE_L2_LINE_SIZE); line < end;
+			line += SIFIVE_L2_LINE_SIZE) {
+#ifdef CONFIG_32BIT
+		writel(line >> 4, l2_base + SIFIVE_L2_FLUSH32);
+#else
+		writeq(line, l2_base + SIFIVE_L2_FLUSH64);
+#endif
+		mb();
+	}
+}
+EXPORT_SYMBOL_GPL(sifive_l2_flush_range);
+
+void *sifive_l2_set_uncached(void *addr, size_t size)
+{
+	phys_addr_t phys_addr = __pa(addr) + uncached_offset;
+	void *mem_base;
+
+	mem_base = memremap(phys_addr, size, MEMREMAP_WT);
+	if (!mem_base) {
+		pr_err("%s memremap failed for addr %p\n", __func__, addr);
+		return ERR_PTR(-EINVAL);
+	}
+
+	return mem_base;
+}
+EXPORT_SYMBOL_GPL(sifive_l2_set_uncached);
 
 static int l2_largest_wayenabled(void)
 {
@@ -191,6 +235,7 @@ static int __init sifive_l2_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	unsigned long quirks = (uintptr_t)device_get_match_data(dev);
+	u64 offset;
 	int nirqs;
 	int ret;
 	int i;
@@ -214,6 +259,11 @@ static int __init sifive_l2_probe(struct platform_device *pdev)
 		ret = devm_request_irq(dev, g_irq[i], l2_int_handler, 0, pdev->name, NULL);
 		if (ret)
 			return dev_err_probe(dev, ret, "Could not request IRQ %d\n", g_irq[i]);
+	}
+
+	if (!device_property_read_u64(dev, "uncached-offset", &offset)) {
+		uncached_offset = offset;
+		static_branch_enable(&sifive_l2_handle_noncoherent_key);
 	}
 
 	l2_config_read();
