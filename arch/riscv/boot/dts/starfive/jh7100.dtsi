@@ -84,7 +84,7 @@
 	};
 
 	soc {
-		compatible = "starfive,jh7100", "simple-bus";
+		compatible = "simple-bus";
 		interrupt-parent = <&plic>;
 		#address-cells = <2>;
 		#size-cells = <2>;
