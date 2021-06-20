@@ -1617,7 +1617,7 @@ static inline void cdns_flush_dcache(unsigned long start, unsigned long len)
 
 static inline void cdns_virt_flush_dcache(void *virt_start, unsigned long len)
 {
-	if (virt_start != NULL)
+	if (virt_start)
 		cdns_flush_dcache(dw_virt_to_phys(virt_start), len);
 }
 #endif

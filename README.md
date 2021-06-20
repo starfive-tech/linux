@@ -61,7 +61,7 @@ arch/riscv/boot/Image
 ```
 You'll also need the matching device tree at
 ```shell
-arch/riscv/boot/dts/starfive/jh7100-starlight.dtb
+arch/riscv/boot/dts/starfive/jh7100-beaglev-starlight.dtb
 ```
 These two files should be copied to the boot partition on the SD card. That is
 onto the same file system that contains the `extlinux/extlinux.conf`. On the
@@ -71,8 +71,8 @@ Now add the following entry to the `extlinux/extlinux.conf` file:
 ```
 label My New Kernel
 kernel /Image
-fdt /jh7100-starlight.dtb
-append earlycon root=/dev/mmcblk0p2 rootwait stmmac.chain_mode=1
+fdt /jh7100-beaglev-starlight.dtb
+append earlycon console=ttyS0,115200n8 root=/dev/mmcblk0p2 rootwait stmmac.chain_mode=1
 ```
 
 This assumes your root file system is at `/dev/mmcblk0p2` which it is on the
@@ -96,18 +96,18 @@ system. How to do that best is out of scope for this README though.
 - [x] Random number generator
 - [x] Temperature sensor
 - [x] Ethernet, though a little flaky and `stmmac.chain_mode=1` needed on the cmdline
-- [ ] Clock tree, statically set up by u-boot
+- [x] Framebuffer, fbdev driver so not upstreamable
+- [ ] Clock tree, statically set up by u-boot, WIP clock driver
 - [ ] Pinctrl/Pinmux, statically set up by u-boot
 - [ ] Watchdog
 - [ ] USB, USB 2.0 seems to work ok, but USB 3.0 is very flaky / broken
 - [ ] Security Engine
-- [ ] Framebuffer
 - [ ] MIPI-DSI
 - [ ] ISP
 - [ ] MIPI-CSI
 - [ ] Video Decode
 - [ ] Video Encode
-- [ ] NVDLA
+- [x] NVDLA
 - [ ] NNE50
 - [ ] Vision DSP
 
@@ -116,11 +116,12 @@ system. How to do that best is out of scope for this README though.
 - [x] LED
 - [x] PMIC / Reboot
 - [x] Ethernet PHY
+- [x] HDMI, working with [some screens][hdmi]
 - [x] AP6236 Wifi
 - [ ] AP6236 Bluetooth
 - [ ] GD25LQ256D SPI flash
-- [ ] HDMI, unknown since framebuffer driver is failing
 
+[hdmi]: https://forum.beagleboard.org/t/hdmi-displays-compatible-list/
 
 ## Contributing
 
