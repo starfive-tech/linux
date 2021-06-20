@@ -37,6 +37,7 @@
 #include <drm/drm_gem.h>
 #include <drm/drm_gem_cma_helper.h>
 
+#include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-map-ops.h>
 #include <linux/of.h>
@@ -153,6 +154,66 @@ static void nvdla_gem_free(struct nvdla_gem_object *nobj)
 				nobj->dma_attrs);
 }
 
+static void nvdla_gem_free_object(struct drm_gem_object *dobj)
+{
+	struct nvdla_gem_object *nobj;
+
+	drm_gem_free_mmap_offset(dobj);
+
+	nobj = to_nvdla_obj(dobj);
+
+	nvdla_gem_free(nobj);
+
+	kfree(nobj);
+}
+
+static struct sg_table
+*nvdla_drm_gem_prime_get_sg_table(struct drm_gem_object *dobj)
+{
+	int32_t ret;
+	struct sg_table *sgt;
+	struct drm_device *drm = dobj->dev;
+	struct nvdla_gem_object *nobj = to_nvdla_obj(dobj);
+
+	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	if (!sgt)
+		return ERR_PTR(-ENOMEM);
+
+	ret = dma_get_sgtable_attrs(drm->dev, sgt, nobj->kvaddr,
+			nobj->dma_addr, dobj->size,
+			nobj->dma_attrs);
+	if (ret) {
+		DRM_ERROR("failed to allocate sgt, %d\n", ret);
+		kfree(sgt);
+		return ERR_PTR(ret);
+	}
+
+	return sgt;
+}
+
+static int nvdla_drm_gem_prime_vmap(struct drm_gem_object *obj, struct dma_buf_map *map)
+{
+	struct nvdla_gem_object *nobj = to_nvdla_obj(obj);
+	if (nobj->dma_attrs & DMA_ATTR_NO_KERNEL_MAPPING)
+		return -ENOMEM;
+	dma_buf_map_set_vaddr(map, nobj->kvaddr);
+	return 0;
+}
+
+static void nvdla_drm_gem_prime_vunmap(struct drm_gem_object *obj, struct dma_buf_map *map)
+{
+    /* Nothing to do */
+}
+
+static const struct drm_gem_object_funcs nvdla_gem_funcs = {
+	.free			= nvdla_gem_free_object,
+	.export			= drm_gem_prime_export,
+	.vmap			= nvdla_drm_gem_prime_vmap,
+	.vunmap			= nvdla_drm_gem_prime_vunmap,
+	.get_sg_table	= nvdla_drm_gem_prime_get_sg_table,
+	.vm_ops			= &drm_gem_cma_vm_ops,
+};
+
 static struct nvdla_gem_object *
 nvdla_gem_create_object(struct drm_device *drm, uint32_t size)
 {
@@ -167,6 +228,7 @@ nvdla_gem_create_object(struct drm_device *drm, uint32_t size)
 		return ERR_PTR(-ENOMEM);
 
 	dobj = &nobj->object;
+	dobj->funcs = &nvdla_gem_funcs;
 
 	drm_gem_private_object_init(drm, dobj, size);
 
@@ -179,19 +241,6 @@ nvdla_gem_create_object(struct drm_device *drm, uint32_t size)
 free_nvdla_obj:
 	kfree(nobj);
 	return ERR_PTR(ret);
-}
-
-static void nvdla_gem_free_object(struct drm_gem_object *dobj)
-{
-	struct nvdla_gem_object *nobj;
-
-	drm_gem_free_mmap_offset(dobj);
-
-	nobj = to_nvdla_obj(dobj);
-
-	nvdla_gem_free(nobj);
-
-	kfree(nobj);
 }
 
 static struct nvdla_gem_object *
@@ -281,42 +330,6 @@ static int32_t nvdla_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma)
 	return nvdla_drm_gem_object_mmap(obj, vma);
 }
 
-static struct sg_table
-*nvdla_drm_gem_prime_get_sg_table(struct drm_gem_object *dobj)
-{
-	int32_t ret;
-	struct sg_table *sgt;
-	struct drm_device *drm = dobj->dev;
-	struct nvdla_gem_object *nobj = to_nvdla_obj(dobj);
-
-	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
-	if (!sgt)
-		return ERR_PTR(-ENOMEM);
-
-	ret = dma_get_sgtable_attrs(drm->dev, sgt, nobj->kvaddr,
-				    nobj->dma_addr, dobj->size,
-				    nobj->dma_attrs);
-	if (ret) {
-		DRM_ERROR("failed to allocate sgt, %d\n", ret);
-		kfree(sgt);
-		return ERR_PTR(ret);
-	}
-
-	return sgt;
-}
-
-static void *nvdla_drm_gem_prime_vmap(struct drm_gem_object *obj)
-{
-	struct nvdla_gem_object *nobj = to_nvdla_obj(obj);
-
-	return nobj->kvaddr;
-}
-
-static void nvdla_drm_gem_prime_vunmap(struct drm_gem_object *obj, void *vaddr)
-{
-	/* Nothing to do */
-}
-
 int32_t nvdla_gem_dma_addr(struct drm_device *dev, struct drm_file *file,
 			uint32_t fd, dma_addr_t *addr)
 {
@@ -370,7 +383,7 @@ static int32_t nvdla_gem_destroy(struct drm_device *drm, void *data,
 {
 	struct nvdla_gem_destroy_args *args = data;
 
-	return drm_gem_dumb_destroy(file, drm, args->handle);
+	return drm_gem_handle_delete(file, args->handle);
 }
 
 static const struct file_operations nvdla_drm_fops = {
@@ -397,18 +410,9 @@ static const struct drm_ioctl_desc nvdla_drm_ioctls[] = {
 static struct drm_driver nvdla_drm_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_RENDER,
 
-	.gem_vm_ops = &drm_gem_cma_vm_ops,
-
-	.gem_free_object_unlocked = nvdla_gem_free_object,
-
 	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
 	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
-	.gem_prime_export = drm_gem_prime_export,
 	.gem_prime_import = drm_gem_prime_import,
-
-	.gem_prime_get_sg_table	= nvdla_drm_gem_prime_get_sg_table,
-	.gem_prime_vmap		= nvdla_drm_gem_prime_vmap,
-	.gem_prime_vunmap	= nvdla_drm_gem_prime_vunmap,
 	.gem_prime_mmap		= nvdla_drm_gem_mmap_buf,
 
 	.ioctls = nvdla_drm_ioctls,
