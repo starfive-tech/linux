@@ -327,7 +327,6 @@ static struct snd_soc_dai_driver pwmdac_dai = {
 
 static int sf_pwmdac_probe(struct platform_device *pdev)
 {
-	const struct pwmdac_platform_data *pdata = pdev->dev.platform_data;
 	struct sf_pwmdac_dev *dev;
 	struct resource *res;
 	int ret;
@@ -350,7 +349,7 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 
 	//todo dma config 
 	//dev->use_pio = false;
-	
+
 	dev_set_drvdata(&pdev->dev, dev);
 	ret = devm_snd_soc_register_component(&pdev->dev, &sf_pwmdac_component,
 					 &pwmdac_dai, 1);

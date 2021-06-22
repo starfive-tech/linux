@@ -33,7 +33,7 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/dmaengine_pcm.h>
-#include "sf_spdif.h"
+#include "startfive_spdif.h"
 
 static irqreturn_t spdif_irq_handler(int irq, void *dev_id)
 {

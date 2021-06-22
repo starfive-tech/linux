@@ -140,7 +140,7 @@ struct sf_pwmdac_dev {
 
 
 
-#if IS_ENABLED(CONFIG_SND_SF_PWMDAC_PCM)
+#if IS_ENABLED(CONFIG_SND_STARTFIVE_PWMDAC_PCM)
 void sf_pwmdac_pcm_push_tx(struct sf_pwmdac_dev *dev);
 void sf_pwmdac_pcm_pop_rx(struct sf_pwmdac_dev *dev);
 int sf_pwmdac_pcm_register(struct platform_device *pdev);

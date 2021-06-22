@@ -28,7 +28,7 @@
 #include <sound/pcm_params.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-#include "sf_pdm.h"
+#include "startfive_pdm.h"
 
 #define AUDIOC_CLK 	(12288000)
 #define PDM_MUL 	(128)
