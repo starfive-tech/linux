@@ -28,11 +28,6 @@
 #include "starfive_fb.h"
 #include "starfive_display_dev.h"
 
-#ifdef _ALIGN_UP
-#undef _ALIGN_UP
-#define _ALIGN_UP(addr, size) (((addr)+((size)-1))&(~((typeof(addr))(size)-1)))
-#endif
-
 #define DSI_CMD_LEN(hdr)	(sizeof(*hdr) + (hdr)->dlen)
 
 static int sf_displayer_reset(struct sf_fb_data *fbi)
@@ -613,7 +608,7 @@ static int of_parse_wr_cmd(struct device_node *np,
 		return -EINVAL;
 	}
 	dev_cmds->n_pack = cnt;
-	dev_cmds->cmds = kzalloc(_ALIGN_UP(alloc_bytes, 4), GFP_KERNEL);
+	dev_cmds->cmds = kzalloc(round_up(alloc_bytes, 4), GFP_KERNEL);
 
 	if (IS_ERR_OR_NULL(dev_cmds->cmds))
 		return -ENOMEM;
