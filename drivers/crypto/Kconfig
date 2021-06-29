@@ -716,6 +716,8 @@ config CRYPTO_DEV_VMX
 
 source "drivers/crypto/vmx/Kconfig"
 
+source "drivers/crypto/sifive-vic/Kconfig"
+
 config CRYPTO_DEV_IMGTEC_HASH
 	tristate "Imagination Technologies hardware hash accelerator"
 	depends on MIPS || COMPILE_TEST

@@ -1,0 +1,10 @@
+config CRYPTO_DEV_SIFIVE_VIC_ENCRYPT
+	tristate "Encryption acceleration support on sifive vic"
+	depends on RISCV
+	select CRYPTO_ENGINE
+	select CRYPTO_RSA
+	default m
+	help
+	  Support for SIFIVE VIC cryptographic acceleration instructions on riscv64 CPU.
+	  This module supports acceleration for AES and GHASH in hardware. If you
+	  choose 'M' here, this module will be called vic-crypto.
