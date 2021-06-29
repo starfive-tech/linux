@@ -22,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/crypto.h>
 #include <linux/io.h>
+#include <linux/scatterlist.h>
 
 #include "vic-sec.h"
 #include "vic-pka-hw.h"
@@ -60,7 +61,6 @@ static int pka_wait(struct vic_sec_dev *sdev)
 
 #define PKA_RUN(sdev, pka, func, flags, size)				\
 	do {								\
-		mutex_lock(&sdev->doing);				\
 		elppka_start(pka, func, flags, size);			\
 		rc = pka_wait(sdev);					\
 		if (rc) {						\
@@ -655,35 +655,35 @@ static void pka_clear_state(struct vic_sec_ctx *ctx)
 static void vic_rsa_free_key(struct vic_rsa_key *key)
 {
 	if(key->d)
-		kzfree(key->d);
+		kfree(key->d);
 	if(key->p)
-		kzfree(key->p);
+		kfree(key->p);
 	if(key->q)
-		kzfree(key->q);
+		kfree(key->q);
 	if(key->dp)
-		kzfree(key->dp);
+		kfree(key->dp);
 	if(key->dq)
-		kzfree(key->dq);
+		kfree(key->dq);
 	if(key->qinv)
-		kzfree(key->qinv);
+		kfree(key->qinv);
 	if(key->rinv)
-		kzfree(key->rinv);
+		kfree(key->rinv);
 	if(key->rinv_p)
-		kzfree(key->rinv_p);
+		kfree(key->rinv_p);
 	if(key->rinv_q)
-		kzfree(key->rinv_q);
+		kfree(key->rinv_q);
 	if(key->mp)
-		kzfree(key->mp);
+		kfree(key->mp);
 	if(key->rsqr)
-		kzfree(key->rsqr);
+		kfree(key->rsqr);
 	if(key->rsqr_p)
-		kzfree(key->rsqr_p);
+		kfree(key->rsqr_p);
 	if(key->rsqr_q)
-		kzfree(key->rsqr_q);
+		kfree(key->rsqr_q);
 	if(key->pmp)
-		kzfree(key->pmp);
+		kfree(key->pmp);
 	if(key->qmp)
-		kzfree(key->qmp);
+		kfree(key->qmp);
 	if(key->e)
 		kfree(key->e);
 	if(key->n)
@@ -1081,19 +1081,19 @@ static void vic_rsa_setkey_crt(struct vic_rsa_key *rsa_key, struct rsa_key *raw_
 
  free_dq:
 	memset(rsa_key->dq, '\0', half_key_sz);
-	kzfree(rsa_key->dq);
+	kfree(rsa_key->dq);
 	rsa_key->dq = NULL;
  free_dp:
 	memset(rsa_key->dp, '\0', half_key_sz);
-	kzfree(rsa_key->dp);
+	kfree(rsa_key->dp);
 	rsa_key->dp = NULL;
  free_q:
 	memset(rsa_key->q, '\0', half_key_sz);
-	kzfree(rsa_key->q);
+	kfree(rsa_key->q);
 	rsa_key->q = NULL;
  free_p:
 	memset(rsa_key->p, '\0', half_key_sz);
-	kzfree(rsa_key->p);
+	kfree(rsa_key->p);
 	rsa_key->p = NULL;
  err:
 	rsa_key->crt_mode = false;

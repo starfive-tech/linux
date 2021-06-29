@@ -149,7 +149,10 @@
 
 		clkgen: clock-controller@11800000 {
 			compatible = "starfive,jh7100-clkgen";
-			reg = <0x0 0x11800000 0x0 0x10000>;
+			/* TODO: Need to be fixed when clock register programming
+			will be used by clock controller related to crypto clock "secclk" */
+			reg = <0x0 0x11800000 0x0 0x234>,
+			      <0x0 0x11800240 0x0 0xfdc0>;
 			clocks = <&osc0_clk>, <&osc1_clk>;
 			clock-names = "osc0", "osc1";
 			#clock-cells = <1>;

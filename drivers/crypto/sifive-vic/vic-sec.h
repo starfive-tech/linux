@@ -2,9 +2,11 @@
 #define __VIC_SEC_H__
 
 #include <crypto/aes.h>
-#include <crypto/sha.h>
+#include <crypto/sha1.h>
+#include <crypto/sha2.h>
 #include <crypto/engine.h>
 #include <linux/delay.h>
+#include <linux/semaphore.h>
 
 #include "vic-pka.h"
 
@@ -124,7 +126,7 @@ struct vic_sec_dev {
 	struct mutex 			doing;
 
 	struct mutex            lock; /* protects req / areq */
-	struct ablkcipher_request *sreq;
+	struct skcipher_request *sreq;
 	struct aead_request     *areq;
 
 	size_t			        data_buf_len;

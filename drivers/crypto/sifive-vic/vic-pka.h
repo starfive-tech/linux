@@ -3,6 +3,8 @@
 #include <crypto/internal/akcipher.h>
 #include <crypto/internal/rsa.h>
 
+#include <linux/io.h>
+
 #define CRYPTO_OK                      (   0)
 #define CRYPTO_FAILED                  (  -1)
 #define CRYPTO_INPROGRESS              (  -2)

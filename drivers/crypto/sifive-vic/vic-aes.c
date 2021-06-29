@@ -32,6 +32,7 @@
 #include <crypto/scatterwalk.h>
 #include <crypto/internal/aead.h>
 #include <crypto/internal/hash.h>
+#include <crypto/internal/skcipher.h>
 
 #include "vic-sec.h"
 
@@ -279,11 +280,11 @@ static int vic_cryp_hw_init(struct vic_sec_dev *cryp)
 	case VIC_AES_MODE_CBC:
 	case VIC_AES_MODE_CFB:
 	case VIC_AES_MODE_OFB:
-		vic_cryp_hw_write_iv(cryp, (u32 *)cryp->sreq->info);
+		vic_cryp_hw_write_iv(cryp, (u32 *)cryp->sreq->iv);
 		break;
 	case VIC_AES_MODE_CTR:
-		vic_cryp_hw_write_ctr(cryp, (u32 *)cryp->sreq->info);
-		memcpy((void *)cryp->last_ctr,(void *)cryp->sreq->info,16);
+		vic_cryp_hw_write_ctr(cryp, (u32 *)cryp->sreq->iv);
+		memcpy((void *)cryp->last_ctr,(void *)cryp->sreq->iv,16);
 		break;
 
 	default:
@@ -413,7 +414,7 @@ static int vic_cryp_finish_req(struct vic_sec_dev *sdev, int err)
 		crypto_finalize_aead_request(sdev->engine, sdev->areq, err);
 		sdev->areq = NULL;
 	} else {
-		crypto_finalize_ablkcipher_request(sdev->engine, sdev->sreq,
+		crypto_finalize_skcipher_request(sdev->engine, sdev->sreq,
 						   err);
 		sdev->sreq = NULL;
 	}
@@ -805,9 +806,9 @@ static int vic_cryp_cipher_one_req(struct crypto_engine *engine, void *areq);
 static int vic_cryp_prepare_cipher_req(struct crypto_engine *engine,
 					 void *areq);
 
-static int vic_cryp_cra_init(struct crypto_tfm *tfm)
+static int vic_cryp_cra_init_tfm(struct crypto_skcipher *tfm)
 {
-	struct vic_sec_ctx *ctx = crypto_tfm_ctx(tfm);
+	struct vic_sec_ctx *ctx = crypto_skcipher_ctx(tfm);
 
 	ctx->sdev = vic_sec_find_dev(ctx);
 	if (!ctx->sdev)
@@ -816,7 +817,7 @@ static int vic_cryp_cra_init(struct crypto_tfm *tfm)
 	mutex_lock(&ctx->sdev->lock);
 	vic_clk_enable(ctx->sdev,AES_CLK);
 
-	tfm->crt_ablkcipher.reqsize = sizeof(struct vic_sec_request_ctx);
+    crypto_skcipher_set_reqsize(tfm, sizeof(struct vic_sec_request_ctx));
 
 	ctx->begin_new = 1;
 	ctx->enginectx.op.do_one_request = vic_cryp_cipher_one_req;
@@ -825,9 +826,9 @@ static int vic_cryp_cra_init(struct crypto_tfm *tfm)
 	return 0;
 }
 
-static void vic_cryp_cra_exit(struct crypto_tfm *tfm)
+static void vic_cryp_cra_exit_tfm(struct crypto_skcipher *tfm)
 {
-	struct vic_sec_ctx *ctx = crypto_tfm_ctx(tfm);
+	struct vic_sec_ctx *ctx = crypto_skcipher_ctx(tfm);
 
 	ctx->begin_new = 0;
 	ctx->enginectx.op.do_one_request = NULL;
@@ -877,11 +878,11 @@ static void vic_cryp_aes_aead_exit(struct crypto_aead *tfm)
 	mutex_unlock(&ctx->sdev->lock);
 }
 
-static int vic_cryp_crypt(struct ablkcipher_request *req, unsigned long mode)
+static int vic_cryp_crypt(struct skcipher_request *req, unsigned long mode)
 {
-	struct vic_sec_ctx *ctx = crypto_ablkcipher_ctx(
-			crypto_ablkcipher_reqtfm(req));
-	struct vic_sec_request_ctx *rctx = ablkcipher_request_ctx(req);
+	struct vic_sec_ctx *ctx = crypto_skcipher_ctx(
+			crypto_skcipher_reqtfm(req));
+	struct vic_sec_request_ctx *rctx = skcipher_request_ctx(req);
 	struct vic_sec_dev *sdev = ctx->sdev;
 
 	if (!sdev)
@@ -890,7 +891,7 @@ static int vic_cryp_crypt(struct ablkcipher_request *req, unsigned long mode)
 	rctx->mode = mode;
 	rctx->req_type = AES_ABLK;
 
-	return crypto_transfer_ablkcipher_request_to_engine(sdev->engine, req);
+	return crypto_transfer_skcipher_request_to_engine(sdev->engine, req);
 }
 
 static int vic_cryp_aead_crypt(struct aead_request *req, unsigned long mode)
@@ -908,10 +909,10 @@ static int vic_cryp_aead_crypt(struct aead_request *req, unsigned long mode)
 	return crypto_transfer_aead_request_to_engine(cryp->engine, req);
 }
 
-static int vic_cryp_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
+static int vic_cryp_setkey(struct crypto_skcipher *tfm, const u8 *key,
 			     unsigned int keylen)
 {
-	struct vic_sec_ctx *ctx = crypto_ablkcipher_ctx(tfm);
+	struct vic_sec_ctx *ctx = crypto_skcipher_ctx(tfm);
 
 	memcpy(ctx->key, key, keylen);
 	ctx->keylen = keylen;
@@ -919,7 +920,7 @@ static int vic_cryp_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
 	return 0;
 }
 
-static int vic_cryp_aes_setkey(struct crypto_ablkcipher *tfm, const u8 *key,
+static int vic_cryp_aes_setkey(struct crypto_skcipher *tfm, const u8 *key,
 				 unsigned int keylen)
 {
 	if (keylen != AES_KEYSIZE_128 && keylen != AES_KEYSIZE_192 &&
@@ -936,8 +937,6 @@ static int vic_cryp_aes_aead_setkey(struct crypto_aead *tfm, const u8 *key,
 
 	if (keylen != AES_KEYSIZE_128 && keylen != AES_KEYSIZE_192 &&
 	    keylen != AES_KEYSIZE_256) {
-		crypto_tfm_set_flags((struct crypto_tfm *)tfm,
-				     CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
 	}
 
@@ -972,52 +971,52 @@ static int vic_cryp_aes_ccm_setauthsize(struct crypto_aead *tfm,
 	return 0;
 }
 
-static int vic_cryp_aes_ecb_encrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ecb_encrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_ECB | FLG_ENCRYPT);
 }
 
-static int vic_cryp_aes_ecb_decrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ecb_decrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_ECB);
 }
 
-static int vic_cryp_aes_cbc_encrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_cbc_encrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CBC | FLG_ENCRYPT);
 }
 
-static int vic_cryp_aes_cbc_decrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_cbc_decrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CBC);
 }
 
-static int vic_cryp_aes_cfb_encrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_cfb_encrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CFB | FLG_ENCRYPT);
 }
 
-static int vic_cryp_aes_cfb_decrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_cfb_decrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CFB);
 }
 
-static int vic_cryp_aes_ofb_encrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ofb_encrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_OFB | FLG_ENCRYPT);
 }
 
-static int vic_cryp_aes_ofb_decrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ofb_decrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_OFB);
 }
 
-static int vic_cryp_aes_ctr_encrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ctr_encrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CTR | FLG_ENCRYPT);
 }
 
-static int vic_cryp_aes_ctr_decrypt(struct ablkcipher_request *req)
+static int vic_cryp_aes_ctr_decrypt(struct skcipher_request *req)
 {
 	return vic_cryp_crypt(req,  VIC_AES_MODE_CTR);
 }
@@ -1042,7 +1041,7 @@ static int vic_cryp_aes_ccm_decrypt(struct aead_request *req)
 	return vic_cryp_aead_crypt(req, VIC_AES_MODE_CCM);
 }
 
-static int vic_cryp_prepare_req(struct ablkcipher_request *req,
+static int vic_cryp_prepare_req(struct skcipher_request *req,
 				  struct aead_request *areq)
 {
 	struct vic_sec_ctx *ctx;
@@ -1053,7 +1052,7 @@ static int vic_cryp_prepare_req(struct ablkcipher_request *req,
 	if (!req && !areq)
 		return -EINVAL;
 
-	ctx = req ? crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req)) :
+	ctx = req ? crypto_skcipher_ctx(crypto_skcipher_reqtfm(req)) :
 		    crypto_aead_ctx(crypto_aead_reqtfm(areq));
 
 	sdev = ctx->sdev;
@@ -1067,7 +1066,7 @@ static int vic_cryp_prepare_req(struct ablkcipher_request *req,
 		}
 	}
 
-	rctx = req ? ablkcipher_request_ctx(req) : aead_request_ctx(areq);
+	rctx = req ? skcipher_request_ctx(req) : aead_request_ctx(areq);
 
 	rctx->sdev = sdev;
 	ctx->sdev = sdev;
@@ -1078,7 +1077,7 @@ static int vic_cryp_prepare_req(struct ablkcipher_request *req,
 
 	if (req) {
 		sdev->sreq = req;
-		sdev->total_in = req->nbytes;
+		sdev->total_in = req->cryptlen;
 		sdev->total_out = sdev->total_in;
 		sdev->authsize = 0;
 		rctx->assoclen = 0;
@@ -1148,8 +1147,8 @@ out:
 static int vic_cryp_prepare_cipher_req(struct crypto_engine *engine,
 					 void *areq)
 {
-	struct ablkcipher_request *req = container_of(areq,
-						      struct ablkcipher_request,
+	struct skcipher_request *req = container_of(areq,
+						      struct skcipher_request,
 						      base);
 
 	return vic_cryp_prepare_req(req, NULL);
@@ -1157,12 +1156,12 @@ static int vic_cryp_prepare_cipher_req(struct crypto_engine *engine,
 
 static int vic_cryp_cipher_one_req(struct crypto_engine *engine, void *areq)
 {
-	struct ablkcipher_request *req = container_of(areq,
-						      struct ablkcipher_request,
+	struct skcipher_request *req = container_of(areq,
+						      struct skcipher_request,
 						      base);
-	struct vic_sec_request_ctx *rctx = ablkcipher_request_ctx(req);
-	struct vic_sec_ctx *ctx = crypto_ablkcipher_ctx(
-			crypto_ablkcipher_reqtfm(req));
+	struct vic_sec_request_ctx *rctx = skcipher_request_ctx(req);
+	struct vic_sec_ctx *ctx = crypto_skcipher_ctx(
+			crypto_skcipher_reqtfm(req));
 	struct vic_sec_dev *cryp = ctx->sdev;
 
 	if (!cryp)
@@ -1446,115 +1445,95 @@ static struct ahash_alg algs_aes_cmac[] = {
 	},
 };
 
-static struct crypto_alg crypto_algs[] = {
+static struct skcipher_alg crypto_algs[] = {
 {
-	.cra_name		= "ecb(aes)",
-	.cra_driver_name	= "vic-ecb-aes",
-	.cra_priority		= 200,
-	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER |
-				  CRYPTO_ALG_ASYNC,
-	.cra_blocksize		= AES_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct vic_sec_ctx),
-	.cra_alignmask		= 0xf,
-	.cra_type		= &crypto_ablkcipher_type,
-	.cra_module		= THIS_MODULE,
-	.cra_init		= vic_cryp_cra_init,
-	.cra_exit               = vic_cryp_cra_exit,
-	.cra_ablkcipher = {
-		.min_keysize	= AES_MIN_KEY_SIZE,
-		.max_keysize	= AES_MAX_KEY_SIZE,
-		.setkey		= vic_cryp_aes_setkey,
-		.encrypt	= vic_cryp_aes_ecb_encrypt,
-		.decrypt	= vic_cryp_aes_ecb_decrypt,
-	}
+	.base.cra_name			= "ecb(aes)",
+	.base.cra_driver_name		= "vic-ecb-aes",
+	.base.cra_priority		= 200,
+	.base.cra_flags			= CRYPTO_ALG_ASYNC,
+	.base.cra_blocksize		= AES_BLOCK_SIZE,
+	.base.cra_ctxsize		= sizeof(struct vic_sec_ctx),
+	.base.cra_alignmask		= 0xf,
+	.base.cra_module		= THIS_MODULE,
+	.init				= vic_cryp_cra_init_tfm,
+	.exit               		= vic_cryp_cra_exit_tfm,
+	.min_keysize			= AES_MIN_KEY_SIZE,
+	.max_keysize			= AES_MAX_KEY_SIZE,
+	.setkey				= vic_cryp_aes_setkey,
+	.encrypt			= vic_cryp_aes_ecb_encrypt,
+	.decrypt			= vic_cryp_aes_ecb_decrypt,
 },
 {
-	.cra_name		= "cbc(aes)",
-	.cra_driver_name	= "vic-cbc-aes",
-	.cra_priority		= 200,
-	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER |
-				  CRYPTO_ALG_ASYNC,
-	.cra_blocksize		= AES_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct vic_sec_ctx),
-	.cra_alignmask		= 0xf,
-	.cra_type		= &crypto_ablkcipher_type,
-	.cra_module		= THIS_MODULE,
-	.cra_init		= vic_cryp_cra_init,
-	.cra_exit               = vic_cryp_cra_exit,
-	.cra_ablkcipher = {
-		.min_keysize	= AES_MIN_KEY_SIZE,
-		.max_keysize	= AES_MAX_KEY_SIZE,
-		.ivsize		= AES_BLOCK_SIZE,
-		.setkey		= vic_cryp_aes_setkey,
-		.encrypt	= vic_cryp_aes_cbc_encrypt,
-		.decrypt	= vic_cryp_aes_cbc_decrypt,
-	}
+	.base.cra_name			= "cbc(aes)",
+	.base.cra_driver_name		= "vic-cbc-aes",
+	.base.cra_priority		= 200,
+	.base.cra_flags			= CRYPTO_ALG_ASYNC,
+	.base.cra_blocksize		= AES_BLOCK_SIZE,
+	.base.cra_ctxsize		= sizeof(struct vic_sec_ctx),
+	.base.cra_alignmask		= 0xf,
+	.base.cra_module		= THIS_MODULE,
+	.init				= vic_cryp_cra_init_tfm,
+	.exit               		= vic_cryp_cra_exit_tfm,
+	.min_keysize			= AES_MIN_KEY_SIZE,
+	.max_keysize			= AES_MAX_KEY_SIZE,
+	.ivsize				= AES_BLOCK_SIZE,
+	.setkey				= vic_cryp_aes_setkey,
+	.encrypt			= vic_cryp_aes_cbc_encrypt,
+	.decrypt			= vic_cryp_aes_cbc_decrypt,
 },
 {
-	.cra_name		= "ctr(aes)",
-	.cra_driver_name	= "vic-ctr-aes",
-	.cra_priority		= 200,
-	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER |
-				  CRYPTO_ALG_ASYNC,
-	.cra_blocksize		= 1,
-	.cra_ctxsize		= sizeof(struct vic_sec_ctx),
-	.cra_alignmask		= 0xf,
-	.cra_type		= &crypto_ablkcipher_type,
-	.cra_module		= THIS_MODULE,
-	.cra_init		= vic_cryp_cra_init,
-	.cra_exit               = vic_cryp_cra_exit,
-	.cra_ablkcipher = {
-		.min_keysize	= AES_MIN_KEY_SIZE,
-		.max_keysize	= AES_MAX_KEY_SIZE,
-		.ivsize		= AES_BLOCK_SIZE,
-		.setkey		= vic_cryp_aes_setkey,
-		.encrypt	= vic_cryp_aes_ctr_encrypt,
-		.decrypt	= vic_cryp_aes_ctr_decrypt,
-	}
+	.base.cra_name			= "ctr(aes)",
+	.base.cra_driver_name		= "vic-ctr-aes",
+	.base.cra_priority		= 200,
+	.base.cra_flags			= CRYPTO_ALG_ASYNC,
+	.base.cra_blocksize		= 1,
+	.base.cra_ctxsize		= sizeof(struct vic_sec_ctx),
+	.base.cra_alignmask		= 0xf,
+	.base.cra_module		= THIS_MODULE,
+	.init				= vic_cryp_cra_init_tfm,
+	.exit               		= vic_cryp_cra_exit_tfm,
+	.min_keysize			= AES_MIN_KEY_SIZE,
+	.max_keysize			= AES_MAX_KEY_SIZE,
+	.ivsize				= AES_BLOCK_SIZE,
+	.setkey				= vic_cryp_aes_setkey,
+	.encrypt			= vic_cryp_aes_ctr_encrypt,
+	.decrypt			= vic_cryp_aes_ctr_decrypt,
 },
 {
-	.cra_name		= "cfb(aes)",
-	.cra_driver_name	= "vic-cfb-aes",
-	.cra_priority		= 200,
-	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER |
-				  CRYPTO_ALG_ASYNC,
-	.cra_blocksize		= AES_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct vic_sec_ctx),
-	.cra_alignmask		= 0xf,
-	.cra_type		= &crypto_ablkcipher_type,
-	.cra_module		= THIS_MODULE,
-	.cra_init		= vic_cryp_cra_init,
-	.cra_exit               = vic_cryp_cra_exit,
-	.cra_ablkcipher = {
-		.min_keysize	= AES_MIN_KEY_SIZE,
-		.max_keysize	= AES_MAX_KEY_SIZE,
-		.ivsize		= AES_BLOCK_SIZE,
-		.setkey		= vic_cryp_aes_setkey,
-		.encrypt	= vic_cryp_aes_cfb_encrypt,
-		.decrypt	= vic_cryp_aes_cfb_decrypt,
-	}
+	.base.cra_name			= "cfb(aes)",
+	.base.cra_driver_name		= "vic-cfb-aes",
+	.base.cra_priority		= 200,
+	.base.cra_flags			= CRYPTO_ALG_ASYNC,
+	.base.cra_blocksize		= AES_BLOCK_SIZE,
+	.base.cra_ctxsize		= sizeof(struct vic_sec_ctx),
+	.base.cra_alignmask		= 0xf,
+	.base.cra_module		= THIS_MODULE,
+	.init				= vic_cryp_cra_init_tfm,
+	.exit               		= vic_cryp_cra_exit_tfm,
+	.min_keysize			= AES_MIN_KEY_SIZE,
+	.max_keysize			= AES_MAX_KEY_SIZE,
+	.ivsize				= AES_BLOCK_SIZE,
+	.setkey				= vic_cryp_aes_setkey,
+	.encrypt			= vic_cryp_aes_cfb_encrypt,
+	.decrypt			= vic_cryp_aes_cfb_decrypt,
 },
 {
-	.cra_name		= "ofb(aes)",
-	.cra_driver_name	= "vic-ofb-aes",
-	.cra_priority		= 200,
-	.cra_flags		= CRYPTO_ALG_TYPE_ABLKCIPHER |
-				  CRYPTO_ALG_ASYNC,
-	.cra_blocksize		= AES_BLOCK_SIZE,
-	.cra_ctxsize		= sizeof(struct vic_sec_ctx),
-	.cra_alignmask		= 0xf,
-	.cra_type		= &crypto_ablkcipher_type,
-	.cra_module		= THIS_MODULE,
-	.cra_init		= vic_cryp_cra_init,
-	.cra_exit               = vic_cryp_cra_exit,
-	.cra_ablkcipher = {
-		.min_keysize	= AES_MIN_KEY_SIZE,
-		.max_keysize	= AES_MAX_KEY_SIZE,
-		.ivsize		= AES_BLOCK_SIZE,
-		.setkey		= vic_cryp_aes_setkey,
-		.encrypt	= vic_cryp_aes_ofb_encrypt,
-		.decrypt	= vic_cryp_aes_ofb_decrypt,
-	}
+	.base.cra_name			= "ofb(aes)",
+	.base.cra_driver_name		= "vic-ofb-aes",
+	.base.cra_priority		= 200,
+	.base.cra_flags			= CRYPTO_ALG_ASYNC,
+	.base.cra_blocksize		= AES_BLOCK_SIZE,
+	.base.cra_ctxsize		= sizeof(struct vic_sec_ctx),
+	.base.cra_alignmask		= 0xf,
+	.base.cra_module		= THIS_MODULE,
+	.init				= vic_cryp_cra_init_tfm,
+	.exit               		= vic_cryp_cra_exit_tfm,
+	.min_keysize			= AES_MIN_KEY_SIZE,
+	.max_keysize			= AES_MAX_KEY_SIZE,
+	.ivsize				= AES_BLOCK_SIZE,
+	.setkey				= vic_cryp_aes_setkey,
+	.encrypt			= vic_cryp_aes_ofb_encrypt,
+	.decrypt			= vic_cryp_aes_ofb_decrypt,
 },
 };
 
@@ -1621,7 +1600,7 @@ int vic_aes_register_algs(void)
 		goto err_hash;
 	}
 
-	ret = crypto_register_algs(crypto_algs, ARRAY_SIZE(crypto_algs));
+	ret = crypto_register_skciphers(crypto_algs, ARRAY_SIZE(crypto_algs));
 	if (ret) {
 		printk("Could not register algs\n");
 		goto err_algs;
@@ -1634,7 +1613,7 @@ int vic_aes_register_algs(void)
 	return 0;
 
 err_aead_algs:
-	crypto_unregister_algs(crypto_algs, ARRAY_SIZE(crypto_algs));
+	crypto_unregister_skciphers(crypto_algs, ARRAY_SIZE(crypto_algs));
 err_algs:
 	crypto_unregister_ahashes(algs_aes_cmac, ARRAY_SIZE(algs_aes_cmac));
 err_hash:
@@ -1646,7 +1625,7 @@ int vic_aes_unregister_algs(void)
 
 	crypto_unregister_aeads(aead_algs, ARRAY_SIZE(aead_algs));
 #if 1
-	crypto_unregister_algs(crypto_algs, ARRAY_SIZE(crypto_algs));
+	crypto_unregister_skciphers(crypto_algs, ARRAY_SIZE(crypto_algs));
 
 	crypto_unregister_ahashes(algs_aes_cmac, ARRAY_SIZE(algs_aes_cmac));
 #endif

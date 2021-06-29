@@ -667,8 +667,6 @@ static int vic_hmac_setkey(struct crypto_ahash *tfm,
 	ahash_request_set_crypt(req, &sg, ctx->key, keylen);
 
 	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
-	if (ret)
-		crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
 
 err_free_req:
 	ahash_request_free(req);
