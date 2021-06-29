@@ -137,9 +137,6 @@ int dw_dma_async_do_memcpy(void *src, void *dst, size_t size)
 	dma_addr_t src_dma, dst_dma;
 	struct dma_async_tx_descriptor *desc;
 
-	const struct iommu_ops *iommu;
-	u64 dma_addr = 0, dma_size = 0;
-
 	dma_dev = kzalloc(sizeof(*dma_dev), GFP_KERNEL);
 	if(!dma_dev){
 		dev_err(dma_dev, "kmalloc error.\n");
@@ -149,12 +146,7 @@ int dw_dma_async_do_memcpy(void *src, void *dst, size_t size)
 	dma_dev->bus = NULL;
 	dma_dev->coherent_dma_mask = 0xffffffff;
 
-	iort_dma_setup(dma_dev, &dma_addr, &dma_size);
-	iommu = iort_iommu_configure_id(dma_dev, NULL);
-	if (PTR_ERR(iommu) == -EPROBE_DEFER)
-		return -EPROBE_DEFER;
-
-	arch_setup_dma_ops(dma_dev, dst_dma, dma_size, iommu, true);
+	arch_setup_dma_ops(dma_dev, dst_dma, 0, NULL, true);
 
 	if(_dma_async_alloc_buf(dma_dev, &src, &dst, size, &src_dma, &dst_dma)) {
 		dev_err(dma_dev, "Err alloc.\n");
@@ -207,9 +199,6 @@ int dw_dma_memcpy_raw(dma_addr_t src_dma, dma_addr_t dst_dma, size_t size)
 	struct device *dma_dev;
 	struct dma_async_tx_descriptor *desc;
 
-	const struct iommu_ops *iommu;
-	u64 dma_addr = 0, dma_size = 0;
-
 	dma_dev = kzalloc(sizeof(*dma_dev), GFP_KERNEL);
 	if(!dma_dev){
 		DMA_PRINTK("kmalloc error.\n");
@@ -219,12 +208,7 @@ int dw_dma_memcpy_raw(dma_addr_t src_dma, dma_addr_t dst_dma, size_t size)
 	dma_dev->bus = NULL;
 	dma_dev->coherent_dma_mask = 0xffffffff;
 
-	iort_dma_setup(dma_dev, &dma_addr, &dma_size);
-	iommu = iort_iommu_configure_id(dma_dev, NULL);
-	if (PTR_ERR(iommu) == -EPROBE_DEFER)
-		return -EPROBE_DEFER;
-
-	arch_setup_dma_ops(dma_dev, dst_dma, dma_size, iommu, true);
+	arch_setup_dma_ops(dma_dev, dst_dma, 0, NULL, true);
 
 	chan = _dma_get_channel(DMA_MEMCPY);
 	if(!chan){
