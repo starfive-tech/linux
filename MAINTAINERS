@@ -17423,6 +17423,14 @@ S:	Supported
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/staging.git
 F:	drivers/staging/
 
+SIFVE JH7100 SOC GPIO DRIVER
+M:	Drew Fustini <drew@beagleboard.org>
+M:	Huan Feng <huan.feng@starfivetech.com>
+L:	linux-riscv@lists.infradead.org
+L:	linux-gpio@vger.kernel.org
+F:	Documentation/devicetree/bindings/gpio/starfive,jh7100-gpio.yaml
+F:	drivers/gpio/gpio-starfive-jh7100.c
+
 STARFIRE/DURALAN NETWORK DRIVER
 M:	Ion Badulescu <ionut@badula.org>
 S:	Odd Fixes
