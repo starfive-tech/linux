@@ -36,4 +36,3 @@ EXPORT_SYMBOL_GPL(vin_notifier_call);
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");
 MODULE_DESCRIPTION("Starfive VIC video in notifier");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("video");

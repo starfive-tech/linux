@@ -932,4 +932,3 @@ module_exit(stf_vin_cleanup);
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");
 MODULE_DESCRIPTION("Starfive VIC video in driver");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("video");
