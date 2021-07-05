@@ -354,10 +354,10 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	if (chan->hw_handshake_num) {
 		switch (chan->direction) {
 		case DMA_MEM_TO_DEV:
-			reg |= chan->hw_handshake_num << CH_CFG_L_DST_PER_POS;
+			reg |= chan->hw_handshake_num << CH_CFG_L_SRC_PER_POS;
 			break;
 		case DMA_DEV_TO_MEM:
-			reg |= chan->hw_handshake_num << CH_CFG_L_SRC_PER_POS;
+			reg |= chan->hw_handshake_num << CH_CFG_L_DST_PER_POS;
 			break;
 		default:
 			break;
@@ -403,7 +403,7 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 		descs_count =  atomic_read(&chan->descs_allocated);
 		for (descs_flush = 0; descs_flush < descs_count; descs_flush++) {
 			hw_desc = &first->hw_desc[descs_flush];
-			starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc));
+			starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
 		}
 	}
 #endif
@@ -619,8 +619,13 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
+	#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
+		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
+	#else
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_SRC_MSIZE_POS;
+	#endif
 	hw_desc->lli->ctl_lo = cpu_to_le32(ctllo);
 
 	set_desc_src_master(hw_desc);
@@ -998,6 +1003,12 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 
 	/* The completed descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
+	if (!vd) {
+		dev_err(chan2dev(chan), "BUG: vd is null!\n",
+			axi_chan_name(chan));
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		return;
+	}
 
 	if (chan->cyclic) {
 		desc = vd_to_axi_desc(vd);
@@ -1008,6 +1019,9 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
+					#ifdef CONFIG_SOC_STARFIVE_VIC7100
+					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
+					#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1054,7 +1068,7 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 			axi_chan_handle_err(chan, status);
 		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
-	}
+		}
 	}
 
 	/* Re-enable interrupts */

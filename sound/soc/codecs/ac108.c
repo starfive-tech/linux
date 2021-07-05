@@ -1043,10 +1043,28 @@ static int ac108_set_clock(int y_start_n_stop) {
 static int ac108_prepare(struct snd_pcm_substream *substream,
 					struct snd_soc_dai *dai)
 {
+	u8 r;
+
 	dev_dbg(dai->dev, "%s() stream=%s\n",
 		__func__,
 		snd_pcm_stream_str(substream));
 	
+	if (ac10x->i2c101 && _MASTER_MULTI_CODEC == _MASTER_AC101) {
+		ac101_trigger(substream, SNDRV_PCM_TRIGGER_START, dai);
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		       return 0;
+		}
+	}
+
+	ac10x_read(I2S_CTRL, &r, ac10x->i2cmap[_MASTER_INDEX]);
+	if ((r & (0x01 << BCLK_IOEN)) && (r & (0x01 << LRCK_IOEN)) == 0) {
+		/* disable global clock */
+		ac108_multi_update_bits(I2S_CTRL, 0x1 << TXEN | 0x1 << GEN, 0x0 << TXEN | 0x0 << GEN, ac10x);
+	}
+
+	/* delayed clock starting, move to machine trigger() */
+	ac108_set_clock(1);
+
 	return 0;
 }
 
@@ -1122,6 +1140,8 @@ void ac108_aif_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct ac10x_priv *ac10x = snd_soc_codec_get_drvdata(codec);
 
+	ac108_set_clock(0);
+
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		/*0x21: Module clock disable <I2S, ADC digital, MIC offset Calibration, ADC analog>*/
 		ac108_multi_write(MOD_CLK_EN, 0x0, ac10x);
@@ -1154,7 +1174,7 @@ static const struct snd_soc_dai_ops ac108_dai_ops = {
 	/*ALSA PCM audio operations*/
 	.hw_params	= ac108_hw_params,
 	.prepare	= ac108_prepare,
-	.trigger	= ac108_trigger,
+	/*.trigger	= ac108_trigger, */
 	.mute_stream	= ac108_aif_mute,
 
 	/*DAI format configuration*/

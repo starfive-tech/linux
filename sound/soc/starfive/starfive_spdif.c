@@ -33,7 +33,7 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/dmaengine_pcm.h>
-#include "startfive_spdif.h"
+#include "starfive_spdif.h"
 
 static irqreturn_t spdif_irq_handler(int irq, void *dev_id)
 {
@@ -172,6 +172,7 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 	switch (format) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 	case SNDRV_PCM_FORMAT_S24_LE:
+	case SNDRV_PCM_FORMAT_S32_LE:
 		break;
 	default:
 		dev_err(spdif->dev, "invalid format\n");
@@ -206,12 +207,23 @@ static int sf_spdif_dai_probe(struct snd_soc_dai *dai)
 {
 	struct sf_spdif_dev *spdif = snd_soc_dai_get_drvdata(dai);
 
-	snd_soc_dai_init_dma_data(dai, &spdif->dma_data, NULL);
+	#if 0
+	spdif->play_dma_data.addr = (dma_addr_t)spdif->spdif_base + SPDIF_FIFO_ADDR;
+	spdif->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	spdif->play_dma_data.fifo_size = 16;
+	spdif->play_dma_data.maxburst = 16;
+	spdif->capture_dma_data.addr = (dma_addr_t)spdif->spdif_base + SPDIF_FIFO_ADDR;
+	spdif->capture_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	spdif->capture_dma_data.fifo_size = 16;
+	spdif->capture_dma_data.maxburst = 16;
+	snd_soc_dai_init_dma_data(dai, &spdif->play_dma_data, &spdif->capture_dma_data);
+	snd_soc_dai_set_drvdata(dai, spdif);
+	#endif
 
 	/* reset */
 	regmap_update_bits(spdif->regmap, SPDIF_CTRL,
 		SPDIF_ENABLE | SPDIF_SFR_ENABLE | SPDIF_FIFO_ENABLE, 0);
-	
+
 	/* clear irq */
 	regmap_update_bits(spdif->regmap, SPDIF_INT_REG,
 		SPDIF_INT_REG_BIT, 0);	
@@ -278,14 +290,18 @@ static struct snd_soc_dai_driver sf_spdif_dai = {
 		.channels_min = 2,
 		.channels_max = 2,
 		.rates = SF_PCM_RATE_8000_22050,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE|SNDRV_PCM_FMTBIT_S24_LE,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE \
+					|SNDRV_PCM_FMTBIT_S24_LE \
+					|SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.capture =  {
 		.stream_name = "Capture",
 		.channels_min = 2,
 		.channels_max = 2,
 		.rates = SF_PCM_RATE_8000_22050,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE|SNDRV_PCM_FMTBIT_S24_LE,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE \
+					|SNDRV_PCM_FMTBIT_S24_LE \
+					|SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.ops = &sf_spdif_dai_ops,
 	.symmetric_rates = 1,
@@ -349,9 +365,9 @@ static int sf_spdif_probe(struct platform_device *pdev)
 		ret = sf_spdif_pcm_register(pdev);
 		spdif->use_pio = true;
 	} else {
-		//ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
-		//		0);
-		//spdif->use_pio = false;
+		ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
+					0);
+		spdif->use_pio = false;
 	}
 
 	if (ret)
@@ -361,13 +377,6 @@ static int sf_spdif_probe(struct platform_device *pdev)
 
 err_clk_disable:
 	return ret;
-}
-
-static int sf_spdif_dev_remove(struct platform_device *pdev)
-{
-	struct axi_spdif *spdif = platform_get_drvdata(pdev);
-
-	return 0;
 }
 
 static const struct of_device_id sf_spdif_of_match[] = {
@@ -382,7 +391,6 @@ static struct platform_driver sf_spdif_driver = {
 		.of_match_table = sf_spdif_of_match,
 	},
 	.probe = sf_spdif_probe,
-	.remove = sf_spdif_dev_remove,
 };
 module_platform_driver(sf_spdif_driver);
 

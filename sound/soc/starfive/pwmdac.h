@@ -18,8 +18,8 @@
   * <h2><center>&copy; COPYRIGHT 20120 Shanghai StarFive Technology Co., Ltd. </center></h2>
   */
   
-#ifndef __STARTFIVE_PWMDAC_LOCAL_H
-#define __STARTFIVE_PWMDAC_LOCAL_H
+#ifndef __STARFIVE_PWMDAC_LOCAL_H
+#define __STARFIVE_PWMDAC_LOCAL_H
 
 #include <linux/clk.h>
 #include <linux/device.h>
@@ -116,6 +116,7 @@ enum pwmdac_config_list{
 
 struct sf_pwmdac_dev {
 	void __iomem *pwmdac_base;
+	resource_size_t	mapbase;
 	u8  mode;
 	u8 shift_bit;
 	u8 duty_cycle;
@@ -129,6 +130,7 @@ struct sf_pwmdac_dev {
 	int active;
 	
 	struct device *dev;
+	struct snd_dmaengine_dai_dma_data play_dma_data;
 	struct snd_pcm_substream __rcu *tx_substream;
 	unsigned int (*tx_fn)(struct sf_pwmdac_dev *dev,
 			struct snd_pcm_runtime *runtime, unsigned int tx_ptr,
@@ -140,7 +142,7 @@ struct sf_pwmdac_dev {
 
 
 
-#if IS_ENABLED(CONFIG_SND_STARTFIVE_PWMDAC_PCM)
+#if IS_ENABLED(CONFIG_SND_STARFIVE_PWMDAC_PCM)
 void sf_pwmdac_pcm_push_tx(struct sf_pwmdac_dev *dev);
 void sf_pwmdac_pcm_pop_rx(struct sf_pwmdac_dev *dev);
 int sf_pwmdac_pcm_register(struct platform_device *pdev);

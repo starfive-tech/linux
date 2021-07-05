@@ -241,7 +241,7 @@ struct i2svad_dev {
 	struct vad_params vad;
 };
 
-#if IS_ENABLED(CONFIG_SND_STARTFIVE_I2SVAD_PCM)
+#if IS_ENABLED(CONFIG_SND_STARFIVE_I2SVAD_PCM)
 void i2svad_pcm_push_tx(struct i2svad_dev *dev);
 void i2svad_pcm_pop_rx(struct i2svad_dev *dev);
 int i2svad_pcm_register(struct platform_device *pdev);

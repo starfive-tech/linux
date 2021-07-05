@@ -95,4 +95,4 @@ module_platform_driver(pwmdac_dit_driver);
 MODULE_AUTHOR("jenny.zhang <jenny.zhang@starfivetech.com>");
 MODULE_DESCRIPTION("pwmdac dummy codec driver");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform: startfive-pwmdac dummy codec");
+MODULE_ALIAS("platform: starfive-pwmdac dummy codec");

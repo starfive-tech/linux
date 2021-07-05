@@ -130,6 +130,10 @@ struct sf_spdif_dev {
 	u32 fifo_th;
 	int active;
 
+	/* data related to DMA transfers b/w i2s and DMAC */
+	struct snd_dmaengine_dai_dma_data play_dma_data;
+	struct snd_dmaengine_dai_dma_data capture_dma_data;
+
 	bool use_pio;
 	struct snd_pcm_substream __rcu *tx_substream;
 	struct snd_pcm_substream __rcu *rx_substream;
@@ -149,7 +153,7 @@ struct sf_spdif_dev {
 	struct snd_dmaengine_dai_dma_data dma_data;
 };
 
-#if IS_ENABLED(CONFIG_SND_STARTFIVE_SPDIF_PCM)
+#if IS_ENABLED(CONFIG_SND_STARFIVE_SPDIF_PCM)
 void sf_spdif_pcm_push_tx(struct sf_spdif_dev *dev);
 void sf_spdif_pcm_pop_rx(struct sf_spdif_dev *dev);
 int sf_spdif_pcm_register(struct platform_device *pdev);

@@ -32,7 +32,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/dmaengine_pcm.h>
-#include "startfive_i2svad.h"
+#include "starfive_i2svad.h"
 #include <linux/kthread.h>
 
 

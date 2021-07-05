@@ -30,7 +30,6 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/dmaengine_pcm.h>
-#include <sound/sf_pwmdac.h>
 #include "pwmdac.h"
 #include <linux/kthread.h>
 
@@ -51,7 +50,17 @@ static void pwmdac_set_ctrl_enable(struct sf_pwmdac_dev *dev)
 {
 	u32 date;
 	date = pwmdc_read_reg(dev->pwmdac_base, PWMDAC_CTRL);
-	pwmdc_write_reg(dev->pwmdac_base, PWMDAC_CTRL, date|0x01 );
+	pwmdc_write_reg(dev->pwmdac_base, PWMDAC_CTRL, date | BIT(0) );
+}
+
+/*
+ * 32bit-4byte
+*/
+static void pwmdac_set_ctrl_disable(struct sf_pwmdac_dev *dev)
+{
+	u32 date;
+	date = pwmdc_read_reg(dev->pwmdac_base, PWMDAC_CTRL);
+	pwmdc_write_reg(dev->pwmdac_base, PWMDAC_CTRL, date & ~ BIT(0));
 }
 
 /*
@@ -62,8 +71,8 @@ static void pwmdac_set_ctrl_shift(struct sf_pwmdac_dev *dev, u8 data)
 {
 	u32 value = 0;
  	
-	if(data == 8){
-		value = (~((~value)|0x02));
+	if (data == 8) {
+		value = (~((~value) | 0x02));
 		pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, value);
 	}
 	else if(data == 10){
@@ -82,16 +91,16 @@ static void pwmdac_set_ctrl_dutyCycle(struct sf_pwmdac_dev *dev, u8 data)
 	u32 value = 0;
 	
 	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_CTRL);
-	if(data == 0){ //left
-		value = (~((~value)|(0x03<<2)));
+	if (data == 0) { //left
+		value = (~((~value) | (0x03<<2)));
 		pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, value);
 	}
-	else if(data == 1){ //right
-		value = (~((~value)|(0x01<<3))) | (0x01<<2);
+	else if (data == 1) { //right
+		value = (~((~value) | (0x01<<3))) | (0x01<<2);
 		pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, value);
 	}
-	else if(data == 2){ //center
-		value = (~((~value)|(0x01<<2))) | (0x01<<3);
+	else if (data == 2) { //center
+		value = (~((~value) | (0x01<<2))) | (0x01<<3);
 		pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, value);
 	}
 }
@@ -102,7 +111,7 @@ static void pwmdac_set_ctrl_N(struct sf_pwmdac_dev *dev, u16 data)
 	u32 value = 0;
 	
  	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_CTRL);
- 	pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, (value & 0xF) | ((data - 1)<<4));
+ 	pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, (value & 0xF) | ((data - 1) << 4));
 }
 
 
@@ -111,8 +120,7 @@ static void pwmdac_LR_data_change(struct sf_pwmdac_dev *dev, u8 data)
 	u32 value = 0;
 	
 	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_CTRL);
-	switch(data)
-	{
+	switch (data) {
 		case NO_CHANGE:
 			value &= (~SFC_PWMDAC_LEFT_RIGHT_DATA_CHANGE);
 			break;
@@ -129,10 +137,10 @@ static void pwmdac_data_mode(struct sf_pwmdac_dev *dev,  u8 data)
 	u32 value = 0;
 	
 	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_CTRL);
-	if(data == UNSINGED_DATA){
+	if (data == UNSINGED_DATA) {
 		value &= (~SFC_PWMDAC_DATA_MODE);
 	}
-	else if(data == INVERTER_DATA_MSB){
+	else if (data == INVERTER_DATA_MSB) {
 		value |= SFC_PWMDAC_DATA_MODE;
 	}
 	pwmdc_write_reg(dev->pwmdac_base,PWMDAC_CTRL, value);
@@ -143,12 +151,12 @@ static int pwmdac_data_shift(struct sf_pwmdac_dev *dev,u8 data)
 {    
 	u32 value = 0;
 	
-	if((data < PWMDAC_DATA_LEFT_SHIFT_BIT_0)||(data>PWMDAC_DATA_LEFT_SHIFT_BIT_7)){
+	if ((data < PWMDAC_DATA_LEFT_SHIFT_BIT_0) || (data > PWMDAC_DATA_LEFT_SHIFT_BIT_7)) {
 		return -1;
 	}
 	
 	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_CTRL);
-	value &= (~(PWMDAC_DATA_LEFT_SHIFT_BIT_ALL<<15));
+	value &= ( ~ ( PWMDAC_DATA_LEFT_SHIFT_BIT_ALL << 15 ) );
 	value |= (data<<15);
  	pwmdc_write_reg(dev->pwmdac_base , PWMDAC_CTRL, value);
     return 0;
@@ -159,7 +167,7 @@ static int get_pwmdac_fifo_state(struct sf_pwmdac_dev *dev)
 	u32 value;    
 
 	value = pwmdc_read_reg(dev->pwmdac_base , PWMDAC_SATAE);
-	if((value & 0x02) == 0)
+	if ((value & 0x02) == 0)
 		return FIFO_UN_FULL;
 	
 	return FIFO_FULL;
@@ -176,15 +184,19 @@ static void pwmdac_set(struct sf_pwmdac_dev *dev)
 
     pwmdac_LR_data_change(dev, NO_CHANGE);
     pwmdac_data_mode(dev, dev->data_mode);
-	if(dev->shift)
-	{
+	if (dev->shift) {
 		pwmdac_data_shift(dev, dev->shift); 		
 	}
 }
 
+static void pwmdac_stop(struct sf_pwmdac_dev *dev)
+{
+	pwmdac_set_ctrl_disable(dev);
+}
+
 static int pwmdac_config(struct sf_pwmdac_dev *dev)
 {
-    switch(dev->mode){
+    switch (dev->mode) {
         case shift_8Bit_unsigned:
         case shift_8Bit_unsigned_dataShift:
             /* 8 bit, unsigned */ 
@@ -225,22 +237,20 @@ static int pwmdac_config(struct sf_pwmdac_dev *dev)
             return -1;
     }	
 
-    if((dev->mode == shift_8Bit_unsigned_dataShift) || (dev->mode == shift_8Bit_inverter_dataShift)
-        || (dev->mode == shift_10Bit_unsigned_dataShift) || (dev->mode == shift_10Bit_inverter_dataShift))
-    {
+    if ((dev->mode == shift_8Bit_unsigned_dataShift) || (dev->mode == shift_8Bit_inverter_dataShift)
+        || (dev->mode == shift_10Bit_unsigned_dataShift) || (dev->mode == shift_10Bit_inverter_dataShift)) {
         dev->shift = 4; /*0~7*/
-    }else{
+    } else {
         dev->shift = 0;
-    }	
+    }
     return 0;
 }
 
-
 static int sf_pwmdac_prepare(struct snd_pcm_substream *substream,
 			  struct snd_soc_dai *dai)
-{	
+{
 	struct sf_pwmdac_dev *dev = snd_soc_dai_get_drvdata(dai);
-	pwmdac_set(dev);
+	//pwmdac_set(dev);
 	return 0;
 }
 
@@ -250,9 +260,9 @@ static int pwmdac_tx_thread(void *dev)
 
 	set_current_state(TASK_INTERRUPTIBLE);
 	while (!schedule_timeout(usecs_to_jiffies(50))) {
-		if(pwmdac_dev->tx_thread_exit)
+		if (pwmdac_dev->tx_thread_exit)
 			break;
-		if(get_pwmdac_fifo_state(pwmdac_dev)==0){
+		if (get_pwmdac_fifo_state(pwmdac_dev)==0) {
 			sf_pwmdac_pcm_push_tx(pwmdac_dev);
 		}
 		
@@ -274,6 +284,7 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		dev->active++;
+		pwmdac_set(dev);
 		if (dev->use_pio) {
 			dev->tx_thread = kthread_create(pwmdac_tx_thread, (void *)dev, "pwmdac");
 			if (IS_ERR(dev->tx_thread)) {
@@ -288,6 +299,7 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		dev->active--;
+		pwmdac_stop(dev);
 		if (dev->use_pio) {
 			  if(dev->tx_thread){  
 				dev->tx_thread_exit = 1;
@@ -299,6 +311,20 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 		break;
 	}
 	return ret;
+
+	return 0;
+}
+
+static int sf_pwmdac_dai_probe(struct snd_soc_dai *dai)
+{
+	struct sf_pwmdac_dev *dev = dev_get_drvdata(dai->dev);
+
+	dev->play_dma_data.addr = dev->mapbase + PWMDAC_WDATA;
+	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	dev->play_dma_data.fifo_size = 4; //32bit
+	dev->play_dma_data.maxburst = 2; //16bit/8 =2
+	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, NULL);
+	snd_soc_dai_set_drvdata(dai, dev);
 
 	return 0;
 }
@@ -316,6 +342,7 @@ static const struct snd_soc_component_driver sf_pwmdac_component = {
 static struct snd_soc_dai_driver pwmdac_dai = {
 	.name = "pwmdac",
 	.id = 0,
+	.probe	= sf_pwmdac_dai_probe,
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
@@ -336,6 +363,7 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	dev->mapbase = res->start;
 	dev->pwmdac_base  = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(dev->pwmdac_base))
 		return PTR_ERR(dev->pwmdac_base);
@@ -345,11 +373,7 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 	dev->fifo_th = 2;//8byte
 	pwmdac_config(dev);
 
-	dev->use_pio = true;
-
-	//todo dma config 
-	//dev->use_pio = false;
-
+	dev->use_pio = false;
 	dev_set_drvdata(&pdev->dev, dev);
 	ret = devm_snd_soc_register_component(&pdev->dev, &sf_pwmdac_component,
 					 &pwmdac_dai, 1);
@@ -396,5 +420,5 @@ module_platform_driver(sf_pwmdac_driver);
 
 MODULE_AUTHOR("jenny.zhang <jenny.zhang@starfivetech.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("startfive pwmdac SoC Interface");
-MODULE_ALIAS("platform:startfive-pwmdac");
+MODULE_DESCRIPTION("starfive pwmdac SoC Interface");
+MODULE_ALIAS("platform:starfive-pwmdac");
