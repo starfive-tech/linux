@@ -298,7 +298,7 @@ static void starfive_set_clockevent(struct clock_event_device *evt)
 	evt->rating		= 300;
 }
 
-static int starfive_clockevents_init(void __iomem *base, unsigned int irq,
+static int starfive_clockevents_register(void __iomem *base, unsigned int irq,
 				struct device_node *np, const char *name)
 {
 	struct starfive_clkevt *clkevt;
@@ -388,7 +388,7 @@ static int __init do_starfive_timer_of_init(struct device_node *np,
 			goto err;
 		}
 
-		ret = starfive_clockevents_init(base + timer->timer_base[index],
+		ret = starfive_clockevents_register(base + timer->timer_base[index],
 						irq, np, name);
 		if (ret) {
 			pr_err("init clockevents failed.\n");
