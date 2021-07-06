@@ -1439,8 +1439,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 	unsigned int val = 0;
 	int ret = 0, index;
 
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
-
 	if (ac10x == NULL) {
 		ac10x = kzalloc(sizeof(struct ac10x_priv), GFP_KERNEL);
 		if (ac10x == NULL) {
@@ -1448,8 +1446,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 			return -ENOMEM;
 		}
 	}
-
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
 
 	index = (int)i2c_id->driver_data;
 	if (index == AC101_I2C_ID) {
@@ -1463,8 +1459,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 		goto __ret;
 	}
 
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
-
 	ret = of_property_read_u32(np, "data-protocol", &val);
 	if (ret) {
 		pr_err("Please set data-protocol.\n");
@@ -1474,8 +1468,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 
 	if (of_property_read_u32(np, "tdm-chips-count", &val)) val = 1;
 	ac10x->tdm_chips_cnt = val;
-
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
 
 	pr_err(" ac10x i2c_id number: %d\n", index);
 	pr_err(" ac10x data protocol: %d\n", ac10x->data_protocol);
@@ -1487,8 +1479,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 		dev_err(&i2c->dev, "Fail to initialize i2cmap%d I/O: %d\n", index, ret);
 		return ret;
 	}
-
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
 
 	/*
 	 * Writing this register with 0x12 
@@ -1502,8 +1492,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 	/* sync regcache for FLAT type */
 	ac10x_fill_regcache(&i2c->dev, ac10x->i2cmap[index]);
 
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
-
 	ac10x->codec_cnt++;
 	pr_err(" ac10x codec count  : %d\n", ac10x->codec_cnt);
 
@@ -1511,8 +1499,6 @@ static int ac108_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *i
 	if (ret) {
 		pr_err("failed to create attr group\n");
 	}
-
-	printk(KERN_ERR "%s L.%d", __func__, __LINE__);
 
 __ret:
 	/* It's time to bind codec to i2c[_MASTER_INDEX] when all i2c are ready */
