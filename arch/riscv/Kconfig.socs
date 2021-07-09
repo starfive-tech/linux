@@ -45,6 +45,14 @@ config SOC_STARFIVE_VIC7100_I2C_GPIO
 
 endmenu
 
+config SOC_STARFIVE_DUBHE
+	bool "StarFive Dubhe SoC"
+	select SERIAL_SIFIVE if TTY
+	select SERIAL_SIFIVE_CONSOLE if TTY
+	select SIFIVE_PLIC
+	help
+	  This enables support for StarFive Dubhe SoC platform hardware.
+
 config SOC_VIRT
 	bool "QEMU Virt Machine"
 	select CLINT_TIMER if RISCV_M_MODE
