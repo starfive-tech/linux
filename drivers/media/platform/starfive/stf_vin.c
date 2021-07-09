@@ -708,6 +708,19 @@ static int vin_parse_dt(struct device *dev, struct stf_vin_dev *vin)
 
 	vin->isp0 = of_property_read_bool(np, "isp0_enable");
 	vin->isp1 = of_property_read_bool(np, "isp1_enable");
+	of_property_read_u32(np, "csi-lane", &vin->csi_fmt.lane);
+
+#ifdef CONFIG_VIDEO_STARFIVE_VIN_SENSOR_IMX219SUB
+		of_property_read_u8_array(np, "csi1-dlane-swaps", vin->csi_fmt.dlane_swap, 4);
+		of_property_read_u8_array(np, "csi1-dlane-pn-swaps", vin->csi_fmt.dlane_pn_swap, 4);
+		of_property_read_u8(np, "csi1-clane-swap", &vin->csi_fmt.clane_swap);
+		of_property_read_u8(np, "csi1-clane-pn-swap", &vin->csi_fmt.clane_pn_swap);
+		of_property_read_u32(np, "csi1-mipiID", &vin->csi_fmt.mipi_id);
+		of_property_read_u32(np, "csi1-width", &vin->csi_fmt.w); 
+		of_property_read_u32(np, "csi1-height", &vin->csi_fmt.h); 
+		of_property_read_u32(np, "csi1-dt", &vin->csi_fmt.dt);
+
+#else
 
 	of_property_read_u8_array(np, "csi-dlane-swaps", vin->csi_fmt.dlane_swap, 4);
 
@@ -725,7 +738,7 @@ static int vin_parse_dt(struct device *dev, struct stf_vin_dev *vin)
 
 	of_property_read_u32(np, "csi-dt", &vin->csi_fmt.dt);
 
-	of_property_read_u32(np, "csi-lane", &vin->csi_fmt.lane);
+#endif
 
 	return ret;
 }

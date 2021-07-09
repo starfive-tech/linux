@@ -12,6 +12,12 @@ config VIDEO_STARFIVE_VIN_SENSOR_IMX219
 	bool "Sony IMX219 CMOS Image Sensor"
 	help
 	  Say Y here if you want to have support for VIN sensor IMX219
+	  
+config VIDEO_STARFIVE_VIN_SENSOR_IMX219SUB
+	bool "Sony IMX219sub CMOS Image Sensor"
+	help
+	  Say Y here if you want to have support for VIN sensor IMX219sub
+	  
 config VIN_SENSOR_SC2235
 	bool "VIN SENSOR support SC2235"
 	depends on VIDEO_STF_VIN
