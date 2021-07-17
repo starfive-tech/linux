@@ -88,6 +88,10 @@ properties:
     $ref: /schemas/types.yaml#/definitions/uint32
     enum: [0, 1, 2, 3, 4, 5, 6]
 
+  starfive,keep-gpiomux:
+    description: Keep pinmux for these GPIOs from being reset at boot.
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+
 required:
   - compatible
   - reg
