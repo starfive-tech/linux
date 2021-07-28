@@ -81,8 +81,7 @@ static const struct snd_pcm_hardware sf_pcm_hardware = {
 	.rates = SNDRV_PCM_RATE_16000,
 	.rate_min = 16000,
 	.rate_max = 16000,
-	.formats = SNDRV_PCM_FMTBIT_U8|\
-			SNDRV_PCM_FMTBIT_S16_LE,
+	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.channels_min = 2,
 	.channels_max = 2,
 	.buffer_bytes_max = BUFFER_BYTES_MAX,

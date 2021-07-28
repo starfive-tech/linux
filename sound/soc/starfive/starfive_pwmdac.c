@@ -665,7 +665,7 @@ static struct snd_soc_dai_driver pwmdac_dai = {
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_16000,
-		.formats = SNDRV_PCM_FMTBIT_U8 |SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.ops = &sf_pwmdac_dai_ops,
 };
@@ -687,8 +687,8 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 		return PTR_ERR(dev->pwmdac_base);
 	
 	dev->dev = &pdev->dev;
-	dev->mode = shift_8Bit_unsigned;
-	dev->fifo_th = 2;//8byte
+	dev->mode = shift_8Bit_inverter;
+	dev->fifo_th = 1;//8byte
 	pwmdac_config(dev);
 
 	dev->use_pio = false;
