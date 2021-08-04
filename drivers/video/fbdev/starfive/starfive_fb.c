@@ -981,9 +981,18 @@ static int sf_fb_pp_init(struct sf_fb_data *sf_dev) {
 
 	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
 		if(1 == sf_dev->pp[pp_id].inited) {
-				ret = sf_fb_pp_video_mode_init(sf_dev, &src, &dst, pp_id);
-				if (!ret)
-					pp_config(sf_dev, pp_id, &src, &dst);
+#ifdef CONFIG_FB_STARFIVE_SEEED5INCH
+			if (pp_id == 1) {
+			 	sf_dev->pp[pp_id].src.height = 480;
+				sf_dev->pp[pp_id].src.width = 800;
+			 	sf_dev->pp[pp_id].dst.height = 480;
+				sf_dev->pp[pp_id].dst.width = 800;
+			}
+#endif				
+			
+			ret = sf_fb_pp_video_mode_init(sf_dev, &src, &dst, pp_id);
+			if (!ret)
+				pp_config(sf_dev, pp_id, &src, &dst);
 		}
 	}
 

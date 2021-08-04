@@ -329,7 +329,7 @@ static int imx219_probe(struct i2c_client *client,
 	struct imx219 *imx219;
 	struct device_node *np = client->dev.of_node;
 	int ret;
-	MIPI_INFO("imx219_probe enter\n");
+	MIPI_INFO("imx219_probe main enter\n");
 
 	imx219 = devm_kzalloc(dev, sizeof(struct imx219), GFP_KERNEL);
 	if (!imx219)
@@ -401,7 +401,7 @@ static struct i2c_driver imx219_i2c_driver = {
 static __init int init_imx219(void)
 { 
     int err;
-
+	printk(" init_imx219 main\n");
 	err = i2c_add_driver(&imx219_i2c_driver);
     if (err != 0)
 		printk("i2c driver registration failed, error=%d\n", err);
