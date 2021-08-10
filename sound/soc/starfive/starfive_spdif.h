@@ -123,10 +123,20 @@
 #define SPDIF_STAT		(SPDIF_PARITY_FLAG | SPDIF_UNDERR_FLAG | SPDIF_OVRERR_FLAG | SPDIF_EMPTY_FLAG |		\
 						 SPDIF_AEMPTY_FLAG | SPDIF_FULL_FLAG | SPDIF_AFULL_FLAG | SPDIF_SYNCERR_FLAG | 		\
 						 SPDIF_LOCK_FLAG | SPDIF_BEGIN_FLAG | SPDIF_RIGHT_LEFT)
+
+#define AUDIO_SRC_CLK		(24576000)
+#define SPDIF_MUL		(128)
+
 struct sf_spdif_dev {
 	void __iomem *spdif_base;
 	struct regmap *regmap;
 	struct device *dev;
+
+	struct clk* audio_src;
+	struct clk* audio_12288;
+	struct clk* spdif_clk;
+	struct clk* spdif_apb;
+
 	u32 fifo_th;
 	int active;
 

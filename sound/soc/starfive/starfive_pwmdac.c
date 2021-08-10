@@ -716,7 +716,58 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 	dev->pwmdac_base  = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(dev->pwmdac_base))
 		return PTR_ERR(dev->pwmdac_base);
+
+	dev->audio_src = devm_clk_get(&pdev->dev, "audiosrc");
+	if (IS_ERR(dev->audio_src)) {
+		dev_err(&pdev->dev, "failed to get audiosrc: %ld\n",
+			PTR_ERR(dev->audio_src));
+		return PTR_ERR(dev->audio_src);
+	}
+
+	dev->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
+	if (IS_ERR(dev->audio_12288)) {
+		dev_err(&pdev->dev, "failed to get audio12288: %ld\n",
+			PTR_ERR(dev->audio_12288));
+		return PTR_ERR(dev->audio_12288);
+	}
+
+	dev->pwmdac_apb = devm_clk_get(&pdev->dev, "pwmdacapb");
+	if (IS_ERR(dev->pwmdac_apb)) {
+		dev_err(&pdev->dev, "failed to get pwmdacapb: %ld\n",
+			PTR_ERR(dev->pwmdac_apb));
+		return PTR_ERR(dev->pwmdac_apb);
+	}
+
+	dev->pwmdac_mclk = devm_clk_get(&pdev->dev, "pwmdacclk");
+	if (IS_ERR(dev->pwmdac_mclk)) {
+		dev_err(&pdev->dev, "failed to get pwmdacmux: %ld\n",
+			PTR_ERR(dev->pwmdac_mclk));
+		return PTR_ERR(dev->pwmdac_mclk);
+	}
+	ret = clk_prepare_enable(dev->pwmdac_mclk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable pwmdac_mux\n");
+		goto err_clk_mux_disable;
+	}
 	
+	ret = clk_set_parent(dev->pwmdac_mclk, dev->audio_src);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set pwmdac parent audio_src\n");
+		goto err_clk_mux_disable;
+	}
+	
+	ret = clk_set_rate(dev->pwmdac_mclk, PWMDAC_MCLK);
+	if (ret) {
+		dev_err(&pdev->dev, "setting sysclk failed\n");
+		goto err_clk_mux_disable;
+	}
+
+	ret = clk_prepare_enable(dev->pwmdac_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare_enable pwmdac_en\n");
+		goto err_clk_mux_disable;
+	}
+
 	dev->dev = &pdev->dev;
 	dev->mode = shift_8Bit_inverter;
 	dev->fifo_th = 1;//8byte
@@ -737,7 +788,13 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 		ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,
 				0);
 	}
+
   	return 0;
+
+err_clk_mux_disable:
+	clk_disable(dev->pwmdac_mclk);
+
+	return ret;
 }
 
 

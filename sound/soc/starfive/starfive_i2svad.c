@@ -982,6 +982,20 @@ static int dw_i2s_probe(struct platform_device *pdev)
 
 	vad_init(&(dev->vad));
 	pm_runtime_enable(&pdev->dev);
+	
+	dev->apb_clk = devm_clk_get(&pdev->dev, "i2svadapb");
+	if (IS_ERR(dev->apb_clk)) {
+		dev_err(&pdev->dev, "failed to get i2svadapb clock: %ld\n",
+			PTR_ERR(dev->apb_clk));
+		ret = PTR_ERR(dev->apb_clk);
+		goto err_clk_disable;
+	}
+
+	ret = clk_prepare_enable(dev->apb_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable i2svad apb\n");
+		goto err_clk_disable;
+	}
 
 	return 0;
 

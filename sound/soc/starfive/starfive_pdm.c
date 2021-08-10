@@ -30,13 +30,21 @@
 #include <sound/tlv.h>
 #include "starfive_pdm.h"
 
-#define AUDIOC_CLK 	(12288000)
+#define PDM_MCLK 	(3072000)
 #define PDM_MUL 	(128)
 
 struct sf_pdm {
+	struct device *dev;
 	struct regmap *pdm_map;
-	struct regmap *clk_map;
-	struct clk *clk;
+	
+	struct clk* audio_src;
+	struct clk* audio_12288;
+	struct clk* pdm_apb;
+	struct clk* pdm_clk;
+	struct clk* i2sadc_apb;
+	struct clk* i2sadc_mclk;
+	struct clk* i2sadc_bclk;
+	struct clk* i2sadc_lrclk;
 };
 
 static const DECLARE_TLV_DB_SCALE(volume_tlv, -9450, 150, 0);
@@ -52,16 +60,15 @@ static const struct snd_kcontrol_new sf_pdm_snd_controls[] = {
 	SOC_SINGLE("DC offset", PDM_DC_SCALE0, 8, 0xFFFFF, 0),
 };
 
-static int sf_pdm_set_mclk(struct regmap *map, 
+static int sf_pdm_set_mclk(struct sf_pdm* priv, 
 	unsigned int clk, unsigned int weight)
 {
-	int mclk_div,bclk_div,lrclk_div;
-	u32	pdm_div;
+	int ret;
 
 	/*
 	audio source clk:12288000, mclk_div:4, mclk:3M
 	support 8K/16K/32K/48K sample reate
-	suapport 16/24/32 bit weight
+	support 16/24/32 bit weight
 	bit weight 32
 	mclk bclk  lrclk
 	3M   1.5M  48K
@@ -91,7 +98,7 @@ static int sf_pdm_set_mclk(struct regmap *map,
 	case 48000:		
 		break;
 	default:
-		printk(KERN_ERR "sample rate:%d\n", clk);
+		dev_err(priv->dev, "sample rate:%d\n", clk);
 		return -EINVAL;
 	}
 
@@ -101,7 +108,7 @@ static int sf_pdm_set_mclk(struct regmap *map,
 	case 32:		
 		break;
 	default:
-		printk(KERN_ERR "bit weight:%d\n", weight);
+		dev_err(priv->dev, "bit weight:%d\n", weight);
 		return -EINVAL;
 	}
 
@@ -109,17 +116,53 @@ static int sf_pdm_set_mclk(struct regmap *map,
 		weight = 32;
 	}
 
-	mclk_div = 4;
-	bclk_div = AUDIOC_CLK/mclk_div/(clk*weight);
-	lrclk_div = weight;
+	ret= clk_set_parent(priv->pdm_clk, priv->audio_src);
+	if (ret) {
+		dev_err(priv->dev, "failed to set pdm parent audio_src\n");
+		return ret;
+	}
 
-	/* PDM MCLK = 128*LRCLK */
-	pdm_div = AUDIOC_CLK/(PDM_MUL*clk);
+	ret = clk_set_rate(priv->pdm_clk, PDM_MUL*clk);
+	if (ret) {
+		dev_err(priv->dev, "setting pdm_clk failed\n");
+		return ret;
+	}
 
-	regmap_update_bits(map, AUDIO_CLK_ADC_MCLK, 0x0F, mclk_div);
-	regmap_update_bits(map, AUDIO_CLK_I2SADC_BCLK, 0x1F, bclk_div);
-	regmap_update_bits(map, AUDIO_CLK_ADC_LRCLK, 0x3F, lrclk_div);
-	regmap_update_bits(map, AUDIO_CLK_PDM_CLK, 0x0F, pdm_div);
+	ret= clk_set_parent(priv->i2sadc_mclk, priv->audio_src);
+	if (ret) {
+		dev_err(priv->dev, "failed to set i2sadc_mclk parent audio_src\n");
+		return ret;
+	}
+
+	ret = clk_set_rate(priv->i2sadc_mclk, PDM_MCLK);
+	if (ret) {
+		dev_err(priv->dev, "setting i2sadc_mclk failed\n");
+		return ret;
+	}
+
+	ret= clk_set_parent(priv->i2sadc_bclk, priv->i2sadc_mclk);
+	if (ret) {
+		dev_err(priv->dev, "failed to set i2sadc_mclk parent audio_src\n");
+		return ret;
+	}
+
+	ret = clk_set_rate(priv->i2sadc_bclk, clk*weight);
+	if (ret) {
+		dev_err(priv->dev, "setting i2sadc_bclk failed\n");
+		return ret;
+	}
+
+	ret= clk_set_parent(priv->i2sadc_lrclk, priv->i2sadc_bclk);
+	if (ret) {
+		dev_err(priv->dev, "failed to set i2sadc_mclk parent audio_src\n");
+		return ret;
+	}
+
+	ret = clk_set_rate(priv->i2sadc_lrclk, clk);
+	if (ret) {
+		dev_err(priv->dev, "setting i2sadc_lrclk failed\n");
+		return ret;
+	}
 
 	return 0;
 }
@@ -185,7 +228,7 @@ static int sf_pdm_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	ret = sf_pdm_set_mclk(priv->clk_map, rate, width);
+	ret = sf_pdm_set_mclk(priv, rate, width);
 	if (ret < 0) {
 		dev_err(dai->dev, "unsupported sample rate\n");
 		return -EINVAL;
@@ -318,13 +361,16 @@ static int sf_pdm_probe(struct platform_device *pdev)
 	struct sf_pdm *priv;
 	struct resource *res;
 	void __iomem *regs;
+	int ret;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, priv);
-	
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "pdm");
+
+	priv->dev = dev;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	regs = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
@@ -336,20 +382,112 @@ static int sf_pdm_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->pdm_map);
 	}
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "audio-clk");
-	regs = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(regs))
-		return PTR_ERR(regs);
+	priv->audio_src = devm_clk_get(&pdev->dev, "audiosrc");
+	if (IS_ERR(priv->audio_src)) {
+		dev_err(&pdev->dev, "failed to get audiosrc: %ld\n",
+			PTR_ERR(priv->audio_src));
+		return PTR_ERR(priv->audio_src);
+	}
 
-	priv->clk_map = devm_regmap_init_mmio(dev, regs, &sf_audio_clk_regmap_cfg);
-	if (IS_ERR(priv->clk_map)) {
-		dev_err(dev, "failed to init regmap: %ld\n",
-			PTR_ERR(priv->clk_map));
-		return PTR_ERR(priv->clk_map);
+	priv->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
+	if (IS_ERR(priv->audio_12288)) {
+		dev_err(&pdev->dev, "failed to get audio12288: %ld\n",
+			PTR_ERR(priv->audio_12288));
+		return PTR_ERR(priv->audio_12288);
+	}
+
+	priv->pdm_apb = devm_clk_get(&pdev->dev, "pdmapb");
+	if (IS_ERR(priv->pdm_apb)) {
+		dev_err(&pdev->dev, "failed to get pwmdacapb: %ld\n",
+			PTR_ERR(priv->pdm_apb));
+		return PTR_ERR(priv->pdm_apb);
+	}
+	ret = clk_prepare_enable(priv->pdm_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare_enable pwmdac_en\n");
+		return ret;
+	}
+
+	priv->pdm_clk = devm_clk_get(&pdev->dev, "pdmclk");
+	if (IS_ERR(priv->pdm_clk)) {
+		dev_err(&pdev->dev, "failed to get pwmdacmux: %ld\n",
+			PTR_ERR(priv->pdm_clk));
+		ret = PTR_ERR(priv->pdm_clk);
+		goto err_apb_disable_unprepare;
+	}
+	ret = clk_prepare_enable(priv->pdm_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable pwmdac_mux\n");
+		goto err_apb_disable_unprepare;
+	}
+
+	priv->i2sadc_apb = devm_clk_get(&pdev->dev, "i2sadcapb");
+	if (IS_ERR(priv->i2sadc_apb)) {
+		dev_err(&pdev->dev, "failed to get i2sadc_mclk: %ld\n",
+			PTR_ERR(priv->i2sadc_apb));
+		ret = PTR_ERR(priv->i2sadc_apb);
+		goto err_pdm_clk_disable_unprepare;
+	}
+	ret = clk_prepare_enable(priv->i2sadc_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc_mclk\n");
+		goto err_pdm_clk_disable_unprepare;
+	}
+
+	priv->i2sadc_mclk = devm_clk_get(&pdev->dev, "i2sadcmclk");
+	if (IS_ERR(priv->i2sadc_mclk)) {
+		dev_err(&pdev->dev, "failed to get i2sadc_mclk: %ld\n",
+			PTR_ERR(priv->i2sadc_mclk));
+		ret = PTR_ERR(priv->i2sadc_mclk);
+		goto err_i2sadc_apb_disable_unprepare;
+	}
+	ret = clk_prepare_enable(priv->i2sadc_mclk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc_mclk\n");
+		goto err_i2sadc_apb_disable_unprepare;
+	}
+
+	priv->i2sadc_bclk = devm_clk_get(&pdev->dev, "i2sadcbclk");
+	if (IS_ERR(priv->i2sadc_bclk)) {
+		dev_err(&pdev->dev, "failed to get i2sadc_bclk: %ld\n",
+			PTR_ERR(priv->i2sadc_bclk));
+		ret = PTR_ERR(priv->i2sadc_bclk);
+		goto err_i2sadc_mclk_disable_unprepare;
+	}
+	ret = clk_prepare_enable(priv->i2sadc_bclk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc_bclk\n");
+		goto err_i2sadc_mclk_disable_unprepare;
+	}
+
+	priv->i2sadc_lrclk = devm_clk_get(&pdev->dev, "i2sadclrclk");
+	if (IS_ERR(priv->i2sadc_lrclk)) {
+		dev_err(&pdev->dev, "failed to get i2sadc_lrclk: %ld\n",
+			PTR_ERR(priv->i2sadc_lrclk));
+		ret = PTR_ERR(priv->i2sadc_lrclk);
+		goto err_i2sadc_bclk_disable_unprepare;
+	}
+	ret = clk_prepare_enable(priv->i2sadc_lrclk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc_lrclk\n");
+		goto err_i2sadc_bclk_disable_unprepare;
 	}
 
 	return devm_snd_soc_register_component(dev, &sf_pdm_component_drv,
 					       &sf_pdm_dai_drv, 1);
+	
+err_i2sadc_bclk_disable_unprepare:
+	clk_disable_unprepare(priv->i2sadc_bclk);
+err_i2sadc_mclk_disable_unprepare:
+	clk_disable_unprepare(priv->i2sadc_mclk);
+err_i2sadc_apb_disable_unprepare:
+	clk_disable_unprepare(priv->i2sadc_apb);
+err_pdm_clk_disable_unprepare:
+	clk_disable_unprepare(priv->pdm_clk);
+err_apb_disable_unprepare:
+	clk_disable_unprepare(priv->pdm_apb);
+
+	return ret;
 }
 
 static int sf_pdm_dev_remove(struct platform_device *pdev)

@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/regmap.h>
 
 #include <sound/core.h>
@@ -156,7 +157,8 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rate;
 	unsigned int format;
 	unsigned int tsamplerate;
-
+	unsigned int spdif_clk_rate;
+	
 	channels = params_channels(params);
 	rate = params_rate(params);
 	format = params_format(params);
@@ -181,17 +183,21 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 
 	switch (rate) {
 	case 8000:
-	case 11025:
 	case 16000:
-	case 22050:
+	case 32000:
+	case 48000:
 		break;
 	default:
 		printk(KERN_ERR "channel:%d sample rate:%d\n", channels, rate);
 		return -EINVAL;
 	}
 
-	/* 12288000/128=96000 */
-	tsamplerate = (96000 + rate/2)/rate - 1;
+	spdif_clk_rate = clk_get_rate(spdif->spdif_clk);
+	if (0 == spdif_clk_rate) {
+		return -EINVAL;
+	}
+	
+	tsamplerate = (spdif_clk_rate/SPDIF_MUL + rate/2)/rate - 1;
 	
 	if (rate < 3) {
 		return -EINVAL;
@@ -270,16 +276,11 @@ static const struct snd_soc_dai_ops sf_spdif_dai_ops = {
 	.trigger = sf_spdif_trigger,
 	.hw_params = sf_spdif_hw_params,
 };
-
-#define SF_PCM_RATE_44100_192000  (SNDRV_PCM_RATE_44100 | \
-									SNDRV_PCM_RATE_48000 | \
-									SNDRV_PCM_RATE_96000 | \
-									SNDRV_PCM_RATE_192000)
 									
-#define SF_PCM_RATE_8000_22050  (SNDRV_PCM_RATE_8000 | \
-									SNDRV_PCM_RATE_11025 | \
-									SNDRV_PCM_RATE_16000 | \
-									SNDRV_PCM_RATE_22050)									
+#define SF_PCM_RATE_8000_48000  (SNDRV_PCM_RATE_8000 | \
+				SNDRV_PCM_RATE_16000 | \
+				SNDRV_PCM_RATE_32000 | \
+				SNDRV_PCM_RATE_48000)									
 
 static struct snd_soc_dai_driver sf_spdif_dai = {
 	.name = "spdif",
@@ -289,7 +290,7 @@ static struct snd_soc_dai_driver sf_spdif_dai = {
 		.stream_name = "Playback",
 		.channels_min = 2,
 		.channels_max = 2,
-		.rates = SF_PCM_RATE_8000_22050,
+		.rates = SF_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE \
 					|SNDRV_PCM_FMTBIT_S24_LE \
 					|SNDRV_PCM_FMTBIT_S32_LE,
@@ -298,7 +299,7 @@ static struct snd_soc_dai_driver sf_spdif_dai = {
 		.stream_name = "Capture",
 		.channels_min = 2,
 		.channels_max = 2,
-		.rates = SF_PCM_RATE_8000_22050,
+		.rates = SF_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE \
 					|SNDRV_PCM_FMTBIT_S24_LE \
 					|SNDRV_PCM_FMTBIT_S32_LE,
@@ -325,7 +326,7 @@ static int sf_spdif_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int ret;
 	int irq;
-
+	
 	spdif = devm_kzalloc(&pdev->dev, sizeof(*spdif), GFP_KERNEL);
 	if (!spdif)
 		return -ENOMEM;
@@ -342,6 +343,56 @@ static int sf_spdif_probe(struct platform_device *pdev)
 					    &sf_spdif_regmap_config);
 	if (IS_ERR(spdif->regmap))
 		return PTR_ERR(spdif->regmap);
+
+	spdif->audio_src = devm_clk_get(&pdev->dev, "audiosrc");
+	if (IS_ERR(spdif->audio_src)) {
+		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
+			PTR_ERR(spdif->audio_src));
+		return PTR_ERR(spdif->audio_src);
+	}
+	
+	spdif->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
+	if (IS_ERR(spdif->audio_12288)) {
+		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
+			PTR_ERR(spdif->audio_12288));
+		return PTR_ERR(spdif->audio_12288);
+	}
+	
+	spdif->spdif_clk = devm_clk_get(&pdev->dev, "spdifclk");
+	if (IS_ERR(spdif->spdif_clk)) {
+		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
+			PTR_ERR(spdif->spdif_clk));
+		return PTR_ERR(spdif->spdif_clk);
+	}
+	ret = clk_prepare_enable(spdif->spdif_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable spdif_clk\n");
+		return ret;
+	}
+	
+	ret = clk_set_parent(spdif->spdif_clk, spdif->audio_src);
+	if (ret) {
+		dev_err(&pdev->dev, "set parent of spdif_clk failed\n");
+		goto err_spdif_apb_disable;
+	}
+	ret = clk_set_rate(spdif->spdif_clk, AUDIO_SRC_CLK);
+	if (ret) {
+		dev_err(&pdev->dev, "set  spdif_clk rate failed\n");
+		goto err_spdif_apb_disable;
+	}
+	
+	spdif->spdif_apb = devm_clk_get(&pdev->dev, "spdifapb");
+	if (IS_ERR(spdif->spdif_apb)) {
+		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
+			PTR_ERR(spdif->spdif_apb));
+		ret = PTR_ERR(spdif->spdif_apb);
+		goto err_spdif_apb_disable;
+	}
+	ret = clk_prepare_enable(spdif->spdif_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable spdif_apb\n");
+		goto err_spdif_apb_disable;
+	}
 	
 	spdif->dev = &pdev->dev;
 	spdif->fifo_th = 16;
@@ -352,14 +403,14 @@ static int sf_spdif_probe(struct platform_device *pdev)
 				pdev->name, spdif);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to request irq\n");
-			return ret;
+			goto err_spdif_apb_disable;
 		}
 	}
 
 	ret = devm_snd_soc_register_component(&pdev->dev, &sf_spdif_component,
 					 &sf_spdif_dai, 1);
 	if (ret)
-		goto err_clk_disable;
+		goto err_spdif_apb_disable;
 	
 	if (irq >= 0) {
 		ret = sf_spdif_pcm_register(pdev);
@@ -371,11 +422,15 @@ static int sf_spdif_probe(struct platform_device *pdev)
 	}
 
 	if (ret)
-		goto err_clk_disable;
+		goto err_spdif_apb_disable;
 
 	return 0;
 
-err_clk_disable:
+err_spdif_apb_disable:
+	clk_disable_unprepare(spdif->spdif_apb);
+err_spdif_clk_disable:
+	clk_disable_unprepare(spdif->spdif_clk);
+	
 	return ret;
 }
 

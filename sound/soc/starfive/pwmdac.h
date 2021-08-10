@@ -42,6 +42,8 @@
 #define FIFO_UN_FULL	0
 #define FIFO_FULL	1
 
+#define PWMDAC_MCLK	(4096000)
+
 enum pwmdac_lr_change{
 	NO_CHANGE = 0,
 	CHANGE,
@@ -138,6 +140,11 @@ struct sf_pwmdac_dev {
 	unsigned int tx_ptr;
 	struct task_struct *tx_thread;
 	bool tx_thread_exit;
+
+	struct clk* audio_src;
+	struct clk* audio_12288;
+	struct clk* pwmdac_apb;
+	struct clk* pwmdac_mclk;
 };
 
 

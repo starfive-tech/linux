@@ -294,6 +294,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 			}
 		}
 	}
+	
 	return 0;
 }
 
@@ -334,6 +335,7 @@ static int dw_i2s_trigger(struct snd_pcm_substream *substream,
 		ret = -EINVAL;
 		break;
 	}
+
 	return ret;
 }
 
@@ -610,8 +612,141 @@ static int dw_i2s_dai_probe(struct snd_soc_dai *dai)
 	return 0;
 }
 
+static int dw_i2sadc_clk_init(struct dw_i2s_dev* pdw_i2s_dev, struct device* pdev)
+{
+	int ret;
+
+	pdw_i2s_dev->clk_apb = devm_clk_get(pdev, "i2sadc_apb");
+	if (IS_ERR(pdw_i2s_dev->clk_apb))
+		return PTR_ERR(pdw_i2s_dev->clk_apb);
+
+	ret = clk_prepare_enable(pdw_i2s_dev->clk_apb);
+	if (ret < 0)
+		return ret;
+
+	pdw_i2s_dev->i2svad = devm_clk_get(pdev, "i2svad_apb");
+	if (IS_ERR(pdw_i2s_dev->i2svad)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2svad);
+		goto err_adc_apb_clk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2svad);
+	if (ret < 0)
+		goto err_adc_apb_clk_disable;
+
+	pdw_i2s_dev->i2s_mclk = devm_clk_get(pdev, "i2sadc_mclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_mclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_mclk);
+		goto err_i2svad_apb_clk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_mclk);
+	if (ret < 0)
+		goto err_i2svad_apb_clk_disable;
+
+	pdw_i2s_dev->i2s_bclk = devm_clk_get(pdev, "i2sadc_bclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_bclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_bclk);
+		goto err_adc_mclk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_bclk);
+	if (ret < 0)
+		goto err_adc_mclk_disable;
+
+	pdw_i2s_dev->i2s_lrclk = devm_clk_get(pdev, "i2sadc_lrclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_lrclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_lrclk);
+		goto err_adc_bclk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_lrclk);
+	if (ret < 0)
+		goto err_adc_bclk_disable;
+
+	return 0;
+
+err_adc_bclk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2s_bclk);
+err_adc_mclk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2s_mclk);
+err_i2svad_apb_clk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2svad);
+err_adc_apb_clk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->clk_apb);
+
+	return ret;
+}
+
+static int dw_i2sdac_clk_init(struct dw_i2s_dev* pdw_i2s_dev, struct device* pdev)
+{
+	int ret;
+
+	pdw_i2s_dev->clk_apb = devm_clk_get(pdev, "i2sdac_apb");
+	if (IS_ERR(pdw_i2s_dev->clk_apb))
+		return PTR_ERR(pdw_i2s_dev->clk_apb);
+
+	ret = clk_prepare_enable(pdw_i2s_dev->clk_apb);
+	if (ret < 0)
+		return ret;
+
+	pdw_i2s_dev->i2svad = devm_clk_get(pdev, "i2svad_apb");
+	if (IS_ERR(pdw_i2s_dev->i2svad)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2svad);
+		goto err_adc_apb_clk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2svad);
+	if (ret < 0)
+		goto err_adc_apb_clk_disable;
+
+	pdw_i2s_dev->i2s_mclk = devm_clk_get(pdev, "i2sdac_mclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_mclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_mclk);
+		goto err_i2svad_apb_clk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_mclk);
+	if (ret < 0)
+		goto err_i2svad_apb_clk_disable;
+
+	pdw_i2s_dev->i2s_bclk = devm_clk_get(pdev, "i2sdac_bclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_bclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_bclk);
+		goto err_adc_mclk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_bclk);
+	if (ret < 0)
+		goto err_adc_mclk_disable;
+
+	pdw_i2s_dev->i2s_lrclk = devm_clk_get(pdev, "i2sdac_lrclk");
+	if (IS_ERR(pdw_i2s_dev->i2s_lrclk)) {
+		ret = PTR_ERR(pdw_i2s_dev->i2s_lrclk);
+		goto err_adc_bclk_disable;
+	}
+
+	ret = clk_prepare_enable(pdw_i2s_dev->i2s_lrclk);
+	if (ret < 0)
+		goto err_adc_bclk_disable;
+
+	return 0;
+
+err_adc_bclk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2s_bclk);
+err_adc_mclk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2s_mclk);
+err_i2svad_apb_clk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->i2svad);
+err_adc_apb_clk_disable:
+	clk_disable_unprepare(pdw_i2s_dev->clk_apb);
+
+	return ret;
+}
+
 static int dw_i2s_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	const struct i2s_platform_data *pdata = pdev->dev.platform_data;
 	struct dw_i2s_dev *dev;
 	struct resource *res;
@@ -674,13 +809,24 @@ static int dw_i2s_probe(struct platform_device *pdev)
 			}
 		}
 		dev->clk = devm_clk_get(&pdev->dev, clk_id);
-
-		if (IS_ERR(dev->clk))
-			return PTR_ERR(dev->clk);
+		if (IS_ERR(dev->clk)) {
+			ret = PTR_ERR(dev->clk);
+			goto err_clk_disable;
+		}
 
 		ret = clk_prepare_enable(dev->clk);
 		if (ret < 0)
-			return ret;
+			goto err_clk_disable;
+	}
+
+	if (of_device_is_compatible(np, "snps,designware-i2sadc0")) {
+		ret = dw_i2sadc_clk_init(dev, &pdev->dev);
+		if (ret < 0)
+			goto err_clk_disable;
+	} else if (of_device_is_compatible(np, "snps,designware-i2sdac0")) {
+		ret = dw_i2sdac_clk_init(dev, &pdev->dev);
+		if (ret < 0)
+			goto err_clk_disable;
 	}
 
 	dev_set_drvdata(&pdev->dev, dev);
@@ -688,7 +834,7 @@ static int dw_i2s_probe(struct platform_device *pdev)
 					 dw_i2s_dai, 1);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "not able to register dai\n");
-		goto err_clk_disable;
+		goto err_all_clk_disable;
 	}
 
 	if (!pdata) {
@@ -704,16 +850,24 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "could not register pcm: %d\n",
 					ret);
-			goto err_clk_disable;
+			goto err_all_clk_disable;
 		}
 	}
 
 	pm_runtime_enable(&pdev->dev);
 	return 0;
+	
+err_all_clk_disable:
+	clk_disable_unprepare(dev->i2s_lrclk);
+	clk_disable_unprepare(dev->i2s_bclk);
+	clk_disable_unprepare(dev->i2s_mclk);
+	clk_disable_unprepare(dev->i2svad);
+	clk_disable_unprepare(dev->clk_apb);
 
 err_clk_disable:
 	if (dev->capability & DW_I2S_MASTER)
 		clk_disable_unprepare(dev->clk);
+	
 	return ret;
 }
 
@@ -730,9 +884,10 @@ static int dw_i2s_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 static const struct of_device_id dw_i2s_of_match[] = {
-	{ .compatible = "snps,designware-i2sadc0",	 },
-	{ .compatible = "snps,designware-i2sdac0",	 },
-	//{ .compatible = "snps,designware-i2sdac1",	 },
+	{ .compatible = "snps,designware-i2s",	 	},
+	{ .compatible = "snps,designware-i2sadc0",	},
+	{ .compatible = "snps,designware-i2sdac0",	},
+	//{ .compatible = "snps,designware-i2sdac1",	},
 	{},
 };
 

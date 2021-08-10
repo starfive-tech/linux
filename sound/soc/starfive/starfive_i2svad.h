@@ -209,6 +209,7 @@ struct vad_params {
 struct i2svad_dev {
 	void __iomem *i2s_base;
 	struct clk *clk;
+	struct clk* apb_clk;
 	int active;
 	unsigned int capability;
 	unsigned int quirks;
