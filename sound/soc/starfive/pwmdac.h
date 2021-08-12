@@ -142,7 +142,6 @@ struct sf_pwmdac_dev {
 	bool tx_thread_exit;
 
 	struct clk* audio_src;
-	struct clk* audio_12288;
 	struct clk* pwmdac_apb;
 	struct clk* pwmdac_mclk;
 };

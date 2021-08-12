@@ -470,13 +470,13 @@ static int get_pwmdac_fifo_state(struct sf_pwmdac_dev *dev)
 static void pwmdac_set(struct sf_pwmdac_dev *dev)
 {
 	///8-bit + left + N=16
-    pwmdac_set_ctrl_shift(dev, dev->shift_bit);
-    pwmdac_set_ctrl_dutyCycle(dev, dev->duty_cycle);
-    pwmdac_set_ctrl_N(dev, dev->datan);
-    pwmdac_set_ctrl_enable(dev);
+	pwmdac_set_ctrl_shift(dev, dev->shift_bit);
+	pwmdac_set_ctrl_dutyCycle(dev, dev->duty_cycle);
+	pwmdac_set_ctrl_N(dev, dev->datan);
+	pwmdac_set_ctrl_enable(dev);
 
-    pwmdac_LR_data_change(dev, dev->lr_change);
-    pwmdac_data_mode(dev, dev->data_mode);
+	pwmdac_LR_data_change(dev, dev->lr_change);
+	pwmdac_data_mode(dev, dev->data_mode);
 	if (dev->shift) {
 		pwmdac_data_shift(dev, dev->shift); 		
 	}
@@ -608,7 +608,7 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 
 	return 0;
 }
-		
+
 static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
@@ -629,8 +629,8 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 	
-	dev->play_dma_data.fifo_size = 1; 
-	dev->play_dma_data.maxburst = 16; 
+	dev->play_dma_data.fifo_size = 1;
+	dev->play_dma_data.maxburst = 16;
 	
 	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, NULL);
 	snd_soc_dai_set_drvdata(dai, dev);
@@ -644,9 +644,9 @@ static int sf_pwmdac_dai_probe(struct snd_soc_dai *dai)
 
 	dev->play_dma_data.addr = dev->mapbase + PWMDAC_WDATA;
 	dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	dev->play_dma_data.fifo_size = 1; 
-	dev->play_dma_data.maxburst = 16; 
-	
+	dev->play_dma_data.fifo_size = 1;
+	dev->play_dma_data.maxburst = 16;
+
 	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, NULL);
 	snd_soc_dai_set_drvdata(dai, dev);
 
@@ -670,7 +670,6 @@ static const struct snd_kcontrol_new pwmdac_snd_controls[] = {
 };
 static int pwmdac_probe(struct snd_soc_component *component)
 {
-	struct sf_pwmdac_dev *priv = snd_soc_component_get_drvdata(component);
 	snd_soc_add_component_controls(component, pwmdac_snd_controls,
 				     ARRAY_SIZE(pwmdac_snd_controls));
 	return 0;
@@ -711,24 +710,17 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 	if (!dev)
 		return -ENOMEM;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	dev->mapbase = res->start;
-	dev->pwmdac_base  = devm_ioremap_resource(&pdev->dev, res);
+	dev->pwmdac_base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(dev->pwmdac_base))
 		return PTR_ERR(dev->pwmdac_base);
+
+	dev->mapbase = res->start;
 
 	dev->audio_src = devm_clk_get(&pdev->dev, "audiosrc");
 	if (IS_ERR(dev->audio_src)) {
 		dev_err(&pdev->dev, "failed to get audiosrc: %ld\n",
 			PTR_ERR(dev->audio_src));
 		return PTR_ERR(dev->audio_src);
-	}
-
-	dev->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
-	if (IS_ERR(dev->audio_12288)) {
-		dev_err(&pdev->dev, "failed to get audio12288: %ld\n",
-			PTR_ERR(dev->audio_12288));
-		return PTR_ERR(dev->audio_12288);
 	}
 
 	dev->pwmdac_apb = devm_clk_get(&pdev->dev, "pwmdacapb");
@@ -740,13 +732,13 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 
 	dev->pwmdac_mclk = devm_clk_get(&pdev->dev, "pwmdacclk");
 	if (IS_ERR(dev->pwmdac_mclk)) {
-		dev_err(&pdev->dev, "failed to get pwmdacmux: %ld\n",
+		dev_err(&pdev->dev, "failed to get pwmdacclk: %ld\n",
 			PTR_ERR(dev->pwmdac_mclk));
 		return PTR_ERR(dev->pwmdac_mclk);
 	}
 	ret = clk_prepare_enable(dev->pwmdac_mclk);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable pwmdac_mux\n");
+		dev_err(&pdev->dev, "failed to prepare enable pwmdacclk\n");
 		goto err_clk_mux_disable;
 	}
 	
@@ -764,7 +756,7 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 
 	ret = clk_prepare_enable(dev->pwmdac_apb);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare_enable pwmdac_en\n");
+		dev_err(&pdev->dev, "failed to prepare enable pwmdac_apb\n");
 		goto err_clk_mux_disable;
 	}
 

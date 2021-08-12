@@ -326,15 +326,14 @@ static int sf_spdif_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int ret;
 	int irq;
-	
+
 	spdif = devm_kzalloc(&pdev->dev, sizeof(*spdif), GFP_KERNEL);
 	if (!spdif)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, spdif);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	base = devm_ioremap_resource(&pdev->dev, res);
+	base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
@@ -350,14 +349,7 @@ static int sf_spdif_probe(struct platform_device *pdev)
 			PTR_ERR(spdif->audio_src));
 		return PTR_ERR(spdif->audio_src);
 	}
-	
-	spdif->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
-	if (IS_ERR(spdif->audio_12288)) {
-		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
-			PTR_ERR(spdif->audio_12288));
-		return PTR_ERR(spdif->audio_12288);
-	}
-	
+
 	spdif->spdif_clk = devm_clk_get(&pdev->dev, "spdifclk");
 	if (IS_ERR(spdif->spdif_clk)) {
 		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
@@ -369,16 +361,16 @@ static int sf_spdif_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to prepare enable spdif_clk\n");
 		return ret;
 	}
-	
+
 	ret = clk_set_parent(spdif->spdif_clk, spdif->audio_src);
 	if (ret) {
 		dev_err(&pdev->dev, "set parent of spdif_clk failed\n");
-		goto err_spdif_apb_disable;
+		goto err_spdif_clk_disable;
 	}
 	ret = clk_set_rate(spdif->spdif_clk, AUDIO_SRC_CLK);
 	if (ret) {
 		dev_err(&pdev->dev, "set  spdif_clk rate failed\n");
-		goto err_spdif_apb_disable;
+		goto err_spdif_clk_disable;
 	}
 	
 	spdif->spdif_apb = devm_clk_get(&pdev->dev, "spdifapb");
@@ -386,12 +378,12 @@ static int sf_spdif_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get core clock: %ld\n",
 			PTR_ERR(spdif->spdif_apb));
 		ret = PTR_ERR(spdif->spdif_apb);
-		goto err_spdif_apb_disable;
+		goto err_spdif_clk_disable;
 	}
 	ret = clk_prepare_enable(spdif->spdif_apb);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to prepare enable spdif_apb\n");
-		goto err_spdif_apb_disable;
+		goto err_spdif_clk_disable;
 	}
 	
 	spdif->dev = &pdev->dev;

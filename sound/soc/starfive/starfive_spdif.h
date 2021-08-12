@@ -133,7 +133,6 @@ struct sf_spdif_dev {
 	struct device *dev;
 
 	struct clk* audio_src;
-	struct clk* audio_12288;
 	struct clk* spdif_clk;
 	struct clk* spdif_apb;
 

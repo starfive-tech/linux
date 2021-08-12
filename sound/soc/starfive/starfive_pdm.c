@@ -38,7 +38,6 @@ struct sf_pdm {
 	struct regmap *pdm_map;
 	
 	struct clk* audio_src;
-	struct clk* audio_12288;
 	struct clk* pdm_apb;
 	struct clk* pdm_clk;
 	struct clk* i2sadc_apb;
@@ -354,7 +353,7 @@ static const struct regmap_config sf_audio_clk_regmap_cfg = {
 	.reg_stride	= 4,
 	.max_register	= 0x100,
 };
- 
+
 static int sf_pdm_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -370,8 +369,7 @@ static int sf_pdm_probe(struct platform_device *pdev)
 
 	priv->dev = dev;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	regs = devm_ioremap_resource(&pdev->dev, res);
+	regs = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
 
@@ -389,54 +387,47 @@ static int sf_pdm_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->audio_src);
 	}
 
-	priv->audio_12288 = devm_clk_get(&pdev->dev, "audio12288");
-	if (IS_ERR(priv->audio_12288)) {
-		dev_err(&pdev->dev, "failed to get audio12288: %ld\n",
-			PTR_ERR(priv->audio_12288));
-		return PTR_ERR(priv->audio_12288);
-	}
-
 	priv->pdm_apb = devm_clk_get(&pdev->dev, "pdmapb");
 	if (IS_ERR(priv->pdm_apb)) {
-		dev_err(&pdev->dev, "failed to get pwmdacapb: %ld\n",
+		dev_err(&pdev->dev, "failed to get pdm apb: %ld\n",
 			PTR_ERR(priv->pdm_apb));
 		return PTR_ERR(priv->pdm_apb);
 	}
 	ret = clk_prepare_enable(priv->pdm_apb);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare_enable pwmdac_en\n");
+		dev_err(&pdev->dev, "failed to prepare_enable pdm apb\n");
 		return ret;
 	}
 
 	priv->pdm_clk = devm_clk_get(&pdev->dev, "pdmclk");
 	if (IS_ERR(priv->pdm_clk)) {
-		dev_err(&pdev->dev, "failed to get pwmdacmux: %ld\n",
+		dev_err(&pdev->dev, "failed to get pdmclk: %ld\n",
 			PTR_ERR(priv->pdm_clk));
 		ret = PTR_ERR(priv->pdm_clk);
 		goto err_apb_disable_unprepare;
 	}
 	ret = clk_prepare_enable(priv->pdm_clk);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable pwmdac_mux\n");
+		dev_err(&pdev->dev, "failed to prepare enable pdm clk\n");
 		goto err_apb_disable_unprepare;
 	}
 
 	priv->i2sadc_apb = devm_clk_get(&pdev->dev, "i2sadcapb");
 	if (IS_ERR(priv->i2sadc_apb)) {
-		dev_err(&pdev->dev, "failed to get i2sadc_mclk: %ld\n",
+		dev_err(&pdev->dev, "failed to get i2sadcapb: %ld\n",
 			PTR_ERR(priv->i2sadc_apb));
 		ret = PTR_ERR(priv->i2sadc_apb);
 		goto err_pdm_clk_disable_unprepare;
 	}
 	ret = clk_prepare_enable(priv->i2sadc_apb);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable i2sadc_mclk\n");
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc apb\n");
 		goto err_pdm_clk_disable_unprepare;
 	}
 
 	priv->i2sadc_mclk = devm_clk_get(&pdev->dev, "i2sadcmclk");
 	if (IS_ERR(priv->i2sadc_mclk)) {
-		dev_err(&pdev->dev, "failed to get i2sadc_mclk: %ld\n",
+		dev_err(&pdev->dev, "failed to get i2sadc mclk: %ld\n",
 			PTR_ERR(priv->i2sadc_mclk));
 		ret = PTR_ERR(priv->i2sadc_mclk);
 		goto err_i2sadc_apb_disable_unprepare;
@@ -449,27 +440,27 @@ static int sf_pdm_probe(struct platform_device *pdev)
 
 	priv->i2sadc_bclk = devm_clk_get(&pdev->dev, "i2sadcbclk");
 	if (IS_ERR(priv->i2sadc_bclk)) {
-		dev_err(&pdev->dev, "failed to get i2sadc_bclk: %ld\n",
+		dev_err(&pdev->dev, "failed to get i2sadc bclk: %ld\n",
 			PTR_ERR(priv->i2sadc_bclk));
 		ret = PTR_ERR(priv->i2sadc_bclk);
 		goto err_i2sadc_mclk_disable_unprepare;
 	}
 	ret = clk_prepare_enable(priv->i2sadc_bclk);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable i2sadc_bclk\n");
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc bclk\n");
 		goto err_i2sadc_mclk_disable_unprepare;
 	}
 
 	priv->i2sadc_lrclk = devm_clk_get(&pdev->dev, "i2sadclrclk");
 	if (IS_ERR(priv->i2sadc_lrclk)) {
-		dev_err(&pdev->dev, "failed to get i2sadc_lrclk: %ld\n",
+		dev_err(&pdev->dev, "failed to get i2sadc lrclk: %ld\n",
 			PTR_ERR(priv->i2sadc_lrclk));
 		ret = PTR_ERR(priv->i2sadc_lrclk);
 		goto err_i2sadc_bclk_disable_unprepare;
 	}
 	ret = clk_prepare_enable(priv->i2sadc_lrclk);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable i2sadc_lrclk\n");
+		dev_err(&pdev->dev, "failed to prepare enable i2sadc lrclk\n");
 		goto err_i2sadc_bclk_disable_unprepare;
 	}
 
