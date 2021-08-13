@@ -28,27 +28,33 @@
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
 
-#define WDGINTSTAUS	0x0
-#define WDOGCONTROL	0x104	/* Watchdog Control Register R/W */
-#define WDOGLOAD	0x108	/* The initial value to be loaded */
+/* JH7100 WatchDog register define */
+#define JH7100_WDGINTSTAUS	0x000
+#define JH7100_WDOGCONTROL	0x104	/* Watchdog Control Register R/W */
+#define JH7100_WDOGLOAD		0x108	/* The initial value to be loaded */
 				/* into the counter and is also used */
 				/* as the reload value. R/W */
-#define WDOGEN		0x110	/* Watchdog enable Register */
-#define WDOGRELOAD	0x114	/* Write this register to reload preset */
+#define JH7100_WDOGEN		0x110	/* Watchdog enable Register */
+#define JH7100_WDOGRELOAD	0x114	/* Write this register to reload preset */
 				/* value to counter. (Write 0 or 1 are both ok) */
-#define WDOGVALUE	0x118	/* Watchdog Value Register RO */
-#define WDOGINTCLR	0x120	/* Watchdog Clear Interrupt Register WO */
-#define WDOGINTMSK	0x124	/* Watchdog Interrupt Mask Register */
-#define WDOGLOCK	0x13c	/* Watchdog Lock Register  R/W */
+#define JH7100_WDOGVALUE	0x118	/* Watchdog Value Register RO */
+#define JH7100_WDOGINTCLR	0x120	/* Watchdog Clear Interrupt Register WO */
+#define JH7100_WDOGINTMSK	0x124	/* Watchdog Interrupt Mask Register */
+#define JH7100_WDOGLOCK		0x13c	/* Watchdog Lock Register  R/W */
+
+#define JH7100_UNLOCK_KEY	0x378f0765
+#define JH7100_RESEN_SHIFT	0
+#define JH7100_EN_SHIFT		0
+#define JH7100_INTCLR_AVA_SHIFT	1	/* Watchdog can clear interrupt when this bit is 0 */
 
 /* WDOGCONTROL */
 #define WDOG_INT_EN	0x0
 #define WDOG_RESET_EN	0x1
 
 /* WDOGLOCK */
-#define WDOG_UNLOCKED	(0x378f0765)
-#define WDOG_LOCKED	BIT(0)
+#define WDOG_LOCKED		BIT(0)
 
+#define SI5_WATCHDOG_INTCLR	0x1
 #define SI5_WATCHDOG_ENABLE	0x1
 #define SI5_WATCHDOG_ATBOOT	0x0
 #define SI5_WATCHDOG_MAXCNT	0xffffffff
@@ -74,6 +80,14 @@ MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
 			__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
 MODULE_PARM_DESC(soft_noboot, "Watchdog action, set to 1 to ignore reboots, 0 to reboot (default 0)");
 
+struct si5_wdt_variant_t {
+	u32 unlock_key;
+	u8 enrst_shift;
+	u8 en_shift;
+	u8 intclr_check;
+	u8 intclr_ava_shift;
+};
+
 struct si5_wdt_variant {
 	u32 control;
 	u32 load;
@@ -83,6 +97,7 @@ struct si5_wdt_variant {
 	u32 int_clr;
 	u32 int_mask;
 	u32 unlock;
+	struct si5_wdt_variant_t *variant;
 };
 
 struct stf_si5_wdt {
@@ -98,15 +113,24 @@ struct stf_si5_wdt {
 };
 
 #ifdef CONFIG_OF
+static struct si5_wdt_variant_t jh7100_variant = {
+        .unlock_key = JH7100_UNLOCK_KEY,
+        .enrst_shift = JH7100_RESEN_SHIFT,
+        .en_shift = JH7100_EN_SHIFT,
+	.intclr_check = 1,
+	.intclr_ava_shift = JH7100_INTCLR_AVA_SHIFT,
+};
+
 static const struct si5_wdt_variant drv_data_jh7100 = {
-	.control = WDOGCONTROL,
-	.load = WDOGLOAD,
-	.enable = WDOGEN,
-	.reload = WDOGRELOAD,
-	.value = WDOGVALUE,
-	.int_clr = WDOGINTCLR,
-	.int_mask = WDOGINTMSK,
-	.unlock = WDOGLOCK,
+	.control = JH7100_WDOGCONTROL,
+	.load = JH7100_WDOGLOAD,
+	.enable = JH7100_WDOGEN,
+	.reload = JH7100_WDOGRELOAD,
+	.value = JH7100_WDOGVALUE,
+	.int_clr = JH7100_WDOGINTCLR,
+	.int_mask = JH7100_WDOGINTMSK,
+	.unlock = JH7100_WDOGLOCK,
+	.variant =  &jh7100_variant,
 };
 
 static const struct of_device_id starfive_wdt_match[] = {
@@ -152,7 +176,7 @@ u32 si5wdt_ticks_to_sec(struct stf_si5_wdt *wdt, u32 ticks)
 }
 
 /*
- * Write 0x378f0765 to unlock. Write other value to lock. When lock bit is 1,
+ * Write unlock-key to unlock. Write other value to lock. When lock bit is 1,
  * external accesses to other watchdog registers are ignored.
  */
 static int si5wdt_is_locked(struct stf_si5_wdt *wdt)
@@ -166,13 +190,15 @@ static int si5wdt_is_locked(struct stf_si5_wdt *wdt)
 static void si5wdt_unlock(struct stf_si5_wdt *wdt)
 {
 	if (si5wdt_is_locked(wdt))
-		writel(WDOG_UNLOCKED, wdt->base + wdt->drv_data->unlock);
+		writel(wdt->drv_data->variant->unlock_key,
+			wdt->base + wdt->drv_data->unlock);
 }
 
 static void si5wdt_lock(struct stf_si5_wdt *wdt)
 {
 	if (!si5wdt_is_locked(wdt))
-		writel(~WDOG_UNLOCKED, wdt->base + wdt->drv_data->unlock);
+		writel(~wdt->drv_data->variant->unlock_key,
+			wdt->base + wdt->drv_data->unlock);
 }
 
 static int __maybe_unused si5wdt_is_running(struct stf_si5_wdt *wdt)
@@ -180,28 +206,33 @@ static int __maybe_unused si5wdt_is_running(struct stf_si5_wdt *wdt)
 	u32 val;
 
 	si5wdt_unlock(wdt);
-	val = readl(wdt->base + wdt->drv_data->control);
+	val = readl(wdt->base + wdt->drv_data->enable);
 	si5wdt_lock(wdt);
 
-	return !!(val & SI5_WATCHDOG_ENABLE);
+	return !!(val & SI5_WATCHDOG_ENABLE <<
+		wdt->drv_data->variant->en_shift);
 }
 
-static void si5wdt_int_enable(struct stf_si5_wdt *wdt)
+static inline void si5wdt_int_enable(struct stf_si5_wdt *wdt)
 {
 	u32 val;
 
-	val = readl(wdt->base + wdt->drv_data->int_mask);
-	val &= ~(1<<0);
-	writel(val, wdt->base + wdt->drv_data->int_mask);
+	if (wdt->drv_data->int_mask) {
+		val = readl(wdt->base + wdt->drv_data->int_mask);
+		val &= ~(1<<0);
+		writel(val, wdt->base + wdt->drv_data->int_mask);
+	}
 }
 
-static void si5wdt_int_disable(struct stf_si5_wdt *wdt)
+static inline void si5wdt_int_disable(struct stf_si5_wdt *wdt)
 {
 	u32 val;
 
-	val = readl(wdt->base + wdt->drv_data->int_mask);
-	val |= (1<<0);
-	writel(val, wdt->base + wdt->drv_data->int_mask);
+	if (wdt->drv_data->int_mask) {
+		val = readl(wdt->base + wdt->drv_data->int_mask);
+		val |= (1<<0);
+		writel(val, wdt->base + wdt->drv_data->int_mask);
+	}
 }
 
 static void si5wdt_enable_reset(struct stf_si5_wdt *wdt)
@@ -209,17 +240,17 @@ static void si5wdt_enable_reset(struct stf_si5_wdt *wdt)
 	u32 val;
 
 	val = readl(wdt->base + wdt->drv_data->control);
-	val |= WDOG_RESET_EN;
+	val |= WDOG_RESET_EN << wdt->drv_data->variant->enrst_shift;
 	/* enable wdog interrupt to reset */
 	writel(val, wdt->base + wdt->drv_data->control);
 }
 
-void si5wdt_disable_reset(struct stf_si5_wdt *wdt)
+static void si5wdt_disable_reset(struct stf_si5_wdt *wdt)
 {
 	u32 val;
 
 	val = readl(wdt->base + wdt->drv_data->control);
-	val &= ~WDOG_RESET_EN;
+	val &= ~(WDOG_RESET_EN << wdt->drv_data->variant->enrst_shift);
 	/*disable wdog interrupt to reset*/
 	writel(val, wdt->base + wdt->drv_data->control);
 }
@@ -227,27 +258,25 @@ void si5wdt_disable_reset(struct stf_si5_wdt *wdt)
 static void si5wdt_int_clr(struct stf_si5_wdt *wdt)
 {
 	void __iomem *addr;
+	u8 clr_check;
+	u8 clr_ava_shift;
 
 	addr = wdt->base + wdt->drv_data->int_clr;
+	clr_ava_shift = wdt->drv_data->variant->intclr_ava_shift;
+	clr_check = wdt->drv_data->variant->intclr_check;
+	if (clr_check) {
+		/* waiting interrupt can be to clearing */
+		do {
 
-	/* waiting interrupt can be to clearing */
-	do {
+		} while (readl(addr) & BIT(clr_ava_shift));
+	}
 
-	} while (readl(addr) & BIT(1));
-
-	writel(0x1, addr);
+	writel(SI5_WATCHDOG_INTCLR, addr);
 }
 
 static inline void si5wdt_set_count(struct stf_si5_wdt *wdt, u32 val)
 {
 	writel(val, wdt->base + wdt->drv_data->load);
-}
-
-static inline void
-si5wdt_set_relod_count(struct stf_si5_wdt *wdt, u32 count)
-{
-	writel(count, wdt->base + wdt->drv_data->load);
-	writel(0x1, wdt->base + wdt->drv_data->reload);
 }
 
 static inline u32 si5wdt_get_count(struct stf_si5_wdt *wdt)
@@ -257,12 +286,29 @@ static inline u32 si5wdt_get_count(struct stf_si5_wdt *wdt)
 
 static inline void si5wdt_enable(struct stf_si5_wdt *wdt)
 {
-	writel(SI5_WATCHDOG_ENABLE, wdt->base + wdt->drv_data->enable);
+	u32 val;
+
+	val = readl(wdt->base + wdt->drv_data->enable);
+	val |= SI5_WATCHDOG_ENABLE << wdt->drv_data->variant->en_shift;
+	writel(val, wdt->base + wdt->drv_data->enable);
 }
 
 static inline void si5wdt_disable(struct stf_si5_wdt *wdt)
 {
-	writel(~SI5_WATCHDOG_ENABLE, wdt->base + wdt->drv_data->enable);
+	u32 val;
+
+	val = readl(wdt->base + wdt->drv_data->enable);
+	val &= ~(SI5_WATCHDOG_ENABLE << wdt->drv_data->variant->en_shift);
+	writel(val, wdt->base + wdt->drv_data->enable);
+}
+
+static inline void
+si5wdt_set_relod_count(struct stf_si5_wdt *wdt, u32 count)
+{
+	writel(count, wdt->base + wdt->drv_data->load);
+	if (wdt->drv_data->reload)
+		writel(0x1, wdt->base + wdt->drv_data->reload);
+
 }
 
 static int si5wdt_mask_and_disable_reset(struct stf_si5_wdt *wdt, bool mask)
@@ -313,12 +359,10 @@ static int si5wdt_keepalive(struct watchdog_device *wdd)
 
 static irqreturn_t si5wdt_interrupt_handler(int irq, void *data)
 {
-	struct stf_si5_wdt *wdt = platform_get_drvdata(data);
-
-	si5wdt_unlock(wdt);
-	si5wdt_int_clr(wdt);
-	si5wdt_keepalive(&wdt->wdt_device);
-	si5wdt_lock(wdt);
+	/*
+	 * We don't clear the IRQ status. It's supposed to be done by the
+	 * following ping operations.
+	 */
 
 	return IRQ_HANDLED;
 }
@@ -353,9 +397,8 @@ static int si5wdt_start(struct watchdog_device *wdd)
 	else
 		si5wdt_enable_reset(wdt);
 
-	si5wdt_int_enable(wdt);
-
 	si5wdt_set_count(wdt, wdt->count);
+	si5wdt_int_enable(wdt);
 	si5wdt_enable(wdt);
 
 	si5wdt_lock(wdt);
