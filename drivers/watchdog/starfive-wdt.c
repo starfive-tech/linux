@@ -150,17 +150,22 @@ static const struct platform_device_id si5wdt_ids[] = {
 };
 MODULE_DEVICE_TABLE(platform, si5wdt_ids);
 
-static u64
-si5wdt_get_clock_rate(struct device_node *np)
+static void si5wdt_get_clock_rate(struct stf_si5_wdt *wdt)
 {
 	int ret;
 	u32 freq;
 
-	ret = of_property_read_u32(np, "clock-frequency", &freq);
-	if (ret)
-		pr_warn("get rate failed\n");
+	if (!IS_ERR(wdt->clock)) {
+		wdt->freq = clk_get_rate(wdt->clock);
+		return;
+	}
 
-	return (u64)freq;
+	/* Next we try to get clock-frequency from dts.*/
+	ret = of_property_read_u32(wdt->dev->of_node, "clock-frequency", &freq);
+	if (!ret)
+		wdt->freq = (u64)freq;
+	else
+		dev_err(wdt->dev, "get rate failed, need clock-frequency define in dts.\n");
 }
 
 static __maybe_unused
@@ -544,7 +549,14 @@ static int si5wdt_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	wdt->freq = si5wdt_get_clock_rate(dev->of_node);
+	wdt->clock =  devm_clk_get(dev, NULL);
+	if (!IS_ERR(wdt->clock)) {
+		ret = clk_prepare_enable(wdt->clock);
+		if(ret)
+			dev_warn(dev, "enable clk error.\n");
+	}
+
+	si5wdt_get_clock_rate(wdt);
 
 	wdt->wdt_device.min_timeout = 1;
 	wdt->wdt_device.max_timeout = si5wdt_max_timeout(wdt);
