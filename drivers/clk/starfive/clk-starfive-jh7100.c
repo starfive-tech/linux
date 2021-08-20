@@ -661,8 +661,15 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_TEMP_SENSE]		= starfive_clk_gated_divider(priv, "temp_sense",		UNKNOWN,	0x2e0, 5);
 	hws[JH7100_CLK_SYSERR_APB]		= starfive_clk_gate(priv, "syserr_apb",		UNKNOWN,	0x2e4);
 	#endif
+	
+	hws[JH7100_CLK_SDIO0_AHB]		= starfive_clk_gate(priv, "sdio0_ahb",		"ahb_bus",	0x1c8);
+	hws[JH7100_CLK_SDIO0_CCLKINT]		= starfive_clk_gated_divider(priv, "sdio0_cclkint",		"perh0_src",	0x1cc, 5);
+	hws[JH7100_CLK_SDIO0_CCLKINT_INV]	= starfive_clk_gate_dis(priv, "sdio0_cclkint_inv",		"sdio0_cclkint",	0x1d0);
+	hws[JH7100_CLK_SDIO1_AHB]		= starfive_clk_gate(priv, "sdio1_ahb",		"ahb_bus",	0x1d4);
+	hws[JH7100_CLK_SDIO1_CCLKINT]		= starfive_clk_gated_divider(priv, "sdio1_cclkint",		"perh1_src",	0x1d8, 5);
+	hws[JH7100_CLK_SDIO1_CCLKINT_INV]	= starfive_clk_gate_dis(priv, "sdio1_cclkint_inv",		"sdio1_cclkint",	0x1dc);
 
-	hws[JH7100_CLK_GMAC_AHB]		= starfive_clk_gate(priv, "gmac_ahb",		"ahb0_bus",	0x1e0);
+	hws[JH7100_CLK_GMAC_AHB]		= starfive_clk_gate(priv, "gmac_ahb",		"ahb_bus",	0x1e0);
 	hws[JH7100_CLK_GMAC_ROOT_DIV]		= starfive_clk_divider(priv, "gmac_root_div",		"gmacusb_root",	0x1e4, 4);
 	//hws[JH7100_CLK_GMAC_PTP_REF]		= starfive_clk_gated_divider(priv, "gmac_ptp_refclk",		"gmac_root_div",	0x1e8, 5);
 	hws[JH7100_CLK_GMAC_GTX]		= starfive_clk_gated_divider(priv, "gmac_gtxclk",		"gmac_root_div",	0x1ec, 8);
@@ -675,7 +682,6 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	//hws[JH7100_CLK_GMAC_RMII]		= starfive_clk_gate(priv, "gmac_rmii",		UNKNOWN,	0x208);
 	//hws[JH7100_CLK_GMAC_TOPHYREF]		= starfive_clk_gated_divider(priv, "gmac_tophyref",		UNKNOWN,	0x20c, 7);
 
-	
 	hws[JH7100_CLK_UART0_APB]		= starfive_clk_gate(priv, "uart0_apb",		"apb1_bus",	0x248);
 	hws[JH7100_CLK_UART0_CORE]		= starfive_clk_gated_divider(priv, "uart0_core",		"perh1_src",	0x24c, 6);
 	hws[JH7100_CLK_UART1_APB]		= starfive_clk_gate(priv, "uart1_apb",		"apb1_bus",	0x250);
