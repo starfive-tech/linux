@@ -104,7 +104,8 @@ struct stf_si5_wdt {
 	u64 freq;
 	struct device *dev;
 	struct watchdog_device wdt_device;
-	struct clk *clock;
+	struct clk *core_clk;
+	struct clk *apb_clk;
 	const struct si5_wdt_variant *drv_data;
 	u32 count;	/*count of timeout*/
 	u32 reload;	/*restore the count*/
@@ -150,22 +151,47 @@ static const struct platform_device_id si5wdt_ids[] = {
 };
 MODULE_DEVICE_TABLE(platform, si5wdt_ids);
 
-static void si5wdt_get_clock_rate(struct stf_si5_wdt *wdt)
+static int si5wdt_get_clock_rate(struct stf_si5_wdt *wdt)
 {
 	int ret;
 	u32 freq;
 
-	if (!IS_ERR(wdt->clock)) {
-		wdt->freq = clk_get_rate(wdt->clock);
-		return;
+	if (!IS_ERR(wdt->core_clk)) {
+		wdt->freq = clk_get_rate(wdt->core_clk);
+		return 0;
 	}
 
 	/* Next we try to get clock-frequency from dts.*/
 	ret = of_property_read_u32(wdt->dev->of_node, "clock-frequency", &freq);
-	if (!ret)
+	if (!ret) {
 		wdt->freq = (u64)freq;
+		return 0;
+	}
 	else
 		dev_err(wdt->dev, "get rate failed, need clock-frequency define in dts.\n");
+
+	return -ENOENT;
+}
+
+static int si5wdt_enable_clock(struct stf_si5_wdt *wdt)
+{
+	int err = 0;
+
+	wdt->apb_clk =	devm_clk_get(wdt->dev, "apb_clk");
+	if (!IS_ERR(wdt->apb_clk)) {
+		err = clk_prepare_enable(wdt->apb_clk);
+		if(err)
+			dev_warn(wdt->dev, "enable core_clk error.\n");
+	}
+
+	wdt->core_clk =  devm_clk_get(wdt->dev, "core_clk");
+	if (!IS_ERR(wdt->core_clk)) {
+		err = clk_prepare_enable(wdt->core_clk);
+		if(err)
+			dev_warn(wdt->dev, "enable apb_clk error.\n");
+	}
+
+	return err;
 }
 
 static __maybe_unused
@@ -549,12 +575,9 @@ static int si5wdt_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	wdt->clock =  devm_clk_get(dev, NULL);
-	if (!IS_ERR(wdt->clock)) {
-		ret = clk_prepare_enable(wdt->clock);
-		if(ret)
-			dev_warn(dev, "enable clk error.\n");
-	}
+	ret = si5wdt_enable_clock(wdt);
+	if (ret)
+		dev_warn(wdt->dev, "get & enable clk err\n");
 
 	si5wdt_get_clock_rate(wdt);
 
@@ -633,7 +656,7 @@ static int si5wdt_remove(struct platform_device *dev)
 
 	watchdog_unregister_device(&wdt->wdt_device);
 
-	clk_disable_unprepare(wdt->clock);
+	clk_disable_unprepare(wdt->core_clk);
 
 	return 0;
 }

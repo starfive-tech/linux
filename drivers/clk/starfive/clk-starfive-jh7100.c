@@ -682,6 +682,9 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	//hws[JH7100_CLK_GMAC_RMII]		= starfive_clk_gate(priv, "gmac_rmii",		UNKNOWN,	0x208);
 	//hws[JH7100_CLK_GMAC_TOPHYREF]		= starfive_clk_gated_divider(priv, "gmac_tophyref",		UNKNOWN,	0x20c, 7);
 
+	hws[JH7100_CLK_WDTIMER_APB]		= starfive_clk_gate(priv, "wdtimer_apb",		"apb2_bus",	0x2ac);
+	hws[JH7100_CLK_WDT_CORE]		= starfive_clk_gated_divider(priv, "wdt_coreclk",		"perh0_src",	0x2b0, 6);
+
 	hws[JH7100_CLK_UART0_APB]		= starfive_clk_gate(priv, "uart0_apb",		"apb1_bus",	0x248);
 	hws[JH7100_CLK_UART0_CORE]		= starfive_clk_gated_divider(priv, "uart0_core",		"perh1_src",	0x24c, 6);
 	hws[JH7100_CLK_UART1_APB]		= starfive_clk_gate(priv, "uart1_apb",		"apb1_bus",	0x250);
