@@ -139,34 +139,34 @@ static const char *gmac_rx_pre_sels[2] = {
 };
 
 static const char *audio_clk_sels[2] = {
-	[0] = "audio_src", 
+	[0] = "audio_src",
 	[1] = "audio_12288",
 };
 
 static const char *i2sadc_mclk_sels[2] = {
-	[0] = "clk_audio_src", 
+	[0] = "clk_audio_src",
 	[1] = "clk_aud",
 };
 
 static const char *i2sadc_bclk_sels[2] = {
-	[0] = "adc_mclk", 
+	[0] = "adc_mclk",
 	[1] = "i2sadc_bclk_iopad",
 };
 
 static const char *i2sadc_lrclk_sels[4] = {
-	[0] = "i2sadc_bclk_n", 
+	[0] = "i2sadc_bclk_n",
 	[1] = "i2sadc_lrclk_iopad",
 	[2] = "i2sadc_bclk",
 	[3] = "dummy",
 };
 
 static const char *i2sdac0_bclk_sels[2] = {
-	[0] = "audio_dac_mclk", 
+	[0] = "audio_dac_mclk",
 	[1] = "i2sdac0_bclk_iopad",
 };
 
 static const char *i2sdac0_lrclk_sels[4] = {
-	[0] = "i2sdac0_bclk_n", 
+	[0] = "i2sdac0_bclk_n",
 	[1] = "i2sdac0_lrclk_iopad",
 	[2] = "i2sdac0_bclk",
 	[3] = "dummy",
@@ -174,12 +174,12 @@ static const char *i2sdac0_lrclk_sels[4] = {
 
 
 static const char *i2sdac1_bclk_sels[2] = {
-	[0] = "i2s1_mclk", 
+	[0] = "i2s1_mclk",
 	[1] = "i2sadc1_bclk_iopad",
 };
 
 static const char *i2sdac1_lrclk_sels[4] = {
-	[0] = "i2sdac1_bclk_n", 
+	[0] = "i2sdac1_bclk_n",
 	[1] = "i2sdac1_lrclk_iopad",
 	[2] = "i2sdac1_bclk",
 	[3] = "dummy",
@@ -207,7 +207,7 @@ static struct clk_hw * __init starfive_clk_underspecifid(struct clk_starfive_jh7
 	return clk_hw_register_fixed_factor(priv->dev, name, parent, 0, 1,
 						 1);
 }
-							 
+
 static struct clk_hw * __init starfive_clk_fixed_rate(struct clk_starfive_jh7100_priv *priv,
 							 const char *name,
 							 const char *parent,
@@ -230,7 +230,7 @@ static struct clk_hw * __init starfive_clk_fixed_factor(struct clk_starfive_jh71
 	return clk_hw_register_fixed_factor(priv->dev, name, parent, 0,
 						 mult, div);
 }
-						    
+
 static struct clk_hw * __init starfive_clk_divider_o(struct clk_starfive_jh7100_priv *priv,
 						   const char *name,
 						   const char *parent,
@@ -288,19 +288,19 @@ static struct clk_hw * __init starfive_clk_composite(struct clk_starfive_jh7100_
 		}else {
 			mask = mask_arry[mux_width-1];
 		}
-		
+
 		mux = devm_kzalloc(priv->dev, sizeof(*mux), GFP_KERNEL);
 		if (!mux) {
 			return ERR_PTR(-ENOMEM);
 		}
-		
+
 		mux->reg = priv->base + offset;
 		mux->mask = mask;
 		mux->shift = STARFIVE_CLK_MUX_SHIFT;
 		mux_hw = &mux->hw;
 		mux_ops = &clk_mux_ops;
 		mux->lock = &priv->rmw_lock;
-		
+
 	}
 
 	if (gate_width) {
@@ -331,7 +331,7 @@ static struct clk_hw * __init starfive_clk_composite(struct clk_starfive_jh7100_
 		div->flags = CLK_DIVIDER_ONE_BASED;
 		div->table = NULL;
 		div->lock = &priv->rmw_lock;
-		
+
 		div_hw = &div->hw;
 		div_ops = &clk_divider_ops;
 	}
@@ -347,7 +347,7 @@ static struct clk_hw * __init starfive_clk_composite(struct clk_starfive_jh7100_
 
 	return hw;
 }
-									
+
 static struct clk_hw * __init starfive_clk_gated_divider_old(struct clk_starfive_jh7100_priv *priv,
 							 const char *name,
 							 const char *parent,
@@ -362,7 +362,7 @@ static struct clk_hw * __init starfive_clk_gated_divider_old(struct clk_starfive
 	const char * const *parent_names;
 	int num_parents;
 	int ret;
-	
+
 	parent_names = &parent;
 	num_parents = 1;
 
@@ -391,7 +391,7 @@ static struct clk_hw * __init starfive_clk_gated_divider_old(struct clk_starfive
 	div->flags = CLK_DIVIDER_ONE_BASED;
 	div->table = NULL;
 	div->lock = &priv->rmw_lock;
-	
+
 	div_hw = &div->hw;
 	div_ops = &clk_divider_ops;
 
@@ -407,7 +407,7 @@ static struct clk_hw * __init starfive_clk_gated_divider_old(struct clk_starfive
 	return hw;
 }
 
-							 
+
 static struct clk_hw * __init starfive_clk_gated_divider(struct clk_starfive_jh7100_priv *priv,
 							 const char *name,
 							 const char *parent,
@@ -417,7 +417,7 @@ static struct clk_hw * __init starfive_clk_gated_divider(struct clk_starfive_jh7
 	const char * const *parents;
 
 	parents  = &parent;
-	
+
    	return starfive_clk_composite(priv, name, parents, 1, offset, 0, 1, width);
 }
 
@@ -458,7 +458,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_PLL0_OUT]		= starfive_clk_fixed_factor(priv, "pll0_out", "osc_sys", 40, 1);
 	hws[JH7100_CLK_PLL1_OUT]		= starfive_clk_fixed_factor(priv, "pll1_out", "osc_sys", 64, 1);
 	hws[JH7100_CLK_PLL2_OUT]		= starfive_clk_fixed_factor(priv, "pll2_out", "pll2_refclk", 55, 1);
-	
+
 	//hws[JH7100_CLK_CPUNDBUS_ROOT]		= starfive_clk_fixed_factor(priv, "cpundbus_root", "pll0_out", 1, 1);
 	hws[JH7100_CLK_CPUNDBUS_ROOT]		= starfive_clk_mux(priv, "cpundbus_root", 0x0, 2, cpundbus_root_sels, ARRAY_SIZE(cpundbus_root_sels));
 	hws[JH7100_CLK_DLA_ROOT]		= starfive_clk_mux(priv, "dla_root",	0x4, 2, dla_root_sels, ARRAY_SIZE(dla_root_sels));
@@ -469,7 +469,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_VIN_ROOT]		= starfive_clk_mux(priv, "vin_root",	0x18, 2, vin_root_sels, ARRAY_SIZE(vin_root_sels));
 	hws[JH7100_CLK_VOUT_ROOT]		= starfive_clk_mux(priv, "vout_root",	0x1c, 2, vout_root_sels, ARRAY_SIZE(vout_root_sels));
 	hws[JH7100_CLK_AUDIO_ROOT]		= starfive_clk_gated_divider(priv, "audio_root",		"pll0_out",	0x20, 2);
-	
+
 	hws[JH7100_CLK_CDECHIFI4_ROOT]		= starfive_clk_mux(priv, "cdechifi4_root",	0x24, 2, cdechifi4_root_sels, ARRAY_SIZE(cdechifi4_root_sels));
 	hws[JH7100_CLK_CDEC_ROOT]		= starfive_clk_mux(priv, "cdec_root",	0x28, 2, cdec_root_sels, ARRAY_SIZE(cdec_root_sels));
 	hws[JH7100_CLK_VOUTBUS_ROOT]		= starfive_clk_mux(priv, "voutbus_root",	0x2c, 2, voutbus_root_sels, ARRAY_SIZE(voutbus_root_sels));
@@ -487,7 +487,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_AHB_BUS]			= starfive_clk_fixed_factor(priv, "ahb_bus", "cpunbus_root_div", 1, 4);
 	hws[JH7100_CLK_APB1_BUS]		= starfive_clk_fixed_factor(priv, "apb1_bus", "ahb_bus", 1, 2);
 	hws[JH7100_CLK_APB2_BUS]		= starfive_clk_fixed_factor(priv, "apb2_bus", "ahb_bus", 1, 2);
-	
+
 	#if 0
 	hws[JH7100_CLK_CPU_CORE]		= starfive_clk_divider_o(priv, "cpu_core",		UNKNOWN,	0x50, 4);
 	hws[JH7100_CLK_CPU_AXI]			= starfive_clk_divider_o(priv, "cpu_axi",		UNKNOWN,	0x54, 4);
@@ -565,7 +565,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_USBPHY_PLLDIV25M]	= starfive_clk_gated_divider(priv, "usbphy_plldiv25m",		UNKNOWN,	0x174, 6);
 	hws[JH7100_CLK_USBPHY_25M]		= starfive_clk_mux(priv, "usbphy_25m",	0x178, 1, usbphy_25m_sels, ARRAY_SIZE(usbphy_25m_sels));
 	#endif
-	
+
 	//hws[JH7100_CLK_AUDIO_DIV]		= starfive_clk_divider(priv, "audio_div",		"audio_root",	0x17c, 18);
 	//1000M ====> 24.576M, use fixed factor to replace the 40.69 divider.
 	hws[JH7100_CLK_AUDIO_DIV]		= starfive_clk_fixed_factor(priv, "audio_div",		"audio_root",	384,	15625);
@@ -661,7 +661,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_TEMP_SENSE]		= starfive_clk_gated_divider(priv, "temp_sense",		UNKNOWN,	0x2e0, 5);
 	hws[JH7100_CLK_SYSERR_APB]		= starfive_clk_gate(priv, "syserr_apb",		UNKNOWN,	0x2e4);
 	#endif
-	
+
 	hws[JH7100_CLK_SDIO0_AHB]		= starfive_clk_gate(priv, "sdio0_ahb",		"ahb_bus",	0x1c8);
 	hws[JH7100_CLK_SDIO0_CCLKINT]		= starfive_clk_gated_divider(priv, "sdio0_cclkint",		"perh0_src",	0x1cc, 5);
 	hws[JH7100_CLK_SDIO0_CCLKINT_INV]	= starfive_clk_gate_dis(priv, "sdio0_cclkint_inv",		"sdio0_cclkint",	0x1d0);
@@ -686,17 +686,17 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_UART0_CORE]		= starfive_clk_gated_divider(priv, "uart0_core",		"perh1_src",	0x24c, 6);
 	hws[JH7100_CLK_UART1_APB]		= starfive_clk_gate(priv, "uart1_apb",		"apb1_bus",	0x250);
 	hws[JH7100_CLK_UART1_CORE]		= starfive_clk_gated_divider(priv, "uart1_core",		"perh1_src",	0x254, 6);
-	
+
 	hws[JH7100_CLK_I2C0_APB]		= starfive_clk_gate(priv, "i2c0_apb",		"apb1_bus",	0x268);
 	hws[JH7100_CLK_I2C0_CORE]		= starfive_clk_gated_divider(priv, "i2c0_core",		"perh1_src",	0x26c, 6);
 	hws[JH7100_CLK_I2C1_APB]		= starfive_clk_gate(priv, "i2c1_apb",		"apb1_bus",	0x270);
 	hws[JH7100_CLK_I2C1_CORE]		= starfive_clk_gated_divider(priv, "i2c1_core",		"perh1_src",	0x274, 6);
-	
+
 	hws[JH7100_CLK_UART2_APB]		= starfive_clk_gate(priv, "uart2_apb",		"apb2_bus",	0x27c);
-	hws[JH7100_CLK_UART2_CORE]		= starfive_clk_gated_divider(priv, "uart2_core",	"perh0_src",	0x280, 6); 
+	hws[JH7100_CLK_UART2_CORE]		= starfive_clk_gated_divider(priv, "uart2_core",	"perh0_src",	0x280, 6);
 	hws[JH7100_CLK_UART3_APB]		= starfive_clk_gate(priv, "uart3_apb",		"apb2_bus",	0x284);
 	hws[JH7100_CLK_UART3_CORE]		= starfive_clk_gated_divider(priv, "uart3_core",	"perh0_src",	0x288, 6);
-	
+
 	hws[JH7100_CLK_I2C2_APB]		= starfive_clk_gate(priv, "i2c2_apb",		"apb2_bus",	0x29c);
 	hws[JH7100_CLK_I2C2_CORE]		= starfive_clk_gated_divider(priv, "i2c2_core",		"perh0_src",	0x2a0, 6);
 	hws[JH7100_CLK_I2C3_APB]		= starfive_clk_gate(priv, "i2c3_apb",		"apb2_bus",	0x2a4);
@@ -710,7 +710,7 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 		}
 
 	return 0;
-		
+
 err_clk_register:
 	for (i = 0; i < JH7100_CLK_SYS_MAX; i++)
 		if (hws[i] && !IS_ERR(hws[i]))
@@ -765,7 +765,7 @@ static int __init starfive_clkgen_audio_init(struct clk_starfive_jh7100_priv *pr
 		}
 
 	return 0;
-		
+
 err_clk_register:
 	for (i = 0; i < JH7100_CLK_AUD_MAX; i++)
 		if (hws[i] && !IS_ERR(hws[i]))
@@ -859,19 +859,19 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 static const struct of_device_id clk_starfive_jh7100_match[] = {
 	{
 		.compatible = "starfive,jh7100-clkgen-sys",
-		.data = starfive_clk_sys_init 
+		.data = starfive_clk_sys_init
 	},
 	{
 		.compatible = "starfive,jh7100-clkgen-audio",
-		.data = starfive_clk_audio_init 
+		.data = starfive_clk_audio_init
 	},
 	{
 		.compatible = "starfive,jh7100-clkgen-isp",
-		.data = starfive_clk_isp_init 
+		.data = starfive_clk_isp_init
 	},
 	{
 		.compatible = "starfive,jh7100-clkgen-vout",
-		.data = starfive_clk_vout_init 
+		.data = starfive_clk_vout_init
 	},
 	{ /* sentinel */ }
 };
