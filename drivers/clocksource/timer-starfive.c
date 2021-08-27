@@ -52,11 +52,6 @@ static inline void timer_set_mod(struct starfive_clkevt *clkevt, int mod)
 	writel(mod, clkevt->ctrl);
 }
 
-static void timer_disable_by_id(int id)
-{
-	writel(TIMER_ENA_DIS, (void __iomem *)starfive_jh7100_clkevt[id].enable);
-}
-
 /*
  * After disable timer, then enable, the timer will start
  * from the reload count value(0x08[31:0]).
@@ -163,47 +158,36 @@ static int starfive_timer_shutdown(struct clock_event_device *evt)
 	return 0;
 }
 
-static struct starfive_clkevt *
-starfive_clkevt_get(void __iomem *base)
-{
-	int i;
-
-	for (i = 0; i < NR_TIMERS; i++) {
-		if (starfive_jh7100_clkevt[i].base == base)
-			return &starfive_jh7100_clkevt[i];
-	}
-
-	/* It's impossible to reach here */
-	WARN_ON(1);
-
-	return NULL;
-}
-
-static u64 __init
-starfive_get_clock_rate(struct device_node *np, const char *name)
+static int
+starfive_get_clock_rate( struct starfive_clkevt *clkevt, struct device_node *np)
 {
 	int ret;
 	u32 rate;
 
-	ret = of_property_read_u32(np, "clock-frequency", &rate);
-	if (ret)
-		pr_warn("get rate failed.\n");
+	if (clkevt->clk) {
+		clkevt->rate = clk_get_rate(clkevt->clk);
+		if (clkevt->rate > 0){
+			pr_debug("clk_get_rate clkevt->rate: %lld\n", clkevt->rate);
+			return 0;
+		}
+	}
 
-	return (u64)rate;
+	/* Next we try to get clock-frequency from dts.*/
+	ret = of_property_read_u32(np, "clock-frequency", &rate);
+	if (!ret) {
+		pr_debug("Timer: try get clock-frequency:%d MHz\n", rate);
+		clkevt->rate = (u64)rate;
+		return 0;
+	}
+	else
+		pr_err("Timer: get rate failed, need clock-frequency define in dts.\n");
+
+	return -ENOENT;
 }
 
-static int starfive_clocksource_init(void __iomem *base,
+static int starfive_clocksource_init(struct starfive_clkevt *clkevt,
 				const char *name, struct device_node *np)
 {
-	unsigned long rate;
-	struct starfive_clkevt *clkevt;
-
-	rate = starfive_get_clock_rate(np, name);
-	if (rate < 0)
-		return -EINVAL;
-
-	clkevt = starfive_clkevt_get(base);
-
 	timer_set_mod(clkevt, MOD_CONTIN);
 	timer_set_val(clkevt, 0xffffffff);  /* val = rate --> 1s */
 	timer_int_disable(clkevt);
@@ -212,7 +196,7 @@ static int starfive_clocksource_init(void __iomem *base,
 	timer_enable(clkevt);
 
 	clocksource_mmio_init(clkevt->value, name,
-		rate, 200, 32, clocksource_mmio_readl_down);
+		clkevt->rate, 200, 32, clocksource_mmio_readl_down);
 
 	return 0;
 }
@@ -298,21 +282,16 @@ static void starfive_set_clockevent(struct clock_event_device *evt)
 	evt->rating		= 300;
 }
 
-static int starfive_clockevents_register(void __iomem *base, unsigned int irq,
+static int starfive_clockevents_register(struct starfive_clkevt *clkevt, unsigned int irq,
 				struct device_node *np, const char *name)
 {
-	struct starfive_clkevt *clkevt;
-	u64 rate;
 	int ret = 0;
 
-	clkevt = starfive_clkevt_get(base);
-
-	rate = starfive_get_clock_rate(np, name);
-	if (rate < 0)
+	ret = starfive_get_clock_rate(clkevt, np);
+	if (ret)
 		return -EINVAL;
 
-	clkevt->rate = rate;
-	clkevt->periodic = DIV_ROUND_CLOSEST(rate, HZ);
+	clkevt->periodic = DIV_ROUND_CLOSEST(clkevt->rate, HZ);
 
 	starfive_set_clockevent(&clkevt->evt);
 	clkevt->evt.name = name;
@@ -324,7 +303,7 @@ static int starfive_clockevents_register(void __iomem *base, unsigned int irq,
 	if (ret)
 		pr_err("%s: request_irq failed\n", name);
 
-	clockevents_config_and_register(&clkevt->evt, rate, 0xf, 0xffffffff);
+	clockevents_config_and_register(&clkevt->evt, clkevt->rate, 0xf, 0xffffffff);
 
 	return ret;
 }
@@ -355,6 +334,9 @@ static int __init do_starfive_timer_of_init(struct device_node *np,
 {
 	int index, count, irq, ret = -EINVAL;
 	const char *name = NULL;
+	struct clk *clk;
+	struct clk *pclk;
+	struct starfive_clkevt *clkevt;
 	void __iomem *base;
 
 	base = of_iomap(np, 0);
@@ -367,6 +349,13 @@ static int __init do_starfive_timer_of_init(struct device_node *np,
 	}
 
 	starfive_clkevt_init(timer, base);
+
+	pclk = of_clk_get_by_name(np, "apb_clk");
+	if (!IS_ERR(pclk))
+		if (clk_prepare_enable(pclk))
+			pr_warn("pclk for %pOFn is present, but could not be activated\n",
+			np);
+
 	count = of_irq_count(np);
 	if (count > NR_TIMERS || count <= 0) {
 		ret = -EINVAL;
@@ -375,12 +364,22 @@ static int __init do_starfive_timer_of_init(struct device_node *np,
 
 	for (index = 0; index < count; index++) {
 		/* one of timer is wdog-timer, skip...*/
-		of_property_read_string_index(np, "interrupt-names", index, &name);
-		if (!strcmp(name, "wdog"))
+		of_property_read_string_index(np, "clock-names", index, &name);
+		if (strncmp(name, "timer", strlen("timer")))
 			continue;
 
+		clkevt = &starfive_jh7100_clkevt[index];
 		/* Ensure timers are disabled */
-		timer_disable_by_id(index);
+		timer_disable(clkevt);
+
+		clk = of_clk_get_by_name(np, name);
+		if (!IS_ERR(clk)) {
+			clkevt->clk = clk;
+			if (clk_prepare_enable(clk))
+				pr_warn("clk for %pOFn is present, but could not be activated\n",
+				np);
+
+		}
 
 		irq = irq_of_parse_and_map(np, index);
 		if (irq < 0) {
@@ -388,15 +387,13 @@ static int __init do_starfive_timer_of_init(struct device_node *np,
 			goto err;
 		}
 
-		ret = starfive_clockevents_register(base + timer->timer_base[index],
-						irq, np, name);
+		ret = starfive_clockevents_register(clkevt, irq, np, name);
 		if (ret) {
-			pr_err("init clockevents failed.\n");
+			pr_err("%s: init clockevents failed.\n", name);
 			goto err;
 		}
 
-		ret = starfive_clocksource_init(base + timer->timer_base[index],
-						name, np);
+		ret = starfive_clocksource_init(clkevt, name, np);
 		if (ret)
 			goto err;
 	}
