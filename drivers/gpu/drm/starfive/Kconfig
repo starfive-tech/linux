@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2021 StarFive Technology Co., Ltd.
+
+config DRM_STARFIVE
+	tristate "DRM Support for StarFive SoCs"
+	depends on DRM
+	depends on SIFIVE_L2
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select DRM_GEM_CMA_HELPER
+	select DRM_KMS_HELPER
+	select DRM_MIPI_DSI
+	select DRM_PANEL
+	help
+	  Choose this option if you have a StarFive SoCs.
+	  The module will be called starfive-drm
+	  This driver provides kernel mode setting and
+	  buffer management to userspace.
