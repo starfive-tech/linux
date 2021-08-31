@@ -153,6 +153,12 @@ static void ccache_flush_range(phys_addr_t start, size_t len)
 	}
 }
 
+void sifive_ccache_flush_range(phys_addr_t start, size_t len)
+{
+	ccache_flush_range(start, len);
+}
+EXPORT_SYMBOL_GPL(sifive_ccache_flush_range);
+
 static const struct __initdata riscv_cache_ops ccache_cmo_ops = {
 	.wback = &ccache_flush_range,
 	.inv = &ccache_flush_range,
