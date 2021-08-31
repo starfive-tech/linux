@@ -356,21 +356,40 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
+	struct axi_dma_hw_desc *hw_desc = NULL;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	u32 reg, irq_mask;
+	s32 descs_flush, descs_count;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
+	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
-		dev_err(chan2dev(chan), "%s is non-idle!\n",
+		dev_dbg(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
-		return;
+		axi_chan_disable(chan);
+		chan->is_err = true;
+		//return;
 	}
 
 	axi_dma_enable(chan->chip);
 
 	reg = (DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 	       DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
+
+	if (chan->hw_handshake_num) {
+		switch (chan->direction) {
+		case DMA_MEM_TO_DEV:
+			reg |= chan->hw_handshake_num << CH_CFG_L_SRC_PER_POS;
+			break;
+		case DMA_DEV_TO_MEM:
+			reg |= chan->hw_handshake_num << CH_CFG_L_DST_PER_POS;
+			break;
+		default:
+			break;
+		}
+	}
+
 	axi_chan_iowrite32(chan, CH_CFG_L, reg);
 
 	reg = (DWAXIDMAC_TT_FC_MEM_TO_MEM_DMAC << CH_CFG_H_TT_FC_POS |
@@ -679,8 +698,13 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
+		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
+#else
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_SRC_MSIZE_POS;
+#endif
 	hw_desc->lli->ctl_lo = cpu_to_le32(ctllo);
 
 	set_desc_src_master(hw_desc);
@@ -961,6 +985,10 @@ dma_chan_prep_dma_memcpy(struct dma_chan *dchan, dma_addr_t dst_adr,
 		num++;
 	}
 
+	/* Total len of src/dest sg == 0, so no descriptor were allocated */
+	if (unlikely(!desc))
+		return NULL;
+
 	/* Set end-of-link to the last link descriptor of list */
 	set_desc_last(&desc->hw_desc[num - 1]);
 	/* Managed transfer list */
@@ -1015,6 +1043,7 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 {
 	struct virt_dma_desc *vd;
 	unsigned long flags;
+	struct axi_dma_desc *desc;
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
@@ -1022,19 +1051,31 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 
 	/* The bad descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
-	/* Remove the completed descriptor from issued list */
-	list_del(&vd->node);
+	if (!vd) {
+		dev_warn(chan2dev(chan),
+			 "%s vd is null\n", axi_chan_name(chan));
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		return; 
+	}
+	if (chan->is_err) {
+		desc = vd_to_axi_desc(vd);
+		axi_chan_block_xfer_start(chan, desc);
+		chan->is_err = false;
+	} else {
+		/* Remove the completed descriptor from issued list */
+		list_del(&vd->node);
 
-	/* WARN about bad descriptor */
-	dev_err(chan2dev(chan),
-		"Bad descriptor submitted for %s, cookie: %d, irq: 0x%08x\n",
-		axi_chan_name(chan), vd->tx.cookie, status);
-	axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
+		/* WARN about bad descriptor */
+		dev_err(chan2dev(chan),
+			"Bad descriptor submitted for %s, cookie: %d, irq: 0x%08x\n",
+			axi_chan_name(chan), vd->tx.cookie, status);
+		axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
 
-	vchan_cookie_complete(vd);
+		vchan_cookie_complete(vd);
 
-	/* Try to restart the controller */
-	axi_chan_start_first_queued(chan);
+		/* Try to restart the controller */
+		axi_chan_start_first_queued(chan);
+	}
 
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
 }
@@ -1058,6 +1099,12 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 
 	/* The completed descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
+	if (!vd) {
+		dev_err(chan2dev(chan),
+			 "%s vd is null\n", axi_chan_name(chan));
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		return;
+	}
 
 	if (chan->cyclic) {
 		desc = vd_to_axi_desc(vd);
@@ -1068,6 +1115,9 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
+#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1115,7 +1165,7 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
 			dev_dbg(chip->dev, "axi_chan_block_xfer_complete.\n");
-	}
+		}
 	}
 
 	/* Re-enable interrupts */
@@ -1138,7 +1188,7 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
 					!(val & chan_active), 1000, 10000);
 	if (ret == -ETIMEDOUT)
-		dev_warn(dchan2dev(dchan),
+		dev_dbg(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
 
 	if (chan->direction != DMA_MEM_TO_MEM)
@@ -1484,7 +1534,7 @@ static int dw_probe(struct platform_device *pdev)
 	 * Therefore, set constraint to 1024 * 4.
 	 */
 	dw->dma.dev->dma_parms = &dw->dma_parms;
-	dma_set_max_seg_size(&pdev->dev, MAX_BLOCK_SIZE);
+	dma_set_max_seg_size(&pdev->dev, DMAC_MAX_BLK_SIZE);
 	platform_set_drvdata(pdev, chip);
 
 	pm_runtime_enable(chip->dev);

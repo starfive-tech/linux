@@ -56,6 +56,7 @@ struct axi_dma_chan {
 	struct dma_slave_config		config;
 	enum dma_transfer_direction	direction;
 	bool				cyclic;
+	bool				is_err;
 	/* these other elements are all protected by vc.lock */
 	bool				is_paused;
 };
@@ -288,6 +289,12 @@ enum {
 
 /* CH_CFG_H */
 #define CH_CFG_H_PRIORITY_POS		15
+#define CH_CFG_H_DST_HWHS_POL		6
+#define CH_CFG_H_SRC_HWHS_POL		5
+enum {
+	DWAXIDMAC_HWHS_POL_ACTIVE_HIGH	= 0,
+	DWAXIDMAC_HWHS_POL_ACTIVE_LOW
+};
 #define CH_CFG_H_HS_SEL_DST_POS		4
 #define CH_CFG_H_HS_SEL_SRC_POS		3
 enum {
@@ -310,6 +317,9 @@ enum {
 /* CH_CFG_L */
 #define CH_CFG_L_DST_MULTBLK_TYPE_POS	2
 #define CH_CFG_L_SRC_MULTBLK_TYPE_POS	0
+#define CH_CFG_L_DST_PER_POS	4
+#define CH_CFG_L_SRC_PER_POS	11
+
 enum {
 	DWAXIDMAC_MBLK_TYPE_CONTIGUOUS	= 0,
 	DWAXIDMAC_MBLK_TYPE_RELOAD,
