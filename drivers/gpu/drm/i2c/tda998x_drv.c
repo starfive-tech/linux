@@ -1603,7 +1603,9 @@ static void tda998x_bridge_mode_set(struct drm_bridge *bridge,
 		reg |= VIP_CNTRL_3_H_TGL;
 	if (mode->flags & DRM_MODE_FLAG_NVSYNC)
 		reg |= VIP_CNTRL_3_V_TGL;
-	reg_write(priv, REG_VIP_CNTRL_3, reg);
+	//reg_write(priv, REG_VIP_CNTRL_3, reg);
+	reg_write(priv, REG_VIP_CNTRL_3, 0x26);
+	reg_write(priv, REG_VIDFORMAT, 0x06);
 
 	reg_write(priv, REG_VIDFORMAT, 0x00);
 	reg_write16(priv, REG_REFPIX_MSB, ref_pix);
@@ -1641,7 +1643,8 @@ static void tda998x_bridge_mode_set(struct drm_bridge *bridge,
 		reg |= TBG_CNTRL_1_H_TGL;
 	if (mode->flags & DRM_MODE_FLAG_NVSYNC)
 		reg |= TBG_CNTRL_1_V_TGL;
-	reg_write(priv, REG_TBG_CNTRL_1, reg);
+	//reg_write(priv, REG_TBG_CNTRL_1, reg);
+	reg_write(priv, REG_TBG_CNTRL_1, 0x46);
 
 	/* must be last register set: */
 	reg_write(priv, REG_TBG_CNTRL_0, 0);
