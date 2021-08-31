@@ -13,4 +13,6 @@ extern int unregister_sifive_ccache_error_notifier(struct notifier_block *nb);
 #define SIFIVE_CCACHE_ERR_TYPE_CE 0
 #define SIFIVE_CCACHE_ERR_TYPE_UE 1
 
+void sifive_ccache_flush_range(phys_addr_t start, size_t len);
+
 #endif /* __SOC_SIFIVE_CCACHE_H */
