@@ -61,11 +61,11 @@ struct seeed_panel_dev {
 };
 
 struct dcs_buffer {
-    u32 len;
-    union {
-        u32 val32;
-        char val8[4];
-    };
+	u32 len;
+	union {
+		u32 val32;
+		char val8[4];
+	};
 };
 
 static int seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
@@ -73,7 +73,6 @@ static int seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
 	struct i2c_msg msg;
 	u8 buf[2];
 	int ret;
-
 	buf[0] = reg;
 	buf[1] = val;
 
@@ -124,26 +123,27 @@ static int seeed_panel_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
 #if 0
 static int seeed_panel_disable(struct i2c_client *client)
 {
-    seeed_panel_i2c_write(client, REG_PWM, 0);
-    seeed_panel_i2c_write(client, REG_POWERON, 0);
-    udelay(1);
+	seeed_panel_i2c_write(client, REG_PWM, 0);
+	seeed_panel_i2c_write(client, REG_POWERON, 0);
+	udelay(1);
 
-    return 0;
+	return 0;
 }
 #endif
 
 enum dsi_rgb_pattern_t {
-    RGB_PAT_WHITE,
-    RGB_PAT_BLACK,
-    RGB_PAT_RED,
-    RGB_PAT_GREEN,
-    RGB_PAT_BLUE,
-    RGB_PAT_HORIZ_COLORBAR,
-    RGB_PAT_VERT_COLORBAR,
-    RGB_PAT_NUM
+	RGB_PAT_WHITE,
+	RGB_PAT_BLACK,
+	RGB_PAT_RED,
+	RGB_PAT_GREEN,
+	RGB_PAT_BLUE,
+	RGB_PAT_HORIZ_COLORBAR,
+	RGB_PAT_VERT_COLORBAR,
+	RGB_PAT_NUM
 };
 
-static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int seeed_panel_probe(struct i2c_client *client,
+			const struct i2c_device_id *id)
 {
 	u8 reg_value = 0;
 //	int ret = 0;
@@ -157,7 +157,8 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 		return -EIO;
 	}
 	
-	seeed_panel = devm_kzalloc(&client->dev, sizeof(struct seeed_panel_dev), GFP_KERNEL);
+	seeed_panel = devm_kzalloc(&client->dev,sizeof(struct seeed_panel_dev),
+					GFP_KERNEL);
 	if (!seeed_panel)
 		return -ENOMEM;
 
@@ -165,7 +166,8 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 	i2c_set_clientdata(client, seeed_panel);
 
 	seeed_panel_i2c_read(client, REG_ID, &reg_value);
-	dev_info(&client->dev, "%s[%d],reg[0x80] = 0x%x\n",__func__,__LINE__,reg_value);
+	dev_info(&client->dev, "%s[%d],reg[0x80] = 0x%x\n",
+			__func__, __LINE__, reg_value);
 	switch (reg_value) {
 		case 0xde: /* ver 1 */
 		case 0xc3: /* ver 2 */
@@ -176,14 +178,14 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 			return -ENODEV;
 	}
 
-    seeed_panel_i2c_write(client, REG_POWERON, 1);
-    mdelay(5);
-    /* Wait for nPWRDWN to go low to indicate poweron is done. */
-    for (i = 0; i < 100; i++) {
+	seeed_panel_i2c_write(client, REG_POWERON, 1);
+	mdelay(5);
+	/* Wait for nPWRDWN to go low to indicate poweron is done. */
+	for (i = 0; i < 100; i++) {
 		seeed_panel_i2c_read(client, REG_PORTB, &reg_value);
-        if (reg_value & 1)
-            break;
-    }
+		if (reg_value & 1)
+			break;
+	}
 
 	seeed_panel_i2c_write(client, REG_PWM, 255);
 	seeed_panel_i2c_write(client, REG_PORTA, BIT(2));
@@ -210,7 +212,7 @@ static struct i2c_driver seeed_panel_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= "seeed_panel",
-        .of_match_table = seeed_panel_dt_ids,
+		.of_match_table = seeed_panel_dt_ids,
 	},
 	.probe		= seeed_panel_probe,
 	.remove		= seeed_panel_remove,
@@ -219,10 +221,10 @@ static struct i2c_driver seeed_panel_driver = {
 
 static __init int init_seeed_panel(void)
 {
-    int err;
+	int err;
 
 	err = i2c_add_driver(&seeed_panel_driver);
-    if (err != 0)
+	if (err != 0)
 		printk("i2c driver registration failed, error=%d\n", err);
 
 	return err;

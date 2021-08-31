@@ -12,7 +12,6 @@
 #include <linux/fb.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
-
 #include "starfive_fb.h"
 
 #define RST_SEQ_LEN		16
@@ -54,7 +53,7 @@ enum {
 #define RESUME_WITH_CE			(0x00000020)
 
 
-/**
+/*
  * Video stream type
  */
 typedef enum {

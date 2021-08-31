@@ -42,17 +42,16 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/of_address.h>
 #include <video/stf-vin.h>
-
 #include "starfive_fb.h"
 #include "starfive_lcdc.h"
 #include "starfive_vpp.h"
 #include "starfive_display_dev.h"
 #include "starfive_mipi_tx.h"
+#include "sys_comm_regs.h"
 
 static struct sf_fb_data *stf_dev = NULL;
-
 static DEFINE_MUTEX(stf_mutex);
-
+static int sf_fb_pp_get_2lcdc_id(struct sf_fb_data *sf_dev);
 //#define SF_FB_DEBUG	1
 #ifdef SF_FB_DEBUG
 	#define FB_PRT(format, args...)  printk(KERN_DEBUG "[FB]: " format, ## args)
@@ -91,27 +90,37 @@ static int sf_fb_lcdc_clk_cfg(struct sf_fb_data *sf_dev)
 	int ret = 0;
 
 	switch(sf_dev->display_info.xres) {
-		case 640:
-			dev_warn(sf_dev->dev, "640 do nothing! need to set clk\n");
-			break;
-		case 800:
-			tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
-			tmp_val &= ~(0x3F);
-			tmp_val |= (54 & 0x3F);
-			sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
-			break;
-		case 1280:
-			dev_warn(sf_dev->dev, "1280 do nothing! need to set clk\n");
-			break;
-		case 1920:
-			tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
-			tmp_val &= ~(0x3F);
-			tmp_val |= (24 & 0x3F);
-			sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
-			break;
-		default:
-			dev_err(sf_dev->dev, "Fail to allocate video RAM\n");
-			ret = -EINVAL;
+	case 640:
+		dev_warn(sf_dev->dev, "640 do nothing! need to set clk\n");
+		break;
+	case 800:
+		tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
+		tmp_val &= ~(0x3F);
+		tmp_val |= (54 & 0x3F);
+		sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
+		break;
+	case 1024:
+		tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
+		tmp_val &= ~(0x3F);
+		tmp_val |= (48 & 0x3F);
+		sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
+		break;
+	case 1280:
+		tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
+		tmp_val &= ~(0x3F);
+		tmp_val |= (30 & 0x3F);
+		dev_warn(sf_dev->dev, "1280  set clk\n");
+		sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
+		break;
+	case 1920:
+		tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
+		tmp_val &= ~(0x3F);
+		tmp_val |= (24 & 0x3F);
+		sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
+		break;
+	default:
+		dev_err(sf_dev->dev, "Fail to allocate video RAM\n");
+		ret = -EINVAL;
 	}
 
 	return ret;
@@ -137,11 +146,11 @@ static int vin_frame_complete_notify(struct notifier_block *nb,
 		//dev_warn(sf_dev->dev, "%s NO use PPx\n",__func__);
 	} else {
 		if(sf_dev->pp[sf_dev->pp_conn_lcdc].src.format >= COLOR_RGB888_ARGB) {
-	        u_addr = 0;
-	        v_addr = 0;
-	        y_rgb_offset = 0;
-	        u_offset = 0;
-	        v_offset = 0;
+			u_addr = 0;
+			v_addr = 0;
+			y_rgb_offset = 0;
+			u_offset = 0;
+			v_offset = 0;
 		} else if (COLOR_YUV420_NV21 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) {
 			size = sf_dev->display_info.xres * sf_dev->display_info.yres;
 			u_addr = address + size + 1;
@@ -165,13 +174,13 @@ static int vin_frame_complete_notify(struct notifier_block *nb,
 static int sf_get_mem_res(struct platform_device *pdev, struct sf_fb_data *sf_dev)
 {
 	struct device *dev = &pdev->dev;
-	struct resource	*res;
+	struct resource *res;
 	void __iomem *regs;
 	char *name;
 	int i;
 
 	for (i = 0; i < sizeof(mem_res_name)/sizeof(struct res_name); i++) {
-	    name = (char *)(& mem_res_name[i]);
+		name = (char *)(& mem_res_name[i]);
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
 		regs = devm_ioremap_resource(dev, res);
 		if (IS_ERR(regs))
@@ -203,24 +212,22 @@ static int sf_get_mem_res(struct platform_device *pdev, struct sf_fb_data *sf_de
 
 static void sf_fb_get_var(struct fb_var_screeninfo *var, struct sf_fb_data *sf_dev)
 {
-	var->xres		= sf_dev->display_info.xres;
-	var->yres		= sf_dev->display_info.yres;
-	var->bits_per_pixel	= sf_dev->display_dev->bpp;
+	var->xres = sf_dev->display_info.xres;
+	var->yres = sf_dev->display_info.yres;
+	var->bits_per_pixel = sf_dev->display_dev->bpp;
 #if defined(CONFIG_FRAMEBUFFER_CONSOLE)
 	if(24 == var->bits_per_pixel)
-	{
-		var->bits_per_pixel	= 16;//as vpp&lcdc miss support rgb888 ,config fb_console src format as rgb565 
-	}
+		var->bits_per_pixel = 16;//as vpp&lcdc miss support rgb888 ,config fb_console src format as rgb565 
 #endif
-	var->pixclock		= 1000000 / (sf_dev->pixclock / 1000000);
-	var->hsync_len		= sf_dev->display_info.hsync_len;
-	var->vsync_len		= sf_dev->display_info.vsync_len;
-	var->left_margin	= sf_dev->display_info.left_margin;
-	var->right_margin	= sf_dev->display_info.right_margin;
-	var->upper_margin	= sf_dev->display_info.upper_margin;
-	var->lower_margin	= sf_dev->display_info.lower_margin;
-	var->sync		= sf_dev->display_info.sync;
-	var->vmode		= FB_VMODE_NONINTERLACED;
+	var->pixclock       = 1000000 / (sf_dev->pixclock / 1000000);
+	var->hsync_len      = sf_dev->display_info.hsync_len;
+	var->vsync_len      = sf_dev->display_info.vsync_len;
+	var->left_margin    = sf_dev->display_info.left_margin;
+	var->right_margin   = sf_dev->display_info.right_margin;
+	var->upper_margin   = sf_dev->display_info.upper_margin;
+	var->lower_margin   = sf_dev->display_info.lower_margin;
+	var->sync           = sf_dev->display_info.sync;
+	var->vmode          = FB_VMODE_NONINTERLACED;
 }
 
 /*
@@ -233,7 +240,6 @@ static int sf_fb_set_par(struct fb_info *info)
 	struct fb_var_screeninfo *var = &info->var;
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
-
 	if (var->bits_per_pixel == 16 ||
 		var->bits_per_pixel == 18 ||
 		var->bits_per_pixel == 24 ||
@@ -251,15 +257,13 @@ static int sf_fb_set_par(struct fb_info *info)
 	}
 
 	sf_dev->fb.fix.line_length = var->xres_virtual * var->bits_per_pixel / 8;
-
 	if (sf_dev->fb.var.bits_per_pixel == 16 ||
 		sf_dev->fb.var.bits_per_pixel == 18 ||
 		sf_dev->fb.var.bits_per_pixel == 24 ||
 		sf_dev->fb.var.bits_per_pixel == 32)
 		fb_dealloc_cmap(&sf_dev->fb.cmap);
 	else
-		fb_alloc_cmap(&sf_dev->fb.cmap,
-			1 << sf_dev->fb.var.bits_per_pixel, 0);
+		fb_alloc_cmap(&sf_dev->fb.cmap, 1 << sf_dev->fb.var.bits_per_pixel, 0);
 
 	/*for fbcon, it need cmap*/
 	switch(var->bits_per_pixel) {
@@ -306,12 +310,52 @@ static int sf_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
+// Update grayscale accroding pp src format. 0 -- RGB, 1 -- YUV. grayscale used by gstreamer fbdevsink
+static void sf_fb_update_fbinfo(struct sf_fb_data *sf_dev)
+{
+	sf_dev->fb.var.grayscale = 0;
+	if (sf_dev->pp_conn_lcdc >= 0) {
+	if ((COLOR_YUV420_NV21 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) ||
+		(COLOR_YUV420_NV12 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) ||
+		(COLOR_YUV420P == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format)) {
+			FB_PRT("[%s,%d]: pp src format is %d\n",__func__, __LINE__,
+			sf_dev->pp[sf_dev->pp_conn_lcdc].src.format);
+			sf_dev->fb.var.grayscale = 1;
+		}
+	}
+}
+
+// Clear frame buffer. Addr is sf_dev->fb.screen_base, size is sf_dev->fb.fix.smem_len
+static int sf_fb_clearscreen(struct sf_fb_data *sf_dev)
+{
+	int y_lenth = 0, uv_lenth = 0;
+	
+	FB_PRT("%s,%d, pp_conn_lcdc=%d\n",__func__, __LINE__, sf_dev->pp_conn_lcdc);
+	if (sf_dev->pp_conn_lcdc >= 0) {
+		switch (sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) {
+		case COLOR_YUV420P:
+		case COLOR_YUV420_NV21:
+		case COLOR_YUV420_NV12:
+			y_lenth = sf_dev->pp[sf_dev->pp_conn_lcdc].src.width * sf_dev->pp[sf_dev->pp_conn_lcdc].src.height;
+			uv_lenth = y_lenth / 2;
+			memset(sf_dev->fb.screen_base, 0x00, y_lenth);            // set y 
+			memset(sf_dev->fb.screen_base + y_lenth, 0x80, uv_lenth); // set uv
+			break;
+		case COLOR_RGB565:
+			memset(sf_dev->fb.screen_base, 0x00, sf_dev->fb.fix.smem_len);
+		default:
+			memset(sf_dev->fb.screen_base, 0x80, sf_dev->fb.fix.smem_len);
+			break;
+		}
+	}
+	return 0;
+}
+
 static int sf_fb_open(struct fb_info *info, int user)
 {
 	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
-
 	sf_fb_set_par(info);
 	lcdc_run(sf_dev, sf_dev->winNum, LCDC_RUN);
 
@@ -326,16 +370,14 @@ static int sf_fb_release(struct fb_info *info, int user)
 	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
-
+	sf_fb_clearscreen(sf_dev);
 	lcdc_run(sf_dev, sf_dev->winNum, LCDC_STOP);
-
 	return 0;
 }
 
 static int sf_fb_ioctl(struct fb_info *info, unsigned cmd, unsigned long arg)
 {
 //	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
-
 	FB_PRT("%s,%d\n",__func__, __LINE__);
 	return 0;
 }
@@ -354,14 +396,12 @@ static int sf_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
-
 	if (var->xres < MIN_XRES)
 		var->xres = MIN_XRES;
 	if (var->yres < MIN_YRES)
 		var->yres = MIN_YRES;
 
 	sf_fb_get_var(var, sf_dev);
-
 	var->xres_virtual = var->xres;
 	var->yres_virtual = var->yres * sf_dev->buf_num;
 	/*
@@ -433,9 +473,9 @@ static int sf_fb_setcolreg(u_int regno, u_int red, u_int green,
 	 * colour you requested.
 	 */
 	if (sf_dev->cmap_inverse) {
-		red	= 0xffff - red;
-		green	= 0xffff - green;
-		blue	= 0xffff - blue;
+		red = 0xffff - red;
+		green = 0xffff - green;
+		blue = 0xffff - blue;
 	}
 
 	/*
@@ -443,8 +483,7 @@ static int sf_fb_setcolreg(u_int regno, u_int red, u_int green,
 	 * to greyscale no matter what visual we are using.
 	 */
 	if (sf_dev->fb.var.grayscale)
-		red = green = blue = (19595 * red + 38470 * green +
-					7471 * blue) >> 16;
+		red = green = blue = (19595 * red + 38470 * green + 7471 * blue) >> 16;
 
 	switch (sf_dev->fb.fix.visual) {
 	case FB_VISUAL_TRUECOLOR:
@@ -462,12 +501,12 @@ static int sf_fb_setcolreg(u_int regno, u_int red, u_int green,
 			pal[regno] = val;
 			ret = 0;
 		}
-	break;
+		break;
 
 	case FB_VISUAL_STATIC_PSEUDOCOLOR:
 	case FB_VISUAL_PSEUDOCOLOR:
 		/* haven't support this function. */
-	break;
+		break;
 	}
 
 	return 0;
@@ -496,7 +535,7 @@ static int sf_fb_set_addr(struct sf_fb_data *sf_dev, struct fb_var_screeninfo *v
 	if(sf_dev->pp_conn_lcdc < 0) {
 		dev_warn(sf_dev->dev, "%s NO use PPx\n",__func__);
 	} else {
-			if(sf_dev->pp[sf_dev->pp_conn_lcdc].src.format >= COLOR_RGB888_ARGB) {
+		if(sf_dev->pp[sf_dev->pp_conn_lcdc].src.format >= COLOR_RGB888_ARGB) {
 			u_addr = 0;
 			v_addr = 0;
 			y_rgb_offset = 0;
@@ -509,7 +548,7 @@ static int sf_fb_set_addr(struct sf_fb_data *sf_dev, struct fb_var_screeninfo *v
 			u_offset = 0;
 			v_offset = size;
 		} else if (COLOR_YUV420_NV12 == sf_dev->pp[sf_dev->pp_conn_lcdc].src.format) {
-			u_addr = address + size ;
+			u_addr = address + size;
 			v_addr = address + size + 1;
 			y_rgb_offset = 0;
 			u_offset = 0;
@@ -535,7 +574,6 @@ static int sf_fb_pan_display(struct fb_var_screeninfo *var,
 	struct sf_fb_data *sf_dev = container_of(info, struct sf_fb_data, fb);
 
 	FB_PRT("%s,%d\n",__func__, __LINE__);
-
 	sf_fb_set_addr(sf_dev, var);
 
 	switch(sf_dev->display_dev->interface_info) {
@@ -590,7 +628,7 @@ static int sf_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 //		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
-			     vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
+			vma->vm_end - vma->vm_start, vma->vm_page_prot)) {
 		return -EAGAIN;
 	}
 
@@ -622,19 +660,19 @@ static int sf_fb_blank(int blank, struct fb_info *info)
 }
 
 static struct fb_ops sf_fb_ops = {
-	.owner		= THIS_MODULE,
-	.fb_open	= sf_fb_open,
-	.fb_release	= sf_fb_release,
-	.fb_ioctl	= sf_fb_ioctl,
-	.fb_check_var	= sf_fb_check_var,
-	.fb_set_par	= sf_fb_set_par,
-	.fb_setcolreg	= sf_fb_setcolreg,
-	.fb_fillrect	= cfb_fillrect,
-	.fb_copyarea	= cfb_copyarea,
-	.fb_imageblit	= cfb_imageblit,
-	.fb_pan_display	= sf_fb_pan_display,
-	.fb_mmap	= sf_fb_mmap,
-	.fb_blank	= sf_fb_blank,
+	.owner         = THIS_MODULE,
+	.fb_open       = sf_fb_open,
+	.fb_release    = sf_fb_release,
+	.fb_ioctl      = sf_fb_ioctl,
+	.fb_check_var  = sf_fb_check_var,
+	.fb_set_par    = sf_fb_set_par,
+	.fb_setcolreg  = sf_fb_setcolreg,
+	.fb_fillrect   = cfb_fillrect,
+	.fb_copyarea   = cfb_copyarea,
+	.fb_imageblit  = cfb_imageblit,
+	.fb_pan_display= sf_fb_pan_display,
+	.fb_mmap       = sf_fb_mmap,
+	.fb_blank      = sf_fb_blank,
 };
 
 static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
@@ -657,11 +695,11 @@ static int sf_fb_map_video_memory(struct sf_fb_data *sf_dev)
 	sf_dev->fb.fix.smem_start = res_mem.start;
 
 	sf_dev->fb.screen_base = devm_ioremap(sf_dev->dev, res_mem.start,
-					      resource_size(&res_mem));
+							resource_size(&res_mem));
 	if (IS_ERR(sf_dev->fb.screen_base))
 		return PTR_ERR(sf_dev->fb.screen_base);
+	memset(sf_dev->fb.screen_base, 0x00, sf_dev->fb.screen_size);
 
-	memset(sf_dev->fb.screen_base, 0, sf_dev->fb.screen_size);
 	return 0;
 }
 
@@ -740,7 +778,6 @@ static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 		dev_err(sf_dev->dev, "Could not get display dev\n");
 	}
 	sf_dev->display_dev = display_dev;
-
 	sf_dev->pixclock = display_dev->pclk;
 
 /*	clk_set_rate(sf_dev->mclk, sf_dev->pixclock);
@@ -805,23 +842,23 @@ static int sf_fbinfo_init(struct device *dev, struct sf_fb_data *sf_dev)
 			}
 			break;
 		case STARFIVEFB_RGB_IF:
-				sf_dev->refresh_en = 1;
-				display_dev->refresh_en = 1;
-				sf_dev->display_info.name = display_dev->name;
-				sf_dev->display_info.xres = display_dev->xres;
-				sf_dev->display_info.yres = display_dev->yres;
-				sf_dev->display_info.pixclock = 1000000 / (sf_dev->pixclock / 1000000);
-				sf_dev->display_info.sync = 0;
-				sf_dev->display_info.left_margin = display_dev->timing.rgb.videomode_info.hbp;
-				sf_dev->display_info.right_margin = display_dev->timing.rgb.videomode_info.hfp;
-				sf_dev->display_info.upper_margin = display_dev->timing.rgb.videomode_info.vbp;
-				sf_dev->display_info.lower_margin = display_dev->timing.rgb.videomode_info.vfp;
-				sf_dev->display_info.hsync_len = display_dev->timing.rgb.videomode_info.hsync;
-				sf_dev->display_info.vsync_len = display_dev->timing.rgb.videomode_info.vsync;
-				if (display_dev->timing.rgb.videomode_info.sync_pol == FB_HSYNC_HIGH_ACT)
-					sf_dev->display_info.sync = FB_SYNC_HOR_HIGH_ACT;
-				if (display_dev->timing.rgb.videomode_info.sync_pol == FB_VSYNC_HIGH_ACT)
-					sf_dev->display_info.sync = FB_SYNC_VERT_HIGH_ACT;
+			sf_dev->refresh_en = 1;
+			display_dev->refresh_en = 1;
+			sf_dev->display_info.name = display_dev->name;
+			sf_dev->display_info.xres = display_dev->xres;
+			sf_dev->display_info.yres = display_dev->yres;
+			sf_dev->display_info.pixclock = 1000000 / (sf_dev->pixclock / 1000000);
+			sf_dev->display_info.sync = 0;
+			sf_dev->display_info.left_margin = display_dev->timing.rgb.videomode_info.hbp;
+			sf_dev->display_info.right_margin = display_dev->timing.rgb.videomode_info.hfp;
+			sf_dev->display_info.upper_margin = display_dev->timing.rgb.videomode_info.vbp;
+			sf_dev->display_info.lower_margin = display_dev->timing.rgb.videomode_info.vfp;
+			sf_dev->display_info.hsync_len = display_dev->timing.rgb.videomode_info.hsync;
+			sf_dev->display_info.vsync_len = display_dev->timing.rgb.videomode_info.vsync;
+			if (display_dev->timing.rgb.videomode_info.sync_pol == FB_HSYNC_HIGH_ACT)
+				sf_dev->display_info.sync = FB_SYNC_HOR_HIGH_ACT;
+			if (display_dev->timing.rgb.videomode_info.sync_pol == FB_VSYNC_HIGH_ACT)
+				sf_dev->display_info.sync = FB_SYNC_VERT_HIGH_ACT;
 			break;
 		default:
 			break;
@@ -889,12 +926,99 @@ static int stfb_mmap(struct file *file, struct vm_area_struct *vma)
 
 	return 0;
 }
-
-static long int stfb_ioctl(struct file *file, unsigned int cmd, long unsigned int arg)
+static int fb_pp_rst(void)
 {
+	sf_fb_pp_enable_intr(stf_dev, PP_INTR_DISABLE);
+	sf_fb_pp_init(stf_dev);
+	sf_fb_pp_run(stf_dev);
+	sf_fb_pp_enable_intr(stf_dev, PP_INTR_ENABLE);
+
 	return 0;
 }
 
+static int fb_set_pp_res(void)
+{
+	int pp_id;
+	int ret = 0;
+
+	// lcdc_disable_intr(stf_dev);
+	// stf_dev->fb.fix.smem_start = 0xfc000000;
+	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
+		if (1 == stf_dev->pp[pp_id].inited) {
+			stf_dev->pp[pp_id].src.height = stf_dev->fb.var.yres;
+			stf_dev->pp[pp_id].src.width = stf_dev->fb.var.xres;
+			stf_dev->pp[pp_id].dst.height = stf_dev->fb.var.yres;
+			stf_dev->pp[pp_id].dst.width = stf_dev->fb.var.xres;
+		}
+	}
+	fb_pp_rst();
+	return 0;
+}
+
+static int fb_set_lcdc_res(void)
+{
+	stf_dev->display_dev->xres = stf_dev->fb.var.xres;
+	stf_dev->display_dev->yres = stf_dev->fb.var.yres;
+	stf_dev->display_info.xres = stf_dev->fb.var.xres;
+	stf_dev->display_info.yres = stf_dev->fb.var.yres;
+
+	sf_fb_lcdc_clk_cfg(stf_dev);
+	sf_fb_lcdc_init(stf_dev);
+	lcdc_run(stf_dev, stf_dev->winNum, LCDC_RUN);
+
+	return 0;
+}
+
+static long int stfb_ioctl(struct file *file, unsigned int cmd, long unsigned int arg)
+{
+	struct fb_info *info;
+	struct pp_mode *ppinfo;
+	u32 tmp_val = 0;
+	int ret = 0;
+	const struct fb_ops *fb;
+	struct fb_var_screeninfo var;
+	struct fb_fix_screeninfo fix;
+	struct fb_cmap cmap_from;
+	struct fb_cmap_user cmap;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+	case FBIOPAN_GET_PP_MODE :
+		ppinfo = stf_dev->pp;
+		ret = copy_to_user(argp, ppinfo, sizeof(struct pp_mode) * PP_NUM) ? -EFAULT : 0;
+		break;
+	case FBIOPAN_SET_PP_MODE :
+		ppinfo = kmalloc(sizeof(struct pp_mode) * PP_NUM, GFP_KERNEL);
+		ret = copy_from_user(&ppinfo[0], argp, sizeof(struct pp_mode) * PP_NUM);
+		if (ppinfo != NULL) {
+			memcpy(stf_dev->pp, ppinfo, sizeof(struct pp_mode) * PP_NUM);
+		}
+		sf_fb_update_fbinfo(stf_dev); // update sf_dev->fb.var.grayscale
+		fb_pp_rst();
+		kfree(ppinfo);
+		break;
+	case FBIOPAN_GET_PIX_FORMAT :
+		info = &stf_dev->fb;
+		var = info->var;
+		ret = copy_to_user(argp, &var, sizeof(struct fb_var_screeninfo)) ? -EFAULT : 0;
+		printk("lqw FBIOPAN_GET_PIX_FORMAT :%d %d\n",var.xres,var.yres);
+		break;
+	case FBIOPAN_SET_PIX_FORMAT :
+		if (copy_from_user(&var, argp, sizeof(struct fb_var_screeninfo))) {
+			return -EFAULT;
+		}
+		stf_dev->fb.var = var;
+		vout_sys_clkrstsrc_init(0x1);
+		vout_sys_clkrst_init(0x1); //commented by zv
+		fb_set_pp_res();
+		fb_set_lcdc_res();
+		break;
+	default:
+		dev_err(stf_dev->dev, "stfb_ioctl error\n");
+	}
+
+	return 0;
+}
 
 static const struct file_operations stfb_fops = {
 	.owner = THIS_MODULE,
@@ -950,6 +1074,7 @@ static int sf_fb_lcdc_init(struct sf_fb_data *sf_dev) {
 		sf_dev->winNum = winNum;
 		lcdc_config(sf_dev, winNum);
 	} else {
+		dev_info(sf_dev->dev, "pp to LCDC\n");
 		lcd_in_pp = (pp_id == 0) ? LCDC_IN_VPP0 : ((pp_id == 1) ? LCDC_IN_VPP1 : LCDC_IN_VPP2);
 		winNum = lcdc_win_sel(sf_dev, lcd_in_pp);
 		sf_dev->winNum = winNum;
@@ -971,11 +1096,7 @@ static int sf_fb_pp_video_mode_init(struct sf_fb_data *sf_dev, struct pp_video_m
 		src->format = sf_dev->pp[pp_id].src.format;
 		src->width = sf_dev->pp[pp_id].src.width;
 		src->height = sf_dev->pp[pp_id].src.height;
-#ifndef CONFIG_FRAMEBUFFER_CONSOLE
-		src->addr = 0xf9000000;
-#else
-		src->addr = 0xfb000000;
-#endif
+		src->addr = sf_dev->fb.fix.smem_start; // Note: 0xfb000000 got from dts, 0xf9000000 is not used
 		dst->format = sf_dev->pp[pp_id].dst.format;
 		dst->width = sf_dev->pp[pp_id].dst.width;
 		dst->height = sf_dev->pp[pp_id].dst.height;
@@ -998,9 +1119,9 @@ static int sf_fb_pp_init(struct sf_fb_data *sf_dev) {
 
 	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
 		if(1 == sf_dev->pp[pp_id].inited) {
-				ret = sf_fb_pp_video_mode_init(sf_dev, &src, &dst, pp_id);
-				if (!ret)
-					pp_config(sf_dev, pp_id, &src, &dst);
+			ret = sf_fb_pp_video_mode_init(sf_dev, &src, &dst, pp_id);
+			if (!ret)
+				pp_config(sf_dev, pp_id, &src, &dst);
 		}
 	}
 
@@ -1028,7 +1149,6 @@ static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 
 	if(!np)
 		return -EINVAL;
-
 	sf_dev->pp = devm_kzalloc(dev, sizeof(struct pp_mode) * PP_NUM, GFP_KERNEL);
 	if (!sf_dev->pp) {
 		dev_err(dev,"allocate memory for platform data failed\n");
@@ -1041,7 +1161,7 @@ static int sf_fb_parse_dt(struct device *dev, struct sf_fb_data *sf_dev) {
 	}
 
 #ifndef CONFIG_FB_STARFIVE_VIDEO
-    return ret;
+	return ret;
 #endif
 
 	for_each_child_of_node(np, child) {
@@ -1105,14 +1225,14 @@ static int starfive_fb_probe(struct platform_device *pdev)
 
 	ret = sf_fb_parse_dt(dev, sf_dev);
 
-#if defined(CONFIG_VIDEO_STARFIVE_VIN)
-	sf_dev->vin.notifier_call = vin_frame_complete_notify;
-	sf_dev->vin.priority = 0;
-	ret = vin_notifier_register(&sf_dev->vin);
-	if (ret) {
-		return ret;
-	}
-#endif
+// #if defined(CONFIG_VIDEO_STARFIVE_VIN)
+// 	sf_dev->vin.notifier_call = vin_frame_complete_notify;
+// 	sf_dev->vin.priority = 0;
+// 	ret = vin_notifier_register(&sf_dev->vin);
+// 	if (ret) {
+// 		return ret;
+// 	}
+// #endif
 
 #if defined(CONFIG_FB_STARFIVE_HDMI_TDA998X)
 	sf_dev->dis_dev_name = "tda_998x_1080p";
@@ -1132,14 +1252,6 @@ static int starfive_fb_probe(struct platform_device *pdev)
 		dev_err(dev, "fb info init FAIL\n");
 		return ret;
 	}
-
-#ifndef CONFIG_FRAMEBUFFER_CONSOLE
-	/*the address 0xf9000000 is required in CMA modem by VIN,
-	*the case used to check VIN image data path only
-	*is not normal application.
-	*/
-	sf_dev->fb.fix.smem_start = 0xf9000000;
-#endif
 
 	sf_dev->lcdc_irq = platform_get_irq_byname(pdev, "lcdc_irq");
 	if (sf_dev->lcdc_irq == -EPROBE_DEFER)
@@ -1198,7 +1310,9 @@ static int starfive_fb_probe(struct platform_device *pdev)
 		dev_err(dev, "lcdc init fail\n");
 		return -EINVAL;
 	}
+	sf_fb_clearscreen(sf_dev);
 	lcdc_run(sf_dev, sf_dev->winNum, LCDC_RUN);
+	sf_fb_update_fbinfo(sf_dev);
 
 	stf_dev = sf_dev;
 

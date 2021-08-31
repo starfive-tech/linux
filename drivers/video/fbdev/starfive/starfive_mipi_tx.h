@@ -169,7 +169,6 @@
 #define  VID_VCA_SET1_ADDR     0xf4
 #define  VID_VCA_SET2_ADDR     0xf8
 
-
 #define  VID_MODE_STAT_CLR_ADDR    0x160
 #define  VID_MODE_STAT_FLAG_ADDR   0x180
 
@@ -190,11 +189,11 @@
 #define  DPI_CFG_ADDR      0x1ac
 
 struct dcs_buffer {
-    u32 len;
-    union {
-        u32 val32;
-        char val8[4];
-    };
+	u32 len;
+	union {
+		u32 val32;
+		char val8[4];
+	};
 };
 
 extern int sf_mipi_init(struct sf_fb_data *sf_dev);

@@ -66,11 +66,9 @@ static int build_dev_list(struct sf_fb_data *fb_data)
 {
 	int rc = 0;
 
-	rc = of_platform_populate(fb_data->dev->of_node,
-				  NULL, NULL, fb_data->dev);
+	rc = of_platform_populate(fb_data->dev->of_node, NULL, NULL, fb_data->dev);
 	if (rc) {
-		dev_err(fb_data->dev,
-			"%s: failed to add child nodes, rc=%d\n",
+		dev_err(fb_data->dev, "%s: failed to add child nodes, rc=%d\n",
 			__func__, rc);
 	}
 

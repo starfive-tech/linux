@@ -27,10 +27,10 @@ enum lcdc_win_num{
 };
 
 enum WIN_FMT{
-    WIN_FMT_RGB565 = 4,
-    WIN_FMT_xRGB1555,
-    WIN_FMT_xRGB4444,
-    WIN_FMT_xRGB8888,
+	WIN_FMT_RGB565 = 4,
+	WIN_FMT_xRGB1555,
+	WIN_FMT_xRGB4444,
+	WIN_FMT_xRGB8888,
 };
 
 #define LCDC_STOP	0
@@ -69,7 +69,6 @@ enum WIN_FMT{
 #define LCDC_PANELDATAFMT		0x00A4
 #define LCDC_WIN0STARTADDR0		0x00B8
 #define LCDC_WIN0STARTADDR1		0x00BC
-
 
 /* Definition controller bit for LCDC registers */
 //for LCDC_SWITCH

@@ -32,7 +32,6 @@
 #include <linux/ratelimit.h>
 #include <linux/slab.h>
 #include <linux/string.h>
-
 #include "adv7513.h"
 
 static int adv7513_write(struct i2c_client *client, u16 reg, u8 val)
@@ -40,7 +39,6 @@ static int adv7513_write(struct i2c_client *client, u16 reg, u8 val)
 	struct i2c_msg msg;
 	u8 buf[2];
 	int ret;
-
 	buf[0] = reg;
 	buf[1] = val;
 
@@ -108,6 +106,7 @@ static u8 adv7513_I2CReadField8 (struct i2c_client *client, u8 RegAddr, u8 Mask,
     u8 data;
 
 	adv7513_read(client, RegAddr, &data);
+
 	return (data&Mask)>>BitPos;
 }
 
@@ -131,19 +130,19 @@ static u8 adv7513_I2CReadField8 (struct i2c_client *client, u8 RegAddr, u8 Mask,
 static void adv7513_I2CWriteField8 (struct i2c_client *client,u8 RegAddr, u8 Mask,
                          u8 BitPos, u8 FieldVal)
 {
-    u8 rdata, wdata;
+	u8 rdata, wdata;
 
-    adv7513_read(client, RegAddr, &rdata);
-    rdata &= (~Mask);
-    wdata = rdata | ((FieldVal<<BitPos)&Mask);
-    adv7513_write(client, RegAddr, wdata);
+	adv7513_read(client, RegAddr, &rdata);
+	rdata &= (~Mask);
+	wdata = rdata | ((FieldVal<<BitPos)&Mask);
+	adv7513_write(client, RegAddr, wdata);
 }
 
 static int adv7513_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct adv7513_data *adv7513;
 	struct device *dev = &client->dev;
-    u8 value;
+	u8 value;
 	int ret = 0;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -236,7 +235,7 @@ static struct i2c_driver adv7513_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= "adv7513",
-        .of_match_table = dvp_adv7513_dt_ids,
+		.of_match_table = dvp_adv7513_dt_ids,
 	},
 	.probe		= adv7513_probe,
 	.remove		= adv7513_remove,
@@ -245,10 +244,10 @@ static struct i2c_driver adv7513_driver = {
 
 static __init int init_adv7513(void)
 {
-    int err;
+	int err;
 
 	err = i2c_add_driver(&adv7513_driver);
-    if (err != 0)
+	if (err != 0)
 		printk("i2c driver registration failed, error=%d\n", err);
 
 	return err;
@@ -262,6 +261,5 @@ static __exit void exit_adv7513(void)
 //late_initcall(init_adv7513);
 fs_initcall(init_adv7513);
 module_exit(exit_adv7513);
-
 MODULE_DESCRIPTION("A driver for adv7513");
 MODULE_LICENSE("GPL");

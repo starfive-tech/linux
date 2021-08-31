@@ -50,6 +50,11 @@
 #define SYS_CONF_PP		0x04
 #define SYS_MAP_CONV		0x08
 
+//pp ioctl
+#define FBIOPAN_GET_PP_MODE	0x4609
+#define FBIOPAN_SET_PP_MODE	0x460a
+#define FBIOPAN_GET_PIX_FORMAT	0x460b
+#define FBIOPAN_SET_PIX_FORMAT	0x460c
 //vout clk registers
 #define CLK_LCDC_OCLK_CTRL	0x14
 
@@ -134,5 +139,10 @@ struct sf_fb_data {
 	int pp_conn_lcdc;
 	int ddr_format;
 };
+
+static int sf_fb_pp_init(struct sf_fb_data *sf_dev);
+static int sf_fb_lcdc_init(struct sf_fb_data *sf_dev);
+static void sf_fb_pp_enable_intr(struct sf_fb_data *sf_dev, int enable);
+static int sf_fb_pp_run(struct sf_fb_data *sf_dev) ;
 
 #endif
