@@ -94,7 +94,7 @@
 
 &gpio {
 	/* don't reset gpio mux for serial console on uart3 */
-	starfive,keep-gpiomux = <13 14>;
+	starfive,keep-gpiomux = <13 14 35>;
 
 	gmac_pins: gmac-0 {
 		gtxclk-pins {
