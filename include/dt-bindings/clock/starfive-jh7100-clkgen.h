@@ -235,5 +235,7 @@
 #define JH7100_CLK_AUD_MAX		29
 
 
+#define JH7100_CLK_ISP_MAX		0
+
 #endif /* __DT_BINDINGS_CLOCK_STARFIVE_JH7100_H__ */
 

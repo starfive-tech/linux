@@ -571,18 +571,20 @@ static int __init starfive_clkgen_sys_init(struct clk_starfive_jh7100_priv *priv
 	hws[JH7100_CLK_AUDIO_DIV]		= starfive_clk_fixed_factor(priv, "audio_div",		"audio_root",	384,	15625);
 	hws[JH7100_CLK_AUDIO_SRC]		= starfive_clk_gate(priv, "audio_src",		"audio_div",	0x180);
 	hws[JH7100_CLK_AUDIO_12288]		= starfive_clk_gate(priv, "audio_12288",		"audio_src_12288",	0x184);
+	
+	hws[JH7100_CLK_VIN_SRC]			= starfive_clk_gated_divider(priv, "vin_src",		"vin_root",	0x188, 3);
+	hws[JH7100_CLK_ISP0_BUS]		= starfive_clk_divider_o(priv, "isp0_bus",		"vin_src",	0x18c, 4);
+	hws[JH7100_CLK_ISP0_AXI]		= starfive_clk_gate(priv, "isp0_axi",		"isp0_bus",	0x190);
+	hws[JH7100_CLK_ISP0NOC_AXI]		= starfive_clk_gate(priv, "isp0noc_axi",		"isp0_bus",	0x194);
+	hws[JH7100_CLK_ISPSLV_AXI]		= starfive_clk_gate(priv, "ispslv_axi",		"isp0_bus",	0x198);
+	hws[JH7100_CLK_ISP1_BUS]		= starfive_clk_divider_o(priv, "isp1_bus",		"vin_src",	0x19c, 4);
+	hws[JH7100_CLK_ISP1_AXI]		= starfive_clk_gate(priv, "isp1_axi",		"isp1_bus",	0x1a0);
+	hws[JH7100_CLK_ISP1NOC_AXI]		= starfive_clk_gate(priv, "isp1noc_axi",		"isp1_bus",	0x1a4);
+	hws[JH7100_CLK_VIN_BUS]			= starfive_clk_divider_o(priv, "vin_bus",		"vin_src",	0x1a8, 4);
+	hws[JH7100_CLK_VIN_AXI]			= starfive_clk_gate(priv, "vin_axi",		"vin_bus",	0x1ac);
+	hws[JH7100_CLK_VINNOC_AXI]		= starfive_clk_gate(priv, "vinnoc_axi",		"vin_bus",	0x1b0);
+	
 	#if 0
-	hws[JH7100_CLK_VIN_SRC]			= starfive_clk_gated_divider(priv, "vin_src",		UNKNOWN,	0x188, 3);
-	hws[JH7100_CLK_ISP0_BUS]		= starfive_clk_divider_o(priv, "isp0_bus",		UNKNOWN,	0x18c, 4);
-	hws[JH7100_CLK_ISP0_AXI]		= starfive_clk_gate(priv, "isp0_axi",		UNKNOWN,	0x190);
-	hws[JH7100_CLK_ISP0NOC_AXI]		= starfive_clk_gate(priv, "isp0noc_axi",		UNKNOWN,	0x194);
-	hws[JH7100_CLK_ISPSLV_AXI]		= starfive_clk_gate(priv, "ispslv_axi",		UNKNOWN,	0x198);
-	hws[JH7100_CLK_ISP1_BUS]		= starfive_clk_divider_o(priv, "isp1_bus",		UNKNOWN,	0x19c, 4);
-	hws[JH7100_CLK_ISP1_AXI]		= starfive_clk_gate(priv, "isp1_axi",		UNKNOWN,	0x1a0);
-	hws[JH7100_CLK_ISP1NOC_AXI]		= starfive_clk_gate(priv, "isp1noc_axi",		UNKNOWN,	0x1a4);
-	hws[JH7100_CLK_VIN_BUS]			= starfive_clk_divider_o(priv, "vin_bus",		UNKNOWN,	0x1a8, 4);
-	hws[JH7100_CLK_VIN_AXI]			= starfive_clk_gate(priv, "vin_axi",		UNKNOWN,	0x1ac);
-	hws[JH7100_CLK_VINNOC_AXI]		= starfive_clk_gate(priv, "vinnoc_axi",		UNKNOWN,	0x1b0);
 	hws[JH7100_CLK_VOUT_SRC]		= starfive_clk_gated_divider(priv, "vout_src",		UNKNOWN,	0x1b4, 3);
 	hws[JH7100_CLK_DISPBUS_SRC]		= starfive_clk_divider_o(priv, "dispbus_src",		UNKNOWN,	0x1b8, 3);
 	hws[JH7100_CLK_DISP_BUS]		= starfive_clk_divider_o(priv, "disp_bus",		UNKNOWN,	0x1bc, 3);
@@ -777,6 +779,28 @@ err_clk_register:
 	return ret;
 }
 
+static int __init starfive_clkgen_isp_init(struct clk_starfive_jh7100_priv *priv)
+{
+	struct clk_hw **hws = priv->clk_hws.hws;
+	int i;
+	int ret;
+
+	for (i = 0; i < JH7100_CLK_ISP_MAX; i++)
+		if (IS_ERR(hws[i])) {
+			dev_err(priv->dev, "clock %d failed to register\n", i);
+			ret = PTR_ERR(hws[i]);
+			goto err_clk_register;
+		}
+
+	return 0;
+
+err_clk_register:
+	for (i = 0; i < JH7100_CLK_ISP_MAX; i++)
+		if (hws[i] && !IS_ERR(hws[i]))
+			clk_hw_unregister(hws[i]);
+
+	return ret;
+}
 
 static int starfive_clk_sys_init(struct platform_device *pdev)
 {
@@ -839,6 +863,31 @@ static int __init starfive_clk_audio_init(struct platform_device *pdev)
 
 static int __init starfive_clk_isp_init(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct clk_starfive_jh7100_priv *priv;
+	int error;
+
+	priv = devm_kzalloc(dev, struct_size(priv, clk_hws.hws, JH7100_CLK_ISP_MAX), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->dev = dev;
+	priv->clk_hws.num = JH7100_CLK_ISP_MAX;
+	spin_lock_init(&priv->rmw_lock);
+
+	priv->base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(priv->base))
+		return PTR_ERR(priv->base);
+
+	error = starfive_clkgen_isp_init(priv);
+	if (error)
+		return error;
+
+	error = devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
+					    &priv->clk_hws);
+	if (error)
+		return error;
+
 	return 0;
 }
 
