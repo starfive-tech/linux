@@ -685,7 +685,7 @@ static void vin_buffer_done(struct vin_line *line, struct vin_params *params)
 		|| output->state == VIN_OUTPUT_STOPPING
 		|| output->state == VIN_OUTPUT_RESERVED
 		|| output->state == VIN_OUTPUT_IDLE) {
-		st_err_ratelimited(ST_VIN,
+		st_warn(ST_VIN,
 				"output state no ready %d!, %d\n",
 				output->state, line->id);
 		return;

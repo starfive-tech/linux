@@ -853,7 +853,7 @@ static int video_pipeline_s_fmt(struct stfcamss_video *video,
 				break;
 			if (mf->code != code ||
 			    mf->width != width || mf->height != height) {
-				st_err(ST_VIDEO,
+				st_warn(ST_VIDEO,
 					"\"%s\":%d pad fmt has been"
 					" changed to 0x%x %ux%u\n",
 					subdev->name, fmt.pad, mf->code,
