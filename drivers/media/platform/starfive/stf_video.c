@@ -1221,7 +1221,7 @@ static int video_g_ext_ctrls(struct file *file, void *fh,
 	ret = v4l2_g_ext_ctrls(subdev->ctrl_handler,
 						vdev, subdev->v4l2_dev->mdev, ctrls);
 	
-	return 0;
+	return ret;
 }
 
 static int video_queryctrl(struct file *file, void *fh,
@@ -1305,7 +1305,6 @@ static int video_try_ext_ctrls(struct file *file, void *fh,
 					  vdev, subdev->v4l2_dev->mdev, ctrls);
 
 	return ret;
-
 }
 
 static int video_querymenu(struct file *file, void *fh,
@@ -1318,11 +1317,7 @@ static int video_querymenu(struct file *file, void *fh,
 	subdev = get_senname(file,__func__);
 	if( subdev == NULL )
 		return -EINVAL; 
-
-	vfh = container_of(&subdev->ctrl_handler, struct v4l2_fh , ctrl_handler);
-	if (!vfh->ctrl_handler)
-		return -ENOTTY;
-	v4l2_querymenu(vfh->ctrl_handler, qm);
+	ret = v4l2_querymenu(subdev->ctrl_handler, qm);
 
 	return ret;
 }
@@ -1353,12 +1348,12 @@ static const struct v4l2_ioctl_ops stf_vid_ioctl_ops = {
 	.vidioc_g_selection             = video_g_selection,
 	.vidioc_g_ctrl                  = video_g_ctrl,
 	.vidioc_s_ctrl                  = video_s_ctrl,
-	.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
 	.vidioc_g_ext_ctrls             = video_g_ext_ctrls,
 	.vidioc_queryctrl               = video_queryctrl,
 	.vidioc_s_ext_ctrls             = video_s_ext_ctrls,
 	.vidioc_try_ext_ctrls           = video_try_ext_ctrls,
-	.vidioc_querymenu               = video_querymenu,
+	//.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
+	//.vidioc_querymenu               = video_querymenu,
 
 };
 
@@ -1388,13 +1383,13 @@ static const struct v4l2_ioctl_ops stf_vid_ioctl_ops_mp = {
 	.vidioc_g_selection             = video_g_selection,
 	.vidioc_g_ctrl                  = video_g_ctrl,
 	.vidioc_s_ctrl                  = video_s_ctrl,
-	.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
+
     .vidioc_g_ext_ctrls             = video_g_ext_ctrls,
 	.vidioc_queryctrl               = video_queryctrl,
 	.vidioc_s_ext_ctrls             = video_s_ext_ctrls,
 	.vidioc_try_ext_ctrls           = video_try_ext_ctrls,
-	.vidioc_querymenu               = video_querymenu,
-
+//	.vidioc_querymenu               = video_querymenu,
+//	.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
 };
 
 static int video_open(struct file *file)
