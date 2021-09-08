@@ -47,6 +47,25 @@
 #define JH7100_EN_SHIFT		0
 #define JH7100_INTCLR_AVA_SHIFT	1	/* Watchdog can clear interrupt when this bit is 0 */
 
+/* JH7110 WatchDog register define */
+#define JH7110_WDOGLOAD		0x000	/* RW: Watchdog load register */
+#define JH7110_WDOGVALUE	0x004	/* RO: The current value for the watchdog counter */
+#define JH7110_WDOGCONTROL	0x008	/* RW: [0]: reset enable;  [1]: int enable/wdt enable/reload counter; [31:2]: res */
+#define JH7110_WDOGINTCLR	0x00c	/* WO: clear intterupt && reload the counter */
+#define JH7110_WDOGRIS		0x010	/* RO: Raw interrupt status from the counter */
+#define JH7110_WDOGIMS		0x014	/* RO: Enabled interrupt status from the counter */
+#define JH7110_WDOGLOCK		0xc00	/* RO: Enable write access to all other registers by writing 0x1ACCE551 */
+#define JH7110_WDOGITCR		0xf00	/* RW: When set HIGH, places the Watchdog into integraeion test mode */
+#define JH7110_WDOGITOP		0xf04	/* WO:	[0] Integration Test WDOGRES value Integration Test Mode
+						Value output on WDOGRES when in Integration Test Mode
+						[1] Integration Test WDOGINT value
+						Value output on WDOGINT when in Integration Test Mode */
+
+#define JH7110_UNLOCK_KEY	0x1acce551
+#define JH7110_RESEN_SHIFT	1
+#define JH7110_EN_SHIFT		0
+#define JH7110_INT_EN_SHIFT	JH7110_EN_SHIFT
+
 /* WDOGCONTROL */
 #define WDOG_INT_EN	0x0
 #define WDOG_RESET_EN	0x1
@@ -122,6 +141,12 @@ static struct si5_wdt_variant_t jh7100_variant = {
 	.intclr_ava_shift = JH7100_INTCLR_AVA_SHIFT,
 };
 
+static struct si5_wdt_variant_t jh7110_variant = {
+        .unlock_key = JH7110_UNLOCK_KEY,
+        .enrst_shift = JH7110_RESEN_SHIFT,
+        .en_shift = JH7110_EN_SHIFT,
+};
+
 static const struct si5_wdt_variant drv_data_jh7100 = {
 	.control = JH7100_WDOGCONTROL,
 	.load = JH7100_WDOGLOAD,
@@ -134,9 +159,21 @@ static const struct si5_wdt_variant drv_data_jh7100 = {
 	.variant =  &jh7100_variant,
 };
 
+static const struct si5_wdt_variant drv_data_jh7110 = {
+	.control = JH7110_WDOGCONTROL,
+	.load = JH7110_WDOGLOAD,
+	.enable = JH7110_WDOGCONTROL,
+	.value = JH7110_WDOGVALUE,
+	.int_clr = JH7110_WDOGINTCLR,
+	.unlock = JH7110_WDOGLOCK,
+	.variant =  &jh7110_variant,
+};
+
 static const struct of_device_id starfive_wdt_match[] = {
 	{ .compatible = "starfive,si5-wdt",
 	  .data = &drv_data_jh7100 },
+	{ .compatible = "starfive,dskit_wdt",
+	  .data = &drv_data_jh7110 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, starfive_wdt_match);
@@ -146,6 +183,10 @@ static const struct platform_device_id si5wdt_ids[] = {
 	{
 		.name = "starfive-si5-wdt",
 		.driver_data = (unsigned long)&drv_data_jh7100,
+	},
+	{
+		.name = "starfive-dskit-wdt",
+		.driver_data = (unsigned long)&drv_data_jh7110,
 	},
 	{}
 };
@@ -339,7 +380,8 @@ si5wdt_set_relod_count(struct stf_si5_wdt *wdt, u32 count)
 	writel(count, wdt->base + wdt->drv_data->load);
 	if (wdt->drv_data->reload)
 		writel(0x1, wdt->base + wdt->drv_data->reload);
-
+	else
+		si5wdt_enable(wdt); /* jh7110 need enable controller to reload counter */
 }
 
 static int si5wdt_mask_and_disable_reset(struct stf_si5_wdt *wdt, bool mask)
