@@ -173,7 +173,7 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 
 	switch (csi_dev->s_type) {
 	case SENSOR_VIN:
-		st_err(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
+		st_info(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
 		break;
 	case SENSOR_ISP0:
 	// #ifdef USE_CLK_TREE
@@ -226,7 +226,7 @@ static int stf_csi_set_format(struct stf_csi_dev *csi_dev,
 
 	switch (csi_dev->s_type) {
 	case SENSOR_VIN:
-		st_err(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
+		st_info(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
 		break;
 	case SENSOR_ISP0:
 		if (is_raw10)
@@ -292,7 +292,7 @@ static int csi2rx_start(struct stf_csi_dev *csi_dev)
 	void *reg_base = NULL;
 
 	if (!csiphy) {
-		st_err(ST_CSI, "csiphy%d sensor not exist use csiphy%d init.\n",
+		st_info(ST_CSI, "csiphy%d sensor not exist use csiphy%d init.\n",
 				csi_dev->csiphy_id, !csi_dev->csiphy_id);
 		csiphy = stfcamss->csiphy_dev[!csi_dev->csiphy_id].csiphy;
 		if (!csiphy) {

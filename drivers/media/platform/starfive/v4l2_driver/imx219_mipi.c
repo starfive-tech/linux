@@ -28,6 +28,8 @@
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
+#include <linux/pinctrl/pinctrl.h>
+#include "stfcamss.h"
 
 #define IMX219_REG_VALUE_08BIT		1
 #define IMX219_REG_VALUE_16BIT		2
@@ -537,6 +539,13 @@ static const struct imx219_mode supported_modes[] = {
 	},
 };
 
+struct sensor_pinctrl_info {
+        struct pinctrl *pinctrl;
+        struct pinctrl_state *reset_state_low;
+        struct pinctrl_state *reset_state_high;
+        bool use_pinctrl;
+};
+
 struct imx219 {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
@@ -571,7 +580,37 @@ struct imx219 {
 
 	/* Streaming on/off */
 	bool streaming;
+
+	struct sensor_pinctrl_info imx219_pctrl;
 };
+
+int imx219_sensor_pinctrl_init(
+        struct sensor_pinctrl_info *sensor_pctrl, struct device *dev)
+{
+	sensor_pctrl->pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR_OR_NULL(sensor_pctrl->pinctrl)) {
+		st_err(ST_SENSOR, "Getting pinctrl handle failed\n");
+		return -EINVAL;
+	}
+	sensor_pctrl->reset_state_low
+		= pinctrl_lookup_state(sensor_pctrl->pinctrl, "reset_low");
+	if (IS_ERR_OR_NULL(sensor_pctrl->reset_state_low)) {
+		st_err(ST_SENSOR,
+			"Failed to get the reset_low pinctrl handle\n");
+		return -EINVAL;
+	}
+	sensor_pctrl->reset_state_high
+		= pinctrl_lookup_state(sensor_pctrl->pinctrl, "reset_high");
+	if (IS_ERR_OR_NULL(sensor_pctrl->reset_state_high)) {
+		st_err(ST_SENSOR,
+			"Failed to get the reset_high pinctrl handle\n");
+		return -EINVAL;
+	}
+
+	sensor_pctrl->use_pinctrl = true;
+
+	return 0;
+}
 
 static inline struct imx219 *to_imx219(struct v4l2_subdev *_sd)
 {
@@ -1153,6 +1192,7 @@ static int imx219_power_on(struct device *dev)
 {
 	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct imx219 *imx219 = to_imx219(sd);
+	struct sensor_pinctrl_info *sensor_pctrl = &imx219->imx219_pctrl;
 	int ret;
 
 	ret = regulator_bulk_enable(IMX219_NUM_SUPPLIES, imx219->supplies);
@@ -1168,7 +1208,15 @@ static int imx219_power_on(struct device *dev)
 		goto reg_off;
 	}
 
-	gpiod_set_value_cansleep(imx219->reset_gpio, 1);
+	if (sensor_pctrl->use_pinctrl) {
+		ret = pinctrl_select_state(
+			sensor_pctrl->pinctrl,
+			sensor_pctrl->reset_state_high);
+		if (ret)
+			st_err(ST_SENSOR, "cannot set reset pin to high\n");
+	} else
+		gpiod_set_value_cansleep(imx219->reset_gpio, 1);
+
 	usleep_range(IMX219_XCLR_MIN_DELAY_US,
 			IMX219_XCLR_MIN_DELAY_US + IMX219_XCLR_DELAY_RANGE_US);
 
@@ -1184,8 +1232,17 @@ static int imx219_power_off(struct device *dev)
 {
 	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct imx219 *imx219 = to_imx219(sd);
+	struct sensor_pinctrl_info *sensor_pctrl = &imx219->imx219_pctrl;
+	int ret;
 
-	gpiod_set_value_cansleep(imx219->reset_gpio, 0);
+	if (sensor_pctrl->use_pinctrl) {
+		ret = pinctrl_select_state(
+			sensor_pctrl->pinctrl,
+			sensor_pctrl->reset_state_low);
+		if (ret)
+			st_err(ST_SENSOR, "cannot set reset pin to low\n");
+	} else
+		gpiod_set_value_cansleep(imx219->reset_gpio, 0);
 	regulator_bulk_disable(IMX219_NUM_SUPPLIES, imx219->supplies);
 	clk_disable_unprepare(imx219->xclk);
 
@@ -1487,7 +1544,12 @@ static int imx219_probe(struct i2c_client *client)
 	}
 
 	/* Request optional enable pin */
-	imx219->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	ret = imx219_sensor_pinctrl_init(&imx219->imx219_pctrl, dev);
+	if (ret) {
+		st_err(ST_SENSOR, "Can't get pinctrl, use gpio to ctrl\n");
+		imx219->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+		imx219->imx219_pctrl.use_pinctrl = false;
+	}
 
 	/*
 	 * The sensor must be powered for imx219_identify_module()

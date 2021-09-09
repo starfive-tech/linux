@@ -53,7 +53,7 @@ static int stf_dvp_config_set(struct stf_dvp_dev *dvp_dev)
 	st_info(ST_DVP, "%s, polarities = 0x%x, flags = 0x%x\n",
 			__func__, polarities, flags);
 
-	stf_dvp_io_pad_config(vin);
+	// stf_dvp_io_pad_config(vin);
 
 	if (flags & V4L2_MBUS_HSYNC_ACTIVE_HIGH)
 		polarities |= BIT(9);

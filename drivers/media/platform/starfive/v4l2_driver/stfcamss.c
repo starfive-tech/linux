@@ -54,7 +54,7 @@ static const struct reg_name mem_reg_name[] = {
 	{"isp1"},
 	// {"tclk"},
 	{"trst"},
-	{"iopad"}
+	// {"iopad"}
 };
 
 char * clocks[] = {
