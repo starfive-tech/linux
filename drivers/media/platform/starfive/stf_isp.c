@@ -1,441 +1,917 @@
-/* /drivers/media/platform/starfive/stf_isp.c
-**
-** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License version 2 as
-** published by the Free Software Foundation.
-**
-** Copyright (C) 2020 StarFive, Inc.
-**
-** PURPOSE:	This files contains the driver of VPP.
-**
-** CHANGE HISTORY:
-**	Version		Date		Author		Description
-**	0.1.0		2020-12-09	starfive		created
-**
-*/
-#include <asm/io.h>
-#include <linux/fb.h>
-#include <linux/module.h>
-#include <video/stf-vin.h>
-#include <linux/delay.h>
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2021 StarFive Technology Co., Ltd.
+ */
+#include "stfcamss.h"
+#include <media/v4l2-async.h>
+#include <media/v4l2-ctrls.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-event.h>
+#include <media/v4l2-fwnode.h>
+#include <media/v4l2-subdev.h>
+#include <linux/firmware.h>
 
-#define SF_ISP_DEBUG
-#ifdef SF_ISP_DEBUG
-	#define ISP_PRT(format, args...)    printk(KERN_DEBUG "[ISP]: " format, ## args)
-	#define ISP_INFO(format, args...)   printk(KERN_INFO "[ISP]: " format, ## args)
-	#define ISP_ERR(format, args...)	printk(KERN_ERR "[ISP]: " format, ## args)
-#else
-	#define ISP_PRT(x...)  do{} while(0)
-	#define ISP_INFO(x...)  do{} while(0)
-	#define ISP_ERR(x...)  do{} while(0)
-#endif
+#define STF_ISP_NAME "stf_isp"
 
+static const struct isp_format isp_formats_st7110[] = {
+	{ MEDIA_BUS_FMT_YUYV8_2X8, 16},
+	{ MEDIA_BUS_FMT_RGB565_2X8_LE, 16},
+	{ MEDIA_BUS_FMT_SRGGB10_1X10, 12},
+	{ MEDIA_BUS_FMT_SGRBG10_1X10, 12},
+	{ MEDIA_BUS_FMT_SGBRG10_1X10, 12},
+	{ MEDIA_BUS_FMT_SBGGR10_1X10, 12},
+};
 
-static inline u32 reg_read(void __iomem * base, u32 reg)
+int stf_isp_subdev_init(struct stfcamss *stfcamss, int id)
 {
-	return ioread32(base + reg);
+	struct stf_isp_dev *isp_dev = &stfcamss->isp_dev[id];
+
+	atomic_set(&isp_dev->ref_count, 0);
+	isp_dev->sdev_type = id == 0 ? ISP0_DEV_TYPE : ISP1_DEV_TYPE;
+	isp_dev->id = id;
+	isp_dev->hw_ops = &isp_ops;
+	isp_dev->stfcamss = stfcamss;
+	isp_dev->formats = isp_formats_st7110;
+	isp_dev->nformats = ARRAY_SIZE(isp_formats_st7110);
+	mutex_init(&isp_dev->stream_lock);
+	mutex_init(&isp_dev->setfile_lock);
+	return 0;
 }
 
-static inline void reg_write(void __iomem * base, u32 reg, u32 val)
+/*
+ * ISP Controls.
+ */
+
+static inline struct v4l2_subdev *ctrl_to_sd(struct v4l2_ctrl *ctrl)
 {
-	iowrite32(val, base + reg);
+	return &container_of(ctrl->handler, struct stf_isp_dev,
+			     ctrls.handler)->subdev;
 }
 
-void isp_ddr_format_config(struct stf_vin_dev *vin)
+static u64 isp_calc_pixel_rate(struct stf_isp_dev *isp_dev)
 {
-	void __iomem *ispbase;
-    
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
-	
-	switch (vin->format.format) {
-	case SRC_COLORBAR_VIN_ISP:
-	    reg_write(ispbase, ISP_REG_DVP_POLARITY_CFG, 0xd);
-		break;
+	u64 rate = 0;
 
-	case SRC_DVP_SENSOR_VIN_ISP:
-	    reg_write(ispbase, ISP_REG_DVP_POLARITY_CFG, 0x08);
-		break;
+	return rate;
+}
 
+static int isp_set_ctrl_hue(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_contrast(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_saturation(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_white_balance(struct stf_isp_dev *isp_dev, int awb)
+{
+	struct isp_ctrls *ctrls = &isp_dev->ctrls;
+	int ret = 0;
+
+	if (!awb && (ctrls->red_balance->is_new || ctrls->blue_balance->is_new)) {
+		u16 red = (u16)ctrls->red_balance->val;
+		u16 blue = (u16)ctrls->blue_balance->val;
+		st_debug(ST_ISP, "red = 0x%x, blue = 0x%x\n", red, blue);
+		// isp_dev->hw_ops->isp_set_awb_r_gain(isp_dev, red);
+		// if (ret)
+		// 	return ret;
+		// isp_dev->hw_ops->isp_set_awb_b_gain(isp_dev, blue);
+	}
+
+	return ret;
+}
+
+static int isp_set_ctrl_exposure(struct stf_isp_dev *isp_dev,
+				    enum v4l2_exposure_auto_type auto_exposure)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_gain(struct stf_isp_dev *isp_dev, bool auto_gain)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static const char * const test_pattern_menu[] = {
+	"Disabled",
+	"Color bars",
+	"Color bars w/ rolling bar",
+	"Color squares",
+	"Color squares w/ rolling bar",
+};
+
+#define ISP_TEST_ENABLE			BIT(7)
+#define ISP_TEST_ROLLING		BIT(6)	/* rolling horizontal bar */
+#define ISP_TEST_TRANSPARENT		BIT(5)
+#define ISP_TEST_SQUARE_BW		BIT(4)	/* black & white squares */
+#define ISP_TEST_BAR_STANDARD		(0 << 2)
+#define ISP_TEST_BAR_VERT_CHANGE_1	(1 << 2)
+#define ISP_TEST_BAR_HOR_CHANGE		(2 << 2)
+#define ISP_TEST_BAR_VERT_CHANGE_2	(3 << 2)
+#define ISP_TEST_BAR			(0 << 0)
+#define ISP_TEST_RANDOM			(1 << 0)
+#define ISP_TEST_SQUARE			(2 << 0)
+#define ISP_TEST_BLACK			(3 << 0)
+
+static const u8 test_pattern_val[] = {
+	0,
+	ISP_TEST_ENABLE | ISP_TEST_BAR_VERT_CHANGE_1 |
+		ISP_TEST_BAR,
+	ISP_TEST_ENABLE | ISP_TEST_ROLLING |
+		ISP_TEST_BAR_VERT_CHANGE_1 | ISP_TEST_BAR,
+	ISP_TEST_ENABLE | ISP_TEST_SQUARE,
+	ISP_TEST_ENABLE | ISP_TEST_ROLLING | ISP_TEST_SQUARE,
+};
+
+static int isp_set_ctrl_test_pattern(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	// return isp_write_reg(isp_dev, ISP_REG_PRE_ISP_TEST_SET1,
+	//			test_pattern_val[value]);
+	return ret;
+}
+
+static int isp_set_ctrl_light_freq(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_hflip(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_set_ctrl_vflip(struct stf_isp_dev *isp_dev, int value)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int isp_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
+{
+
+	switch (ctrl->id) {
+	case V4L2_CID_AUTOGAIN:
+		break;
+	case V4L2_CID_EXPOSURE_AUTO:
+		break;
+	}
+
+	return 0;
+}
+
+static int isp_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct v4l2_subdev *sd = ctrl_to_sd(ctrl);
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	int ret;
+
+	/*
+	 * If the device is not powered up by the host driver do
+	 * not apply any controls to H/W at this time. Instead
+	 * the controls will be restored right after power-up.
+	 */
+	if (!atomic_read(&isp_dev->ref_count))
+		return 0;
+
+	switch (ctrl->id) {
+	case V4L2_CID_AUTOGAIN:
+		ret = isp_set_ctrl_gain(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_EXPOSURE_AUTO:
+		ret = isp_set_ctrl_exposure(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_AUTO_WHITE_BALANCE:
+		ret = isp_set_ctrl_white_balance(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_HUE:
+		ret = isp_set_ctrl_hue(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_CONTRAST:
+		ret = isp_set_ctrl_contrast(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_SATURATION:
+		ret = isp_set_ctrl_saturation(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_TEST_PATTERN:
+		ret = isp_set_ctrl_test_pattern(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_POWER_LINE_FREQUENCY:
+		ret = isp_set_ctrl_light_freq(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_HFLIP:
+		ret = isp_set_ctrl_hflip(isp_dev, ctrl->val);
+		break;
+	case V4L2_CID_VFLIP:
+		ret = isp_set_ctrl_vflip(isp_dev, ctrl->val);
+		break;
 	default:
-		pr_err("unknown format\n");
-		return;
+		ret = -EINVAL;
+		break;
 	}
 
-	reg_write(ispbase, ISP_REG_RAW_FORMAT_CFG, 0x000011BB);	// sym_order = [0+:16]
-	reg_write(ispbase, ISP_REG_CFA_MODE, 0x00000030);
-	reg_write(ispbase, ISP_REG_PIC_CAPTURE_START_CFG, 0x00000000); // cro_hstart = [0+:16], cro_vstart = [16+:16]
+	return ret;
 }
 
-void isp_ddr_resolution_config(struct stf_vin_dev *vin)
+static const struct v4l2_ctrl_ops isp_ctrl_ops = {
+	.g_volatile_ctrl = isp_g_volatile_ctrl,
+	.s_ctrl = isp_s_ctrl,
+};
+
+static int isp_init_controls(struct stf_isp_dev *isp_dev)
 {
-	u32 val = 0;
-	void __iomem *ispbase;
-    
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
-	val = (vin->frame.width-1) + ((vin->frame.height-1)<<16);
+	const struct v4l2_ctrl_ops *ops = &isp_ctrl_ops;
+	struct isp_ctrls *ctrls = &isp_dev->ctrls;
+	struct v4l2_ctrl_handler *hdl = &ctrls->handler;
+	int ret;
 
-	reg_write(ispbase, ISP_REG_PIC_CAPTURE_END_CFG, val);	// cro_hend = [0+:16], cro_vend = [16+:16]
-	val = (vin->frame.width) + ((vin->frame.height)<<16);
-	reg_write(ispbase, ISP_REG_PIPELINE_XY_SIZE, val);	// ISP pipeline width[0+:16], height[16+:16]
+	v4l2_ctrl_handler_init(hdl, 32);
 
-	reg_write(ispbase, ISP_REG_Y_PLANE_START_ADDR, vin->buf.paddr);	// Unscaled Output Image Y Plane Start Address Register
-	reg_write(ispbase, ISP_REG_UV_PLANE_START_ADDR,
-		  vin->buf.paddr + (vin->frame.width * vin->frame.height));	// Unscaled Output Image UV Plane Start Address Register
+	/* Clock related controls */
+	ctrls->pixel_rate = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_PIXEL_RATE,
+						0, INT_MAX, 1, isp_calc_pixel_rate(isp_dev));
 
-	reg_write(ispbase, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
+	/* Auto/manual white balance */
+	ctrls->auto_wb = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTO_WHITE_BALANCE,
+					0, 1, 1, 1);
+	ctrls->blue_balance = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_BLUE_BALANCE,
+						0, 4095, 1, 0);
+	ctrls->red_balance = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_RED_BALANCE,
+						0, 4095, 1, 0);
+	/* Auto/manual exposure */
+	ctrls->auto_exp = v4l2_ctrl_new_std_menu(hdl, ops, V4L2_CID_EXPOSURE_AUTO,
+						V4L2_EXPOSURE_MANUAL, 0, V4L2_EXPOSURE_AUTO);
+	ctrls->exposure = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_EXPOSURE,
+						0, 65535, 1, 0);
+	/* Auto/manual gain */
+	ctrls->auto_gain = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_AUTOGAIN,
+						0, 1, 1, 1);
+	ctrls->gain = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_GAIN, 0, 1023, 1, 0);
 
-	reg_write(ispbase, ISP_REG_PIXEL_COORDINATE_GEN, 0x00000010);	// Unscaled Output Pixel Coordinate Generator Mode Register
-	reg_write(ispbase, ISP_REG_PIXEL_AXI_CONTROL, 0x00000000);
-	reg_write(ispbase, ISP_REG_SS_AXI_CONTROL, 0x00000000);
+	ctrls->saturation = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION,
+						0, 255, 1, 64);
+	ctrls->hue = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_HUE, 0, 359, 1, 0);
+	ctrls->contrast = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST,
+						0, 255, 1, 0);
+	ctrls->test_pattern = v4l2_ctrl_new_std_menu_items(hdl, ops,
+						V4L2_CID_TEST_PATTERN,
+						ARRAY_SIZE(test_pattern_menu) - 1,
+						0, 0, test_pattern_menu);
+	ctrls->hflip = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
+	ctrls->vflip = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_VFLIP, 0, 1, 1, 0);
 
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION0, 0x0000004D);	// ICCONV_0
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION1, 0x00000096);	// ICCONV_1
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION2, 0x0000001D);	// ICCONV_2
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION3, 0x000001DA);	// ICCONV_3
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION4, 0x000001B6);	// ICCONV_4
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION5, 0x00000070);	// ICCONV_5
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION6, 0x0000009D);	// ICCONV_6
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION7, 0x0000017C);	// ICCONV_7
-	reg_write(ispbase, ISP_REG_RGB_TO_YUV_COVERSION8, 0x000001E6);	// ICCONV_8
+	ctrls->light_freq = v4l2_ctrl_new_std_menu(hdl, ops,
+						V4L2_CID_POWER_LINE_FREQUENCY,
+						V4L2_CID_POWER_LINE_FREQUENCY_AUTO, 0,
+						V4L2_CID_POWER_LINE_FREQUENCY_50HZ);
 
-	reg_write(ispbase, ISP_REG_CIS_MODULE_CFG, 0x00000000);
-	reg_write(ispbase, ISP_REG_ISP_CTRL_1, 0x10000022);	//0x30000022);//	
-	reg_write(ispbase, ISP_REG_DC_AXI_ID, 0x00000000);
-	reg_write(ispbase, 0x00000008, 0x00010005);//this reg can not be found in document
-}
-
-void isp_reset(struct stf_vin_dev *vin)
-{
-	void __iomem *ispbase;
-	u32 isp_enable = ISP_NO_SCALE_ENABLE | ISP_MULTI_FRAME_ENABLE;
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
-
-	reg_write(ispbase, ISP_REG_ISP_CTRL_0, (isp_enable | ISP_RESET) /*0x00120002 */ );	// isp_rst = [1]
-	reg_write(ispbase, ISP_REG_ISP_CTRL_0, isp_enable /*0x00120000 */ );	// isp_rst = [1]
-}
-
-void isp_enable(struct stf_vin_dev *vin)
-{
-	u32 isp_enable = ISP_NO_SCALE_ENABLE | ISP_MULTI_FRAME_ENABLE;
-	void __iomem *ispbase;
-    
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
-
-	reg_write(ispbase, ISP_REG_ISP_CTRL_0, (isp_enable | ISP_ENBALE) /*0x00120001 */ );	// isp_en = [0]
-	reg_write(ispbase, 0x00000008, 0x00010004);	// CSI immed shadow update
-	reg_write(ispbase, ISP_REG_CSI_INPUT_EN_AND_STATUS, 0x00000001);	// csi_en = [0]
-}
-
-void isp_dvp_2ndframe_config(struct stf_vin_dev *vin)
-{
-	void __iomem *ispbase;
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
-
-	reg_write(ispbase, ISP_REG_Y_PLANE_START_ADDR, FB_SECOND_ADDR);	// Unscaled Output Image Y Plane Start Address Register
-	reg_write(ispbase, ISP_REG_UV_PLANE_START_ADDR, FB_SECOND_ADDR+vin->frame.width*vin->frame.height);	// Unscaled Output Image UV Plane Start Address Register
-	reg_write(ispbase, ISP_REG_STRIDE, vin->frame.width);	// Unscaled Output Image Stride Register
-}
-
-void isp_clk_set(struct stf_vin_dev *vin)
-{
-	if (vin->isp0) {
-		/* enable isp0 clk */
-		reg_write(vin->clkgen_base, CLK_ISP0_CTRL, 0x80000002);	//ISP0-CLK
-		reg_write(vin->clkgen_base, CLK_ISP0_2X_CTRL, 0x80000000);
-		reg_write(vin->clkgen_base, CLK_ISP0_MIPI_CTRL, 0x80000000);
-		reg_write(vin->clkgen_base, CLK_MIPI_RX0_PXL_CTRL, 0x00000008);	//0x00000010);colorbar
-
-		if (vin->format.format == SRC_COLORBAR_VIN_ISP)
-			reg_write(vin->clkgen_base, CLK_C_ISP0_CTRL, 0x00000000);
-		else
-			reg_write(vin->clkgen_base, CLK_C_ISP0_CTRL, 0x02000000);
+	if (hdl->error) {
+		ret = hdl->error;
+		goto free_ctrls;
 	}
 
-	if (vin->isp1) {
-		/* enable isp1 clk */
-		reg_write(vin->clkgen_base, CLK_ISP1_CTRL, 0x80000002);	//ISP1-CLK
-		reg_write(vin->clkgen_base, CLK_ISP1_2X_CTRL, 0x80000000);
-		reg_write(vin->clkgen_base, CLK_ISP1_MIPI_CTRL, 0x80000000);
-		reg_write(vin->clkgen_base, CLK_MIPI_RX1_PXL_CTRL, 0x00000008);	//0x00000010);colorbar
+	ctrls->pixel_rate->flags |= V4L2_CTRL_FLAG_READ_ONLY;
+	ctrls->gain->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	ctrls->exposure->flags |= V4L2_CTRL_FLAG_VOLATILE;
 
-		if (vin->format.format == SRC_COLORBAR_VIN_ISP)
-			reg_write(vin->clkgen_base, CLK_C_ISP1_CTRL, 0x00000000);
-		else
-			reg_write(vin->clkgen_base, CLK_C_ISP1_CTRL, 0x02000000);
-	}
+	v4l2_ctrl_auto_cluster(3, &ctrls->auto_wb, 0, false);
+	v4l2_ctrl_auto_cluster(2, &ctrls->auto_gain, 0, true);
+	v4l2_ctrl_auto_cluster(2, &ctrls->auto_exp, 1, true);
+
+	isp_dev->subdev.ctrl_handler = hdl;
+	return 0;
+
+free_ctrls:
+	v4l2_ctrl_handler_free(hdl);
+	return ret;
 }
-EXPORT_SYMBOL(isp_clk_set);
 
-void isp_ddr_config(struct stf_vin_dev *vin)
+static int isp_set_power(struct v4l2_subdev *sd, int on)
 {
-	isp_ddr_format_config(vin);
-	isp_ddr_resolution_config(vin);
-	/* reset isp */
-	isp_reset(vin);
-	/* enable isp */
-	isp_enable(vin);
-	if(SRC_DVP_SENSOR_VIN_ISP == vin->format.format)
-		isp_dvp_2ndframe_config(vin);
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+
+	if (on)
+		atomic_inc(&isp_dev->ref_count);
+	else
+		atomic_dec(&isp_dev->ref_count);
+
+	return 0;
 }
-EXPORT_SYMBOL(isp_ddr_config);
 
-#define REGVALLIST(list) (list), sizeof(list)/sizeof((list)[0])
-
-typedef struct
+static struct v4l2_mbus_framefmt * __isp_get_format(struct stf_isp_dev *isp_dev,
+		struct v4l2_subdev_pad_config *cfg,
+		unsigned int pad,
+		enum v4l2_subdev_format_whence which)
 {
-	u32 addr;
-	u32 val;
-} regval_t;
+	if (which == V4L2_SUBDEV_FORMAT_TRY)
+		return v4l2_subdev_get_try_format(&isp_dev->subdev, cfg, pad);
 
-static const regval_t isp_800_480_reg_config_list[] = {
-	{0x00000014, 0x0000000D},
-	{0x00000018, 0x000011BB},
-	{0x00000A1C, 0x00000032},
-	{0x0000001C, 0x00000000},
-	{0x00000020, 0x01df031f},
-	{0x00000A0C, 0x01e00320},
-	{0x00000A80, 0xF9000000},
-	{0x00000A84, 0xF905DC00},
-	{0x00000A88, 0x00000320},
-	{0x00000A8C, 0x00000000},
-	{0x00000A90, 0x00000000},
-	{0x00000E40, 0x0000004C},
-	{0x00000E44, 0x00000097},
-	{0x00000E48, 0x0000001D},
-	{0x00000E4C, 0x000001D5},
-	{0x00000E50, 0x000001AC},
-	{0x00000E54, 0x00000080},
-	{0x00000E58, 0x00000080},
-	{0x00000E5C, 0x00000194},
-	{0x00000E60, 0x000001EC},
-	{0x00000280, 0x00000000},
-	{0x00000284, 0x00000000},
-	{0x00000288, 0x00000000},
-	{0x0000028C, 0x00000000},
-	{0x00000290, 0x00000000},
-	{0x00000294, 0x00000000},
-	{0x00000298, 0x00000000},
-	{0x0000029C, 0x00000000},
-	{0x000002A0, 0x00000000},
-	{0x000002A4, 0x00000000},
-	{0x000002A8, 0x00000000},
-	{0x000002AC, 0x00000000},
-	{0x000002B0, 0x00000000},
-	{0x000002B4, 0x00000000},
-	{0x000002B8, 0x00000000},
-	{0x000002BC, 0x00000000},
-	{0x000002C0, 0x00F000F0},
-	{0x000002C4, 0x00F000F0},
-	{0x000002C8, 0x00800080},
-	{0x000002CC, 0x00800080},
-	{0x000002D0, 0x00800080},
-	{0x000002D4, 0x00800080},
-	{0x000002D8, 0x00B000B0},
-	{0x000002DC, 0x00B000B0},
-	{0x00000E00, 0x24000000},
-	{0x00000E04, 0x159500A5},
-	{0x00000E08, 0x0F9900EE},
-	{0x00000E0C, 0x0CE40127},
-	{0x00000E10, 0x0B410157},
-	{0x00000E14, 0x0A210181},
-	{0x00000E18, 0x094B01A8},
-	{0x00000E1C, 0x08A401CC},
-	{0x00000E20, 0x081D01EE},
-	{0x00000E24, 0x06B20263},
-	{0x00000E28, 0x05D802C7},
-	{0x00000E2C, 0x05420320},
-	{0x00000E30, 0x04D30370},
-	{0x00000E34, 0x047C03BB},
-	{0x00000E38, 0x043703FF},
-	{0x00000010, 0x00000080},
-	{0x00000A08, 0x10000032},
-	{0x00000A00, 0x00120002},
-	{0x00000A00, 0x00120000},
-	{0x00000A50, 0x00000002},
-	{0x00000A00, 0x00120001},
-	{0x00000008, 0x00010000},
-	{0x00000008, 0x0002000A},
-	{0x00000000, 0x00000001},
-};
+	return &isp_dev->fmt[pad];
+}
 
-static const regval_t isp_1080p_reg_config_list[] = {
-	{0x00000014, 0x0000000D},
-	{0x00000018, 0x000011BB},
-	{0x00000A1C, 0x00000032},
-	{0x0000001C, 0x00000000},
-	{0x00000020, 0x0437077F},
-	{0x00000A0C, 0x04380780},
-	{0x00000A80, 0xF9000000},
-	{0x00000A84, 0xF91FA400},
-	{0x00000A88, 0x00000780},
-	{0x00000A8C, 0x00000000},
-	{0x00000A90, 0x00000000},
-	{0x00000E40, 0x0000004C},
-	{0x00000E44, 0x00000097},
-	{0x00000E48, 0x0000001D},
-	{0x00000E4C, 0x000001D5},
-	{0x00000E50, 0x000001AC},
-	{0x00000E54, 0x00000080},
-	{0x00000E58, 0x00000080},
-	{0x00000E5C, 0x00000194},
-	{0x00000E60, 0x000001EC},
-	{0x00000280, 0x00000000},
-	{0x00000284, 0x00000000},
-	{0x00000288, 0x00000000},
-	{0x0000028C, 0x00000000},
-	{0x00000290, 0x00000000},
-	{0x00000294, 0x00000000},
-	{0x00000298, 0x00000000},
-	{0x0000029C, 0x00000000},
-	{0x000002A0, 0x00000000},
-	{0x000002A4, 0x00000000},
-	{0x000002A8, 0x00000000},
-	{0x000002AC, 0x00000000},
-	{0x000002B0, 0x00000000},
-	{0x000002B4, 0x00000000},
-	{0x000002B8, 0x00000000},
-	{0x000002BC, 0x00000000},
-	{0x000002C0, 0x00F000F0},
-	{0x000002C4, 0x00F000F0},
-	{0x000002C8, 0x00800080},
-	{0x000002CC, 0x00800080},
-	{0x000002D0, 0x00800080},
-	{0x000002D4, 0x00800080},
-	{0x000002D8, 0x00B000B0},
-	{0x000002DC, 0x00B000B0},
-	{0x00000E00, 0x24000000},
-	{0x00000E04, 0x159500A5},
-	{0x00000E08, 0x0F9900EE},
-	{0x00000E0C, 0x0CE40127},
-	{0x00000E10, 0x0B410157},
-	{0x00000E14, 0x0A210181},
-	{0x00000E18, 0x094B01A8},
-	{0x00000E1C, 0x08A401CC},
-	{0x00000E20, 0x081D01EE},
-	{0x00000E24, 0x06B20263},
-	{0x00000E28, 0x05D802C7},
-	{0x00000E2C, 0x05420320},
-	{0x00000E30, 0x04D30370},
-	{0x00000E34, 0x047C03BB},
-	{0x00000E38, 0x043703FF},
-	{0x00000010, 0x00000080},
-	{0x00000A08, 0x10000032},
-	{0x00000A00, 0x00120002},
-	{0x00000A00, 0x00120000},
-	{0x00000A50, 0x00000002},
-	{0x00000A00, 0x00120001},
-	{0x00000008, 0x00010000},
-	{0x00000008, 0x0002000A},
-	{0x00000000, 0x00000001},
-};
-
-const struct {
-	const regval_t * regval;
-	int regval_num;
-} isp_1920_1080_settings[] = {
-	{REGVALLIST(isp_1080p_reg_config_list)},
-};
-
-const struct {
-	const regval_t * regval;
-	int regval_num;
-} isp_800_480_settings[] = {
-	{REGVALLIST(isp_800_480_reg_config_list)},
-};
-
-void isp_config(struct stf_vin_dev *vin,int isp_id)
+static int isp_set_stream(struct v4l2_subdev *sd, int enable)
 {
-	void __iomem *ispbase;
-	int j;
-    u32 mipi_vc = 0;
-	u32 mipi_channel_sel,vin_src_chan_sel;
-	u32 y_start = vin->buf.paddr;
-	u32 uv_start = y_start + vin->frame.width*vin->frame.height;
-    ISP_INFO("  y_start 0x%08x, uv_start 0x%08x\n", y_start, uv_start); 
-	ISP_INFO("  config isp %d <-- mipi %d:\n", isp_id, vin->csi_fmt.mipi_id);
-    ISP_INFO("  h_size %d, v_size %d\n", vin->frame.width, vin->frame.height);
-	if(vin->isp0)
-		ispbase = vin->isp_isp0_base;
-	else if(vin->isp1)
-	    ispbase = vin->isp_isp1_base;
-	else
-		return;
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	int ret = 0;
+	struct v4l2_mbus_framefmt *fmt;
 
-    if(vin->csi_fmt.mipi_id==0)
-    	reg_write(vin->clkgen_base, CLK_MIPI_RX0_PXL_CTRL, 0x3);
-	else
-        reg_write(vin->clkgen_base, CLK_MIPI_RX1_PXL_CTRL, 0x3);
-	
-    if(isp_id==0){
-	    reg_write(vin->clkgen_base, CLK_ISP0_MIPI_CTRL, 0x80000000|(vin->csi_fmt.mipi_id<<24));
-	    reg_write(vin->clkgen_base, CLK_C_ISP0_CTRL, vin->csi_fmt.mipi_id<<24);
-    }
-	else{
-	    reg_write(vin->clkgen_base, CLK_ISP1_MIPI_CTRL, 0x80000000|(vin->csi_fmt.mipi_id<<24));
-	    reg_write(vin->clkgen_base, CLK_C_ISP1_CTRL, vin->csi_fmt.mipi_id<<24);
-    }
-    mipi_channel_sel = vin->csi_fmt.mipi_id*4+mipi_vc;
-    vin_src_chan_sel = reg_read(vin->sysctrl_base, SYSCTRL_VIN_SRC_CHAN_SEL);
-	
-    if (isp_id == 0) {
-        vin_src_chan_sel &= ~0xf;
-        vin_src_chan_sel |= mipi_channel_sel & 0xf;
-    } else {
-        vin_src_chan_sel &= ~0xf0;
-        vin_src_chan_sel |= (mipi_channel_sel & 0xf) << 4;
-    }
-    reg_write(vin->sysctrl_base, SYSCTRL_VIN_SRC_CHAN_SEL, vin_src_chan_sel);
-
-    // vin padding mipi output from raw10 to raw12
-    if (vin->csi_fmt.dt == DT_RAW10) {
-        uint32_t vin_src_dw_sel = reg_read(vin->sysctrl_base, SYSCTRL_VIN_SRC_DW_SEL);
-        vin_src_dw_sel |= 1<<(isp_id==0?4:5);
-        reg_write(vin->sysctrl_base, SYSCTRL_VIN_SRC_DW_SEL, vin_src_dw_sel);
-    }
-
-	if (VD_WIDTH_1080P == vin->frame.width) {
-		for (j = 0; j < isp_1920_1080_settings[0].regval_num; j++) {
-			reg_write(ispbase,
-				  isp_1920_1080_settings[0].regval[j].addr,
-				  isp_1920_1080_settings[0].regval[j].val);
-			mdelay(5);
+	fmt = __isp_get_format(isp_dev, NULL, STF_ISP_PAD_SINK,
+			V4L2_SUBDEV_FORMAT_ACTIVE);
+	mutex_lock(&isp_dev->stream_lock);
+	if (enable) {
+		if (isp_dev->stream_count == 0) {
+			isp_dev->hw_ops->isp_clk_enable(isp_dev);
+			isp_dev->hw_ops->isp_reset(isp_dev);
+			isp_dev->hw_ops->isp_set_format(isp_dev,
+					&isp_dev->crop, fmt->code);
+				// format->width, format->height);
+			isp_dev->hw_ops->isp_config_set(isp_dev);
+			isp_dev->hw_ops->isp_stream_set(isp_dev, enable);
 		}
-	} else if (SEEED_WIDTH_800 == vin->frame.width) {
-		for (j = 0; j < isp_800_480_settings[0].regval_num; j++) {
-			reg_write(ispbase,
-				  isp_800_480_settings[0].regval[j].addr,
-				  isp_800_480_settings[0].regval[j].val);
-			mdelay(5);
+		isp_dev->stream_count++;
+	} else {
+		if (isp_dev->stream_count == 0)
+			goto exit;
+		if (isp_dev->stream_count == 1) {
+			isp_dev->hw_ops->isp_stream_set(isp_dev, enable);
+			isp_dev->hw_ops->isp_clk_disable(isp_dev);
 		}
+		isp_dev->stream_count--;
+	}
+exit:
+	mutex_unlock(&isp_dev->stream_lock);
+
+	if (enable && atomic_read(&isp_dev->ref_count) == 1) {
+		/* restore controls */
+		ret = v4l2_ctrl_handler_setup(&isp_dev->ctrls.handler);
+	}
+
+	return ret;
+}
+
+static void isp_try_format(struct stf_isp_dev *isp_dev,
+			struct v4l2_subdev_pad_config *cfg,
+			unsigned int pad,
+			struct v4l2_mbus_framefmt *fmt,
+			enum v4l2_subdev_format_whence which)
+{
+	unsigned int i;
+
+	switch (pad) {
+	case STF_ISP_PAD_SINK:
+		/* Set format on sink pad */
+
+		for (i = 0; i < isp_dev->nformats; i++)
+			if (fmt->code == isp_dev->formats[i].code)
+				break;
+
+		if (i >= isp_dev->nformats)
+			fmt->code = MEDIA_BUS_FMT_RGB565_2X8_LE;
+
+		fmt->width = clamp_t(u32, fmt->width, 8, STFCAMSS_FRAME_MAX_WIDTH);
+		fmt->width &= ~0x7 ;
+		fmt->height = clamp_t(u32, fmt->height, 1,
+					STFCAMSS_FRAME_MAX_HEIGHT_PIX);
+
+		fmt->field = V4L2_FIELD_NONE;
+		fmt->colorspace = V4L2_COLORSPACE_SRGB;
+		fmt->flags = 0;
+
+		break;
+
+	case STF_ISP_PAD_SRC:
+
+		*fmt = *__isp_get_format(isp_dev, cfg, STF_ISP_PAD_SINK, which);
+
+		break;
 	}
 }
-EXPORT_SYMBOL(isp_config);
 
-MODULE_AUTHOR("StarFive Technology Co., Ltd.");
-MODULE_DESCRIPTION("loadable ISP driver for StarFive");
-MODULE_LICENSE("GPL");
+static int isp_enum_mbus_code(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_mbus_code_enum *code)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+
+	if (code->index >= isp_dev->nformats)
+		return -EINVAL;
+	if (code->pad == STF_ISP_PAD_SINK) {
+		code->code = isp_dev->formats[code->index].code;
+	} else {
+		struct v4l2_mbus_framefmt *sink_fmt;
+		sink_fmt = __isp_get_format(isp_dev, cfg, STF_ISP_PAD_SINK,
+					code->which);
+
+		code->code = sink_fmt->code;
+		if (!code->code)
+			return -EINVAL;
+	}
+	code->flags = 0;
+
+	return 0;
+}
+
+static int isp_enum_frame_size(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_frame_size_enum *fse)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt format;
+
+	if (fse->index != 0)
+		return -EINVAL;
+
+	format.code = fse->code;
+	format.width = 1;
+	format.height = 1;
+	isp_try_format(isp_dev, cfg, fse->pad, &format, fse->which);
+	fse->min_width = format.width;
+	fse->min_height = format.height;
+
+	if (format.code != fse->code)
+		return -EINVAL;
+
+	format.code = fse->code;
+	format.width = -1;
+	format.height = -1;
+	isp_try_format(isp_dev, cfg, fse->pad, &format, fse->which);
+	fse->max_width = format.width;
+	fse->max_height = format.height;
+
+	return 0;
+}
+
+static int isp_get_format(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_format *fmt)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt *format;
+
+	format = __isp_get_format(isp_dev, cfg, fmt->pad, fmt->which);
+	if (format == NULL)
+		return -EINVAL;
+
+	fmt->format = *format;
+
+	return 0;
+}
+
+static int isp_set_selection(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_selection *sel);
+
+static int isp_set_format(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_format *fmt)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt *format;
+
+	format = __isp_get_format(isp_dev, cfg, fmt->pad, fmt->which);
+	if (format == NULL)
+		return -EINVAL;
+
+	isp_try_format(isp_dev, cfg, fmt->pad, &fmt->format, fmt->which);
+	*format = fmt->format;
+
+	/* Propagate the format from sink to source */
+	if (fmt->pad == STF_ISP_PAD_SINK) {
+		struct v4l2_subdev_selection sel = { 0 };
+		int ret;
+
+		format = __isp_get_format(isp_dev, cfg, STF_ISP_PAD_SRC, fmt->which);
+		*format = fmt->format;
+		isp_try_format(isp_dev, cfg, STF_ISP_PAD_SRC, format, fmt->which);
+
+		/* Reset sink pad compose selection */
+		sel.which = fmt->which;
+		sel.pad = STF_ISP_PAD_SINK;
+		sel.target = V4L2_SEL_TGT_COMPOSE;
+		sel.r.width = fmt->format.width;
+		sel.r.height = fmt->format.height;
+		ret = isp_set_selection(sd, cfg, &sel);
+		if (ret < 0)
+			return ret;
+
+	}
+
+	return 0;
+}
+
+static struct v4l2_rect * __isp_get_compose(struct stf_isp_dev *isp_dev,
+			struct v4l2_subdev_pad_config *cfg,
+			enum v4l2_subdev_format_whence which)
+{
+	if (which == V4L2_SUBDEV_FORMAT_TRY)
+		return v4l2_subdev_get_try_compose(&isp_dev->subdev,
+				cfg, STF_ISP_PAD_SINK);
+
+	return &isp_dev->compose;
+}
+
+static struct v4l2_rect *__isp_get_crop(struct stf_isp_dev *isp_dev,
+			struct v4l2_subdev_pad_config *cfg,
+			enum v4l2_subdev_format_whence which)
+{
+	if (which == V4L2_SUBDEV_FORMAT_TRY)
+		return v4l2_subdev_get_try_crop(&isp_dev->subdev, cfg, STF_ISP_PAD_SRC);
+
+	return &isp_dev->crop;
+}
+
+static void isp_try_compose(struct stf_isp_dev *isp_dev,
+			    struct v4l2_subdev_pad_config *cfg,
+			    struct v4l2_rect *rect,
+			    enum v4l2_subdev_format_whence which)
+{
+	struct v4l2_mbus_framefmt *fmt;
+
+	fmt = __isp_get_format(isp_dev, cfg, STF_ISP_PAD_SINK, which);
+
+	if (rect->width > fmt->width)
+		rect->width = fmt->width;
+
+	if (rect->height > fmt->height)
+		rect->height = fmt->height;
+
+	if (fmt->width > rect->width * SCALER_RATIO_MAX)
+		rect->width = (fmt->width + SCALER_RATIO_MAX - 1) /
+							SCALER_RATIO_MAX;
+
+	rect->width &= ~0x7;
+
+	if (fmt->height > rect->height * SCALER_RATIO_MAX)
+		rect->height = (fmt->height + SCALER_RATIO_MAX - 1) /
+							SCALER_RATIO_MAX;
+
+	if (rect->width < 16)
+		rect->width = 16;
+
+	if (rect->height < 4)
+		rect->height = 4;
+}
+
+static void isp_try_crop(struct stf_isp_dev *isp_dev,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_rect *rect,
+			enum v4l2_subdev_format_whence which)
+{
+	struct v4l2_rect *compose;
+
+	compose = __isp_get_compose(isp_dev, cfg, which);
+
+	if (rect->width > compose->width)
+		rect->width = compose->width;
+
+	if (rect->width + rect->left > compose->width)
+		rect->left = compose->width - rect->width;
+
+	if (rect->height > compose->height)
+		rect->height = compose->height;
+
+	if (rect->height + rect->top > compose->height)
+		rect->top = compose->height - rect->height;
+
+	// /* isp in line based mode writes multiple of 16 horizontally */
+	rect->left &= ~0x1;
+	rect->top &= ~0x1;
+	rect->width &= ~0x7;
+
+	if (rect->width < 16) {
+		rect->left = 0;
+		rect->width = 16;
+	}
+
+	if (rect->height < 4) {
+		rect->top = 0;
+		rect->height = 4;
+	}
+}
+
+static int isp_get_selection(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_selection *sel)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_subdev_format fmt = { 0 };
+	struct v4l2_rect *rect;
+	int ret;
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
+	case V4L2_SEL_TGT_COMPOSE_DEFAULT:
+		fmt.pad = sel->pad;
+		fmt.which = sel->which;
+		ret = isp_get_format(sd, cfg, &fmt);
+		if (ret < 0)
+			return ret;
+
+		sel->r.left = 0;
+		sel->r.top = 0;
+		sel->r.width = fmt.format.width;
+		sel->r.height = fmt.format.height;
+		break;
+	case V4L2_SEL_TGT_COMPOSE:
+		rect = __isp_get_compose(isp_dev, cfg, sel->which);
+		if (rect == NULL)
+			return -EINVAL;
+
+		sel->r = *rect;
+		break;
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		rect = __isp_get_compose(isp_dev, cfg, sel->which);
+		if (rect == NULL)
+			return -EINVAL;
+
+		sel->r.left = rect->left;
+		sel->r.top = rect->top;
+		sel->r.width = rect->width;
+		sel->r.height = rect->height;
+		break;
+	case V4L2_SEL_TGT_CROP:
+		rect = __isp_get_crop(isp_dev, cfg, sel->which);
+		if (rect == NULL)
+			return -EINVAL;
+
+		sel->r = *rect;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	st_info(ST_ISP, "get left = %d, %d, %d, %d\n",
+			sel->r.left, sel->r.top, sel->r.width, sel->r.height);
+
+	return 0;
+}
+
+static int isp_set_selection(struct v4l2_subdev *sd,
+			     struct v4l2_subdev_pad_config *cfg,
+			     struct v4l2_subdev_selection *sel)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_rect *rect;
+	int ret;
+
+	st_info(ST_ISP, "left = %d, %d, %d, %d\n",
+			sel->r.left, sel->r.top, sel->r.width, sel->r.height);
+	if (sel->target == V4L2_SEL_TGT_COMPOSE) {
+		struct v4l2_subdev_selection crop = { 0 };
+
+		rect = __isp_get_compose(isp_dev, cfg, sel->which);
+		if (rect == NULL)
+			return -EINVAL;
+
+		isp_try_compose(isp_dev, cfg, &sel->r, sel->which);
+		*rect = sel->r;
+
+		/* Reset source crop selection */
+		crop.which = sel->which;
+		crop.pad = STF_ISP_PAD_SRC;
+		crop.target = V4L2_SEL_TGT_CROP;
+		crop.r = *rect;
+		ret = isp_set_selection(sd, cfg, &crop);
+	} else if (sel->target == V4L2_SEL_TGT_CROP) {
+		struct v4l2_subdev_format fmt = { 0 };
+
+		rect = __isp_get_crop(isp_dev, cfg, sel->which);
+		if (rect == NULL)
+			return -EINVAL;
+
+		isp_try_crop(isp_dev, cfg, &sel->r, sel->which);
+
+		*rect = sel->r;
+
+		/* Reset source pad format width and height */
+		fmt.which = sel->which;
+		fmt.pad = STF_ISP_PAD_SRC;
+		ret = isp_get_format(sd, cfg, &fmt);
+		if (ret < 0)
+			return ret;
+
+		fmt.format.width = rect->width;
+		fmt.format.height = rect->height;
+		ret = isp_set_format(sd, cfg, &fmt);
+	} else {
+		ret = -EINVAL;
+	}
+
+	st_info(ST_ISP, "out left = %d, %d, %d, %d\n",
+			sel->r.left, sel->r.top, sel->r.width, sel->r.height);
+
+	return ret;
+}
+
+static int isp_init_formats(struct v4l2_subdev *sd,
+			struct v4l2_subdev_fh *fh)
+{
+	struct v4l2_subdev_format format = {
+		.pad = STF_ISP_PAD_SINK,
+		.which = fh ? V4L2_SUBDEV_FORMAT_TRY :
+				V4L2_SUBDEV_FORMAT_ACTIVE,
+		.format = {
+			.code = MEDIA_BUS_FMT_RGB565_2X8_LE,
+			.width = 1920,
+			.height = 1080
+		}
+	};
+
+	return isp_set_format(sd, fh ? fh->pad : NULL, &format);
+}
+
+static int isp_link_setup(struct media_entity *entity,
+			const struct media_pad *local,
+			const struct media_pad *remote, u32 flags)
+{
+	if (flags & MEDIA_LNK_FL_ENABLED)
+		if (media_entity_remote_pad(local))
+			return -EBUSY;
+	return 0;
+}
+
+static int stf_isp_load_setfile(struct stf_isp_dev *isp_dev, char *file_name)
+{
+	struct device *dev = isp_dev->stfcamss->dev;
+	const struct firmware *fw;
+	u8 *buf = NULL;
+	int *regval_num;
+	int ret;
+
+	st_debug(ST_ISP, "%s, file_name %s\n", __func__, file_name);
+	ret = request_firmware(&fw, file_name, dev);
+	if (ret < 0) {
+		st_err(ST_ISP, "firmware request failed (%d)\n", ret);
+		return ret;
+	}
+	buf = devm_kzalloc(dev, fw->size, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+	memcpy(buf, fw->data, fw->size);
+
+	mutex_lock(&isp_dev->setfile_lock);
+	if (isp_dev->setfile.state == 1)
+		devm_kfree(dev, isp_dev->setfile.data);
+	isp_dev->setfile.data = buf;
+	isp_dev->setfile.size = fw->size;
+	isp_dev->setfile.state = 1;
+	regval_num = (int *)&buf[fw->size - sizeof(unsigned int)];
+	isp_dev->setfile.settings.regval_num = *regval_num;
+	isp_dev->setfile.settings.regval = (regval_t *)buf;
+	mutex_unlock(&isp_dev->setfile_lock);
+
+	st_debug(ST_ISP, "stf_isp setfile loaded size: %zu B, reg_nul: %d\n",
+			fw->size, isp_dev->setfile.settings.regval_num);
+
+	release_firmware(fw);
+	return ret;
+}
+
+static long stf_isp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
+{
+	struct stf_isp_dev *isp_dev = v4l2_get_subdevdata(sd);
+	int ret = -ENOIOCTLCMD;
+
+	switch (cmd) {
+	case VIDIOC_STFISP_LOAD_FW: {
+		struct stfisp_fw_info *fw_info = arg;
+
+		if (IS_ERR(fw_info)) {
+			st_err(ST_ISP, "fw_info failed, params invaild\n");
+			return -EINVAL;
+		}
+
+		ret = stf_isp_load_setfile(isp_dev, fw_info->filename);
+		break;
+	}
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+static const struct v4l2_subdev_core_ops isp_core_ops = {
+	.s_power = isp_set_power,
+	.ioctl = stf_isp_ioctl,
+	.log_status = v4l2_ctrl_subdev_log_status,
+	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
+	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+};
+
+static const struct v4l2_subdev_video_ops isp_video_ops = {
+	.s_stream = isp_set_stream,
+};
+
+static const struct v4l2_subdev_pad_ops isp_pad_ops = {
+	.enum_mbus_code = isp_enum_mbus_code,
+	.enum_frame_size = isp_enum_frame_size,
+	.get_fmt = isp_get_format,
+	.set_fmt = isp_set_format,
+	.get_selection = isp_get_selection,
+	.set_selection = isp_set_selection,
+};
+
+static const struct v4l2_subdev_ops isp_v4l2_ops = {
+	.core = &isp_core_ops,
+	.video = &isp_video_ops,
+	.pad = &isp_pad_ops,
+};
+
+static const struct v4l2_subdev_internal_ops isp_v4l2_internal_ops = {
+	.open = isp_init_formats,
+};
+
+static const struct media_entity_operations isp_media_ops = {
+	.link_setup = isp_link_setup,
+	.link_validate = v4l2_subdev_link_validate,
+};
+
+int stf_isp_register(struct stf_isp_dev *isp_dev,
+		struct v4l2_device *v4l2_dev)
+{
+	struct v4l2_subdev *sd = &isp_dev->subdev;
+	struct media_pad *pads = isp_dev->pads;
+	int ret;
+
+	v4l2_subdev_init(sd, &isp_v4l2_ops);
+	sd->internal_ops = &isp_v4l2_internal_ops;
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+	snprintf(sd->name, ARRAY_SIZE(sd->name), "%s%d",
+		STF_ISP_NAME, isp_dev->id);
+	v4l2_set_subdevdata(sd, isp_dev);
+
+	ret = isp_init_formats(sd, NULL);
+	if (ret < 0) {
+		st_err(ST_ISP, "Failed to init format: %d\n", ret);
+		return ret;
+	}
+
+	pads[STF_ISP_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
+	pads[STF_ISP_PAD_SRC].flags = MEDIA_PAD_FL_SOURCE;
+
+	sd->entity.function = MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER;
+	sd->entity.ops = &isp_media_ops;
+	ret = media_entity_pads_init(&sd->entity, STF_ISP_PADS_NUM, pads);
+	if (ret < 0) {
+		st_err(ST_ISP, "Failed to init media entity: %d\n", ret);
+		return ret;
+	}
+
+	ret = isp_init_controls(isp_dev);
+	if (ret)
+		goto err_sreg;
+
+	ret = v4l2_device_register_subdev(v4l2_dev, sd);
+	if (ret < 0) {
+		st_err(ST_ISP, "Failed to register subdev: %d\n", ret);
+		goto free_ctrls;
+	}
+
+	if (isp_dev->id == 0)
+		stf_isp_load_setfile(isp_dev, STF_ISP0_SETFILE);
+	else
+		stf_isp_load_setfile(isp_dev, STF_ISP1_SETFILE);
+
+	return 0;
+
+free_ctrls:
+	v4l2_ctrl_handler_free(&isp_dev->ctrls.handler);
+err_sreg:
+	media_entity_cleanup(&sd->entity);
+	return ret;
+}
+
+int stf_isp_unregister(struct stf_isp_dev *isp_dev)
+{
+	v4l2_device_unregister_subdev(&isp_dev->subdev);
+	media_entity_cleanup(&isp_dev->subdev.entity);
+	v4l2_ctrl_handler_free(&isp_dev->ctrls.handler);
+	mutex_destroy(&isp_dev->stream_lock);
+	mutex_destroy(&isp_dev->setfile_lock);
+	return 0;
+}

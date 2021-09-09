@@ -1,210 +1,394 @@
-/* /drivers/media/platform/starfive/stf_csi.c
-**
-** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License version 2 as
-** published by the Free Software Foundation.
-**
-** Copyright (C) 2020 StarFive, Inc.
-**
-** PURPOSE:	This files contains the driver of VPP.
-**
-** CHANGE HISTORY:
-**	Version		Date		Author		Description
-**	0.1.0		2020-12-09	starfive		created
-**
-*/
-#include <asm/io.h>
-#include <linux/fb.h>
-#include <linux/module.h>
-#include <video/stf-vin.h>
-#include <linux/delay.h>
-#include "stf_csi.h"
-
-static inline u32 reg_read(void __iomem * base, u32 reg)
-{
-	return ioread32(base + reg);
-}
-
-static inline void reg_write(void __iomem * base, u32 reg, u32 val)
-{
-	iowrite32(val, base + reg);
-}
-
-static void reg_set_highest_bit(void __iomem * base, u32 reg)
-{
-    u32 val;
-	val = ioread32(base + reg);
-	val &= ~(0x1 << 31);
-	val |= (0x1 & 0x1) << 31;
-	iowrite32(val, base + reg);
-}
-
+// SPDX-License-Identifier: GPL-2.0
 /*
-static void reg_clear_highest_bit(void __iomem * base, u32 reg)
+ * Copyright (C) 2021 StarFive Technology Co., Ltd.
+ */
+#include "stfcamss.h"
+#include <media/v4l2-async.h>
+#include <media/v4l2-ctrls.h>
+#include <media/v4l2-device.h>
+#include <media/v4l2-event.h>
+#include <media/v4l2-fwnode.h>
+#include <media/v4l2-subdev.h>
+
+#define STF_CSI_NAME "stf_csi"
+
+static const struct csi_format csi_formats_st7110[] = {
+	{ MEDIA_BUS_FMT_YUYV8_2X8, 16},
+	{ MEDIA_BUS_FMT_RGB565_2X8_LE, 16},
+	{ MEDIA_BUS_FMT_SRGGB10_1X10, 12},
+	{ MEDIA_BUS_FMT_SGRBG10_1X10, 12},
+	{ MEDIA_BUS_FMT_SGBRG10_1X10, 12},
+	{ MEDIA_BUS_FMT_SBGGR10_1X10, 12},
+};
+
+static int csi_find_format(u32 code,
+		const struct csi_format *formats,
+		unsigned int nformats)
 {
-    u32 val;
-	val = ioread32(base + reg);
-	val &= ~(0x1 << 31);
-	val |= (0x0 & 0x1) << 31;
-	iowrite32(val, base + reg);
-}
-*/
-int csi2rx_dphy_config(struct stf_vin_dev *vin,const csi2rx_dphy_cfg_t *cfg)
-{
-    union dphy_lane_swap dphy_lane_swap = {
-        .bits = {
-            .rx_1c2c_sel        = cfg->clane_nb - 1, // 0 - 1clk, 1 - 2clks
-            .lane_swap_clk      = cfg->clane_map[0], //mipi-rx0 bind to clk0
-            .lane_swap_clk1     = cfg->clane_map[1], //mipi-rx1 bind to clk1
-            .lane_swap_lan0     = cfg->dlane_map[0],
-            .lane_swap_lan1     = cfg->dlane_map[1],
-            .lane_swap_lan2     = cfg->dlane_map[2],
-            .lane_swap_lan3     = cfg->dlane_map[3],
-            .dpdn_swap_clk      = cfg->clane_pn_swap[0],
-            .dpdn_swap_clk1     = cfg->clane_pn_swap[1],
-            .dpdn_swap_lan0     = cfg->dlane_pn_swap[0],
-            .dpdn_swap_lan1     = cfg->dlane_pn_swap[1],
-            .dpdn_swap_lan2     = cfg->dlane_pn_swap[2],
-            .dpdn_swap_lan3     = cfg->dlane_pn_swap[3],
-            .hs_freq_chang_clk0 = 0,
-            .hs_freq_chang_clk1 = 0,
-            .reserved           = 0,
-        }
-    };
-		
-	union dphy_lane_en dphy_lane_en = {
-        .bits = {
-            .gpio_en          = 0,
-            .mp_test_mode_sel = 0,
-            .mp_test_en       = 0,
-            .dphy_enable_lan0 = cfg->dlane_en[0],
-            .dphy_enable_lan1 = cfg->dlane_en[1],
-            .dphy_enable_lan2 = cfg->dlane_en[2],
-            .dphy_enable_lan3 = cfg->dlane_en[3],
-            .rsvd_0           = 0,
-        }
-    };
-    // evb, ov4689, c0-0,d0-1,d1-2,d2-3,d3-4,c1-5
-    //write_reg(ISP_SYSCONTROLLER_BASE_ADDR, 0x10, 0x000468d0);
-    reg_write(vin->sysctrl_base, SYSCTRL_REG4, dphy_lane_swap.raw);    
-    reg_write(vin->sysctrl_base, SYSCTRL_DPHY_CTRL, dphy_lane_en.raw); 
-    reg_write(vin->clkgen_base, CLK_DPHY_CFGCLK_ISPCORE_2X_CTRL, 0x80000008);
-    reg_write(vin->clkgen_base, CLK_DPHY_REFCLK_ISPCORE_2X_CTRL, 0x80000010);
-    reg_write(vin->clkgen_base, CLK_DPHY_TXCLKESC_IN_CTRL, 0x80000028);
+	int i;
 
-    return 0;
-}
-EXPORT_SYMBOL(csi2rx_dphy_config);
-
-static int csi2rx_reset(struct stf_vin_dev *vin,int id)
-{
-	reg_set_highest_bit(vin->clkgen_base,CLK_CSI2RX0_APB_CTRL);
-
-    if (id == 0) {
-		reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_PXL_0_CTRL);
-		reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_PXL_1_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_PXL_2_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_PXL_3_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX0_SYS0_CTRL);
-    } else {
-		reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_PXL_0_CTRL);
-		reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_PXL_1_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_PXL_2_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_PXL_3_CTRL);
-	    reg_set_highest_bit(vin->clkgen_base,CLK_MIPI_RX1_SYS1_CTRL);
-    }
-
-    return 0;
+	for (i = 0; i < nformats; i++)
+		if (formats[i].code == code)
+			return i;
+	return -EINVAL;
 }
 
-static void csi2rx_debug_config(void *reg_base, u32 frame_lines)
+int stf_csi_subdev_init(struct stfcamss *stfcamss, int id)
 {
-    // data_id, ecc, crc error to irq
-    union error_bypass_cfg err_bypass_cfg = {
-        .data_id = 0,
-        .ecc     = 0,
-        .crc     = 0,
-    };
-    union stream_monitor_ctrl stream0_monitor_ctrl = {
-        .frame_length = frame_lines,
-        .frame_mon_en = 1,
-        .frame_mon_vc = 0,
-        .lb_en = 1,
-        .lb_vc = 0,
-    };
-    reg_write(reg_base, ERROR_BYPASS_CFG     , err_bypass_cfg.value);
-    reg_write(reg_base, MONITOR_IRQS_MASK_CFG, 0xffffffff);
-    reg_write(reg_base, INFO_IRQS_MASK_CFG   , 0xffffffff);
-    reg_write(reg_base, ERROR_IRQS_MASK_CFG  , 0xffffffff);
-    reg_write(reg_base, DPHY_ERR_IRQ_MASK_CFG, 0xffffffff);
+	struct stf_csi_dev *csi_dev = &stfcamss->csi_dev[id];
 
-
-    reg_write(reg_base, STREAM0_MONITOR_CTRL, stream0_monitor_ctrl.value);
-    reg_write(reg_base, STREAM0_FCC_CTRL, (0x0<<1)|0x1);  //Frame Capture Counter enable, vc0
+	csi_dev->id = id;
+	csi_dev->csiphy_id = id;
+	csi_dev->s_type = SENSOR_VIN;
+	csi_dev->hw_ops = &csi_ops;
+	csi_dev->stfcamss = stfcamss;
+	csi_dev->formats = csi_formats_st7110;
+	csi_dev->nformats = ARRAY_SIZE(csi_formats_st7110);
+	mutex_init(&csi_dev->stream_lock);
+	return 0;
 }
 
-int csi2rx_config(struct stf_vin_dev *vin,int id, const csi2rx_cfg_t *cfg)
+static int csi_set_power(struct v4l2_subdev *sd, int on)
 {
-    int s_stream0_fifo_mode = 0;
-    int s_stream0_fifo_fill = 0;
-	
-    union static_config config;
-    union dphy_lane_ctrl dphy_lane_ctrl;
-    union stream_cfg stream0_cfg = {
-        .fifo_fill      = 0, // fifo depth is 2048 pixels
-        .bpp_bypass     = 0,
-        .fifo_mode      = 0, // 0 full line; 1 large buffer
-        .num_pixels     = 0, // 0 - 1 pixel per clock (default), 1 - 2 pixel
-        .ls_le_mode     = 0,
-        .interface_mode = 0,
-    };
-
-    void *reg_base = NULL;
-    if(id == 0)
-        reg_base= vin->mipi0_base;
-    else if (id == 1) {
-        reg_base= vin->mipi1_base;
-    }else {
-        return 0;
-    }
-    
-    csi2rx_reset(vin,id);
-
-    // 0x08 STATIC_CFG
-    config.raw = 0;
-    config.bits.lane_nb = cfg->lane_nb;
-    config.bits.dl0_map = cfg->dlane_map[0];
-    config.bits.dl1_map = cfg->dlane_map[1];
-    config.bits.dl2_map = cfg->dlane_map[2];
-    config.bits.dl3_map = cfg->dlane_map[3];
-	
-    reg_write(reg_base, STATIC_CFG, config.raw);
-
-    // 0x40 DPHY_LANE_CONTROL
-    dphy_lane_ctrl.raw = 0;
-    dphy_lane_ctrl.bits.dl0_en = dphy_lane_ctrl.bits.dl0_reset = (cfg->lane_nb > 0);
-    dphy_lane_ctrl.bits.dl1_en = dphy_lane_ctrl.bits.dl1_reset = (cfg->lane_nb > 1);
-    dphy_lane_ctrl.bits.dl2_en = dphy_lane_ctrl.bits.dl2_reset = (cfg->lane_nb > 2);
-    dphy_lane_ctrl.bits.dl3_en = dphy_lane_ctrl.bits.dl3_reset = (cfg->lane_nb > 3);
-    dphy_lane_ctrl.bits.cl_en = dphy_lane_ctrl.bits.cl_reset = 1;
-	
-    reg_write(reg_base, DPHY_LANE_CONTROL, dphy_lane_ctrl.raw);
-
-    csi2rx_debug_config(reg_base, cfg->vsize);
-
-    reg_write(reg_base, STREAM0_DATA_CFG, 0x00000080|(cfg->dt&0x3f));  // all vc, dt0 enabled
-
-    stream0_cfg.fifo_mode = s_stream0_fifo_mode & 0x3;
-    stream0_cfg.fifo_fill = (stream0_cfg.fifo_mode == 1) ? s_stream0_fifo_fill : 0;
-    reg_write(reg_base, STREAM0_CFG, stream0_cfg.value);
-    reg_write(reg_base, STREAM0_CTRL, 0x00000010);      // soft_rst
-    mdelay(100);
-    reg_write(reg_base, STREAM0_CTRL, 0x00000001);      // start
-
-    return 0;
+	return 0;
 }
-EXPORT_SYMBOL(csi2rx_config);
 
-MODULE_AUTHOR("StarFive Technology Co., Ltd.");
-MODULE_DESCRIPTION("loadable CSI driver for StarFive");
-MODULE_LICENSE("GPL");
+static struct v4l2_mbus_framefmt *__csi_get_format(struct stf_csi_dev *csi_dev,
+		struct v4l2_subdev_pad_config *cfg,
+		unsigned int pad,
+		enum v4l2_subdev_format_whence which)
+{
+	if (which == V4L2_SUBDEV_FORMAT_TRY)
+		return v4l2_subdev_get_try_format(&csi_dev->subdev, cfg, pad);
+
+	return &csi_dev->fmt[pad];
+}
+
+static int csi_set_stream(struct v4l2_subdev *sd, int enable)
+{
+	struct stf_csi_dev *csi_dev = v4l2_get_subdevdata(sd);
+	struct stf_csi_dev *csi0_dev = &csi_dev->stfcamss->csi_dev[0];
+	struct v4l2_mbus_framefmt *format;
+	int ret = 0;
+	int is_raw10 = 0;
+	u32 code;
+
+	if (csi_dev->id == 1)
+		csi_set_stream(&csi0_dev->subdev, enable);
+
+	format = __csi_get_format(csi_dev, NULL, STF_CSI_PAD_SRC,
+				V4L2_SUBDEV_FORMAT_ACTIVE);
+	if (format == NULL)
+		return -EINVAL;
+	ret = csi_find_format(format->code, csi_dev->formats, csi_dev->nformats);
+	if (ret < 0)
+		return ret;
+
+	code = csi_dev->formats[ret].code;
+	if (code == MEDIA_BUS_FMT_SBGGR10_1X10 ||
+		code == MEDIA_BUS_FMT_SGBRG10_1X10 ||
+		code == MEDIA_BUS_FMT_SGRBG10_1X10 ||
+		code == MEDIA_BUS_FMT_SRGGB10_1X10)
+		is_raw10 = 1;
+
+	mutex_lock(&csi_dev->stream_lock);
+	if (enable) {
+		if (csi_dev->stream_count == 0) {
+			csi_dev->hw_ops->csi_config_set(csi_dev);
+			csi_dev->hw_ops->csi_clk_enable(csi_dev);
+			csi_dev->hw_ops->csi_set_format(csi_dev, format->height,
+					csi_dev->formats[ret].bpp, is_raw10);
+			csi_dev->hw_ops->csi_stream_set(csi_dev, enable);
+		}
+		csi_dev->stream_count++;
+	} else {
+		if (csi_dev->stream_count == 0)
+			goto exit;
+		if (csi_dev->stream_count == 1) {
+			csi_dev->hw_ops->csi_stream_set(csi_dev, enable);
+			csi_dev->hw_ops->csi_clk_disable(csi_dev);
+		}
+		csi_dev->stream_count--;
+	}
+exit:
+	mutex_unlock(&csi_dev->stream_lock);
+	return 0;
+}
+
+static void csi_try_format(struct stf_csi_dev *csi_dev,
+			struct v4l2_subdev_pad_config *cfg,
+			unsigned int pad,
+			struct v4l2_mbus_framefmt *fmt,
+			enum v4l2_subdev_format_whence which)
+{
+	unsigned int i;
+
+	switch (pad) {
+	case STF_CSI_PAD_SINK:
+		/* Set format on sink pad */
+
+		for (i = 0; i < csi_dev->nformats; i++)
+			if (fmt->code == csi_dev->formats[i].code)
+				break;
+
+		if (i >= csi_dev->nformats)
+			fmt->code = MEDIA_BUS_FMT_RGB565_2X8_LE;
+
+		fmt->width = clamp_t(u32, fmt->width, 1, STFCAMSS_FRAME_MAX_WIDTH);
+		fmt->height = clamp_t(u32, fmt->height, 1,
+						STFCAMSS_FRAME_MAX_HEIGHT_PIX);
+
+		fmt->field = V4L2_FIELD_NONE;
+		fmt->colorspace = V4L2_COLORSPACE_SRGB;
+		fmt->flags = 0;
+		break;
+
+	case STF_CSI_PAD_SRC:
+		*fmt = *__csi_get_format(csi_dev, cfg, STF_CSI_PAD_SINK, which);
+		break;
+	}
+}
+
+static int csi_enum_mbus_code(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_mbus_code_enum *code)
+{
+	struct stf_csi_dev *csi_dev = v4l2_get_subdevdata(sd);
+
+	if (code->index >= csi_dev->nformats)
+		return -EINVAL;
+	if (code->pad == STF_CSI_PAD_SINK) {
+		code->code = csi_dev->formats[code->index].code;
+	} else {
+		struct v4l2_mbus_framefmt *sink_fmt;
+
+		sink_fmt = __csi_get_format(csi_dev, cfg,
+					STF_CSI_PAD_SINK, code->which);
+
+		code->code = sink_fmt->code;
+		if (!code->code)
+			return -EINVAL;
+	}
+	code->flags = 0;
+
+	return 0;
+}
+
+static int csi_enum_frame_size(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_frame_size_enum *fse)
+{
+	struct stf_csi_dev *csi_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt format;
+
+	if (fse->index != 0)
+		return -EINVAL;
+
+	format.code = fse->code;
+	format.width = 1;
+	format.height = 1;
+	csi_try_format(csi_dev, cfg, fse->pad, &format, fse->which);
+	fse->min_width = format.width;
+	fse->min_height = format.height;
+
+	if (format.code != fse->code)
+		return -EINVAL;
+
+	format.code = fse->code;
+	format.width = -1;
+	format.height = -1;
+	csi_try_format(csi_dev, cfg, fse->pad, &format, fse->which);
+	fse->max_width = format.width;
+	fse->max_height = format.height;
+
+	return 0;
+}
+
+static int csi_get_format(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_format *fmt)
+{
+	struct stf_csi_dev *csi_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt *format;
+
+	format = __csi_get_format(csi_dev, cfg, fmt->pad, fmt->which);
+	if (format == NULL)
+		return -EINVAL;
+
+	fmt->format = *format;
+
+	return 0;
+}
+
+static int csi_set_format(struct v4l2_subdev *sd,
+			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_format *fmt)
+{
+	struct stf_csi_dev *csi_dev = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt *format;
+
+	format = __csi_get_format(csi_dev, cfg, fmt->pad, fmt->which);
+	if (format == NULL)
+		return -EINVAL;
+
+	csi_try_format(csi_dev, cfg, fmt->pad, &fmt->format, fmt->which);
+	*format = fmt->format;
+
+	/* Propagate the format from sink to source */
+	if (fmt->pad == STF_CSI_PAD_SINK) {
+		format = __csi_get_format(csi_dev, cfg, STF_CSI_PAD_SRC, fmt->which);
+		*format = fmt->format;
+		csi_try_format(csi_dev, cfg, STF_CSI_PAD_SRC, format, fmt->which);
+	}
+
+	return 0;
+}
+
+static int csi_init_formats(struct v4l2_subdev *sd,
+			struct v4l2_subdev_fh *fh)
+{
+	struct v4l2_subdev_format format = {
+		.pad = STF_CSI_PAD_SINK,
+		.which = fh ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE,
+		.format = {
+			.code = MEDIA_BUS_FMT_RGB565_2X8_LE,
+			.width = 1920,
+			.height = 1080
+		}
+	};
+
+	return csi_set_format(sd, fh ? fh->pad : NULL, &format);
+}
+
+static int csi_link_setup(struct media_entity *entity,
+			const struct media_pad *local,
+			const struct media_pad *remote, u32 flags)
+{
+	if ((local->flags & MEDIA_PAD_FL_SOURCE) &&
+		(flags & MEDIA_LNK_FL_ENABLED)) {
+		struct v4l2_subdev *sd;
+		struct stf_csi_dev *csi_dev;
+		struct vin_line *line;
+
+		if (media_entity_remote_pad(local))
+			return -EBUSY;
+
+		sd = media_entity_to_v4l2_subdev(entity);
+		csi_dev = v4l2_get_subdevdata(sd);
+
+		sd = media_entity_to_v4l2_subdev(remote->entity);
+		line = v4l2_get_subdevdata(sd);
+		if (line->sdev_type == VIN_DEV_TYPE)
+			csi_dev->s_type = SENSOR_VIN;
+		if (line->sdev_type == ISP0_DEV_TYPE)
+			csi_dev->s_type = SENSOR_ISP0;
+		if (line->sdev_type == ISP1_DEV_TYPE)
+			csi_dev->s_type = SENSOR_ISP1;
+		st_info(ST_CSI, "CSI%d device sensor type: %d\n",
+				csi_dev->id, csi_dev->s_type);
+	}
+
+	if ((local->flags & MEDIA_PAD_FL_SINK) &&
+		(flags & MEDIA_LNK_FL_ENABLED)) {
+		struct v4l2_subdev *sd;
+		struct stf_csi_dev *csi_dev;
+		struct stf_csiphy_dev *csiphy_dev;
+
+		if (media_entity_remote_pad(local))
+			return -EBUSY;
+
+		sd = media_entity_to_v4l2_subdev(entity);
+		csi_dev = v4l2_get_subdevdata(sd);
+
+		sd = media_entity_to_v4l2_subdev(remote->entity);
+		csiphy_dev = v4l2_get_subdevdata(sd);
+
+		csi_dev->csiphy_id = csiphy_dev->id;
+		st_info(ST_SENSOR, "CSI%d link to csiphy%d\n",
+				csi_dev->id, csi_dev->csiphy_id);
+	}
+
+	return 0;
+}
+
+static const struct v4l2_subdev_core_ops csi_core_ops = {
+	.s_power = csi_set_power,
+};
+
+static const struct v4l2_subdev_video_ops csi_video_ops = {
+	.s_stream = csi_set_stream,
+};
+
+static const struct v4l2_subdev_pad_ops csi_pad_ops = {
+	.enum_mbus_code = csi_enum_mbus_code,
+	.enum_frame_size = csi_enum_frame_size,
+	.get_fmt = csi_get_format,
+	.set_fmt = csi_set_format,
+};
+
+static const struct v4l2_subdev_ops csi_v4l2_ops = {
+	.core = &csi_core_ops,
+	.video = &csi_video_ops,
+	.pad = &csi_pad_ops,
+};
+
+static const struct v4l2_subdev_internal_ops csi_v4l2_internal_ops = {
+	.open = csi_init_formats,
+};
+
+static const struct media_entity_operations csi_media_ops = {
+	.link_setup = csi_link_setup,
+	.link_validate = v4l2_subdev_link_validate,
+};
+
+int stf_csi_register(struct stf_csi_dev *csi_dev, struct v4l2_device *v4l2_dev)
+{
+	struct v4l2_subdev *sd = &csi_dev->subdev;
+	struct device *dev = csi_dev->stfcamss->dev;
+	struct media_pad *pads = csi_dev->pads;
+	int ret;
+
+	v4l2_subdev_init(sd, &csi_v4l2_ops);
+	sd->internal_ops = &csi_v4l2_internal_ops;
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+	snprintf(sd->name, ARRAY_SIZE(sd->name), "%s%d",
+		STF_CSI_NAME, csi_dev->id);
+	v4l2_set_subdevdata(sd, csi_dev);
+
+	ret = csi_init_formats(sd, NULL);
+	if (ret < 0) {
+		dev_err(dev, "Failed to init format: %d\n", ret);
+		return ret;
+	}
+
+	pads[STF_CSI_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
+	pads[STF_CSI_PAD_SRC].flags = MEDIA_PAD_FL_SOURCE;
+
+	sd->entity.function = MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER;
+	sd->entity.ops = &csi_media_ops;
+	ret = media_entity_pads_init(&sd->entity, STF_CSI_PADS_NUM, pads);
+	if (ret < 0) {
+		dev_err(dev, "Failed to init media entity: %d\n", ret);
+		return ret;
+	}
+
+	ret = v4l2_device_register_subdev(v4l2_dev, sd);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdev: %d\n", ret);
+		goto err_sreg;
+	}
+
+	return 0;
+
+err_sreg:
+	media_entity_cleanup(&sd->entity);
+	return ret;
+}
+
+int stf_csi_unregister(struct stf_csi_dev *csi_dev)
+{
+	v4l2_device_unregister_subdev(&csi_dev->subdev);
+	media_entity_cleanup(&csi_dev->subdev.entity);
+	mutex_destroy(&csi_dev->stream_lock);
+	return 0;
+}

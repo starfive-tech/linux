@@ -2,9 +2,7 @@
 /*
  * Event for VIC Video In
  *
- * Copyright (C) starfivetech.Inc
- * Authors: Xing Tang <eric.tang@starfivetech.com>
- *
+ * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 #include <linux/notifier.h>
 #include <linux/module.h>
@@ -16,13 +14,13 @@ static ATOMIC_NOTIFIER_HEAD(vin_notifier_list);
 
 int vin_notifier_register(struct notifier_block *nb)
 {
-        return atomic_notifier_chain_register(&vin_notifier_list, nb);
+	return atomic_notifier_chain_register(&vin_notifier_list, nb);
 }
 EXPORT_SYMBOL_GPL(vin_notifier_register);
 
 void vin_notifier_unregister(struct notifier_block *nb)
 {
-        atomic_notifier_chain_unregister(&vin_notifier_list, nb);
+	atomic_notifier_chain_unregister(&vin_notifier_list, nb);
 }
 EXPORT_SYMBOL_GPL(vin_notifier_unregister);
 
@@ -32,7 +30,7 @@ int vin_notifier_call(unsigned long e, void *v)
 }
 EXPORT_SYMBOL_GPL(vin_notifier_call);
 
-
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");
 MODULE_DESCRIPTION("Starfive VIC video in notifier");
 MODULE_LICENSE("GPL");
+
