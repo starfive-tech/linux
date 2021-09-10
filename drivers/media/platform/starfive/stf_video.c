@@ -1352,8 +1352,8 @@ static const struct v4l2_ioctl_ops stf_vid_ioctl_ops = {
 	.vidioc_queryctrl               = video_queryctrl,
 	.vidioc_s_ext_ctrls             = video_s_ext_ctrls,
 	.vidioc_try_ext_ctrls           = video_try_ext_ctrls,
-	//.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
-	//.vidioc_querymenu               = video_querymenu,
+	.vidioc_querymenu               = video_querymenu,
+	//.vidioc_query_ext_ctrl			= video_query_ext_ctrl,
 
 };
 
@@ -1383,13 +1383,12 @@ static const struct v4l2_ioctl_ops stf_vid_ioctl_ops_mp = {
 	.vidioc_g_selection             = video_g_selection,
 	.vidioc_g_ctrl                  = video_g_ctrl,
 	.vidioc_s_ctrl                  = video_s_ctrl,
-
     .vidioc_g_ext_ctrls             = video_g_ext_ctrls,
 	.vidioc_queryctrl               = video_queryctrl,
 	.vidioc_s_ext_ctrls             = video_s_ext_ctrls,
 	.vidioc_try_ext_ctrls           = video_try_ext_ctrls,
-//	.vidioc_querymenu               = video_querymenu,
-//	.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
+	.vidioc_querymenu               = video_querymenu,
+	//.vidioc_query_ext_ctrl          = video_query_ext_ctrl,
 };
 
 static int video_open(struct file *file)
