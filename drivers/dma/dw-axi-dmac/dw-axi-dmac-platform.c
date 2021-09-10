@@ -356,12 +356,13 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
-	struct axi_dma_hw_desc *hw_desc = NULL;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	u32 reg, irq_mask;
-	s32 descs_flush, descs_count;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+	s32 descs_flush, descs_count;
+	struct axi_dma_hw_desc *hw_desc = NULL;
 	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_dbg(chan2dev(chan), "%s is non-idle!\n",
@@ -371,12 +372,21 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 		chan->is_err = true;
 		//return;
 	}
+#else
+	if (unlikely(axi_chan_is_hw_enable(chan))) {
+		dev_err(chan2dev(chan), "%s is non-idle!\n",
+			axi_chan_name(chan));
+
+		return;
+	}
+#endif
 
 	axi_dma_enable(chan->chip);
 
 	reg = (DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 	       DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
 
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	if (chan->hw_handshake_num) {
 		switch (chan->direction) {
 		case DMA_MEM_TO_DEV:
@@ -389,6 +399,7 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 			break;
 		}
 	}
+#endif
 
 	axi_chan_iowrite32(chan, CH_CFG_L, reg);
 
@@ -425,7 +436,7 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	axi_chan_irq_set(chan, irq_mask);
 
 	/* flush all the desc */
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	if(chan->chip->flag->need_flush) {
 		int count = atomic_read(&chan->descs_allocated);
 		int i;
@@ -698,7 +709,7 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
 #else
@@ -985,10 +996,6 @@ dma_chan_prep_dma_memcpy(struct dma_chan *dchan, dma_addr_t dst_adr,
 		num++;
 	}
 
-	/* Total len of src/dest sg == 0, so no descriptor were allocated */
-	if (unlikely(!desc))
-		return NULL;
-
 	/* Set end-of-link to the last link descriptor of list */
 	set_desc_last(&desc->hw_desc[num - 1]);
 	/* Managed transfer list */
@@ -1043,8 +1050,9 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 {
 	struct virt_dma_desc *vd;
 	unsigned long flags;
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	struct axi_dma_desc *desc;
-
+#endif
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
 	axi_chan_disable(chan);
@@ -1057,11 +1065,13 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 		return; 
 	}
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	if (chan->is_err) {
 		desc = vd_to_axi_desc(vd);
 		axi_chan_block_xfer_start(chan, desc);
 		chan->is_err = false;
 	} else {
+#endif
 		/* Remove the completed descriptor from issued list */
 		list_del(&vd->node);
 
@@ -1075,7 +1085,9 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 
 		/* Try to restart the controller */
 		axi_chan_start_first_queued(chan);
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	}
+#endif
 
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
 }
@@ -1115,9 +1127,6 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
-					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
-#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1188,8 +1197,14 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
 					!(val & chan_active), 1000, 10000);
 	if (ret == -ETIMEDOUT)
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 		dev_dbg(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
+#else
+		dev_warn(dchan2dev(dchan),
+			 "%s failed to stop\n", axi_chan_name(chan));
+#endif
+
 
 	if (chan->direction != DMA_MEM_TO_MEM)
 		dw_axi_dma_set_hw_channel(chan->chip,
@@ -1357,7 +1372,7 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 	if(chip->dw->hdata->nr_channels > 8){
 		chip->flag->nr_chan_8 = true;
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 		chip->flag->need_flush = true;
 #endif
 	}
@@ -1534,7 +1549,11 @@ static int dw_probe(struct platform_device *pdev)
 	 * Therefore, set constraint to 1024 * 4.
 	 */
 	dw->dma.dev->dma_parms = &dw->dma_parms;
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	dma_set_max_seg_size(&pdev->dev, DMAC_MAX_BLK_SIZE);
+#else
+	dma_set_max_seg_size(&pdev->dev, MAX_BLOCK_SIZE);
+#endif
 	platform_set_drvdata(pdev, chip);
 
 	pm_runtime_enable(chip->dev);
