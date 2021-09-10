@@ -2,6 +2,7 @@
 /* Copyright (c) 2021 StarFive Technology Co., Ltd. */
 
 /dts-v1/;
+#include "starfive_jh7100_clk.dtsi"
 #include <dt-bindings/clock/starfive-jh7100.h>
 #include <dt-bindings/starfive_fb.h>
 
@@ -225,6 +226,7 @@
 			snps,priority = <0 1 2 3>;
 			snps,axi-max-burst-len = <128>;
 			status = "okay";
+			dma-coherent;
 		};
 
 		dma1p: dma-controller@10500000 {
@@ -547,6 +549,106 @@
 			status = "disabled";
 		};
 
+		display-subsystem {
+			compatible = "starfive,display-subsystem";
+			memory-region = <&sffb_reserved>;
+			status = "okay";
+			dma-coherent;
+		};
+
+		display-encoder {
+			compatible = "starfive,display-encoder";
+			encoder-type = <2>;	//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
+			status = "okay";
+
+			ports {
+				port@0 {
+					hdmi_out:endpoint {
+						remote-endpoint = <&tda998x_0_input>;
+						//remote-endpoint = <&dsi_out_port>;
+					};
+				};
+
+				port@1 {
+					hdmi_input0:endpoint {
+						remote-endpoint = <&crtc_0_out>;
+					};
+				};
+
+			};
+		};
+
+		crtc: crtc@12000000 {
+			compatible = "starfive,jh7100-crtc";
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&plic>;
+			interrupts = <101>, <103>;
+			interrupt-names = "lcdc_irq", "vpp1_irq";
+			reg = <0x0 0x12000000 0x0 0x10000>,
+				//<0x0 0x12100000 0x0 0x10000>,
+				<0x0 0x12040000 0x0 0x10000>,
+				<0x0 0x12080000 0x0 0x10000>,
+				<0x0 0x120c0000 0x0 0x10000>,
+				<0x0 0x12240000 0x0 0x10000>,
+				<0x0 0x12250000 0x0 0x10000>,
+				<0x0 0x12260000 0x0 0x10000>;
+			//reg-names = "lcdc", "dsitx", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
+			reg-names = "lcdc", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
+			clocks = <&uartclk>, <&apb2clk>;
+			clock-names = "baudclk", "apb_pclk";
+			ddr-format = <WIN_FMT_RGB565>;
+
+			pp1 {
+				pp-id = <1>;
+				fifo-out;
+				//sys-bus-out;
+				src-format = <COLOR_RGB565>;
+				src-width = <1920>;
+				src-height = <1080>;
+				dst-format = <COLOR_RGB888_ARGB>;
+				dst-width = <1920>;
+				dst-height = <1080>;
+			};
+
+			port: port@0 {
+				reg = <0>;
+				crtc_0_out: endpoint {
+				remote-endpoint = <&hdmi_input0>;
+				};
+			};
+		};
+
+		mipi_dphy: mipi-dphy@12260000{
+				compatible = "starfive,jh7100-mipi-dphy-tx";
+				//reg = <0x0 0x12260000 0x0 0x10000>;
+				clocks = <&uartclk>, <&apb2clk>;
+				clock-names = "baudclk", "apb_pclk";
+				#phy-cells = <0>;
+		};
+
+		mipi_dsi: mipi@12100000 {
+			compatible = "cdns,dsi";
+			clocks = <&apb1clk>, <&apb2clk>;
+			clock-names = "dsi_p_clk", "dsi_sys_clk";
+			phys = <&mipi_dphy>;
+			phy-names = "dphy";
+			status = "okay";
+			reg = <0x0 0x12100000 0x0 0x10000>;
+			reg-names = "dsi";
+
+			port {
+				dsi_out_port: endpoint {
+					remote-endpoint = <&panel_dsi_port>;
+				};
+			};
+			mipi_panel: panel@0 {
+				//compatible = "";
+				status = "okay";
+			};
+		};
+
 		vin_sysctl: vin_sysctl@19800000 {
 			compatible = "starfive,stf-vin";
 			reg = <0x0 0x19800000 0x0 0x10000>,
@@ -557,26 +659,184 @@
 			      <0x0 0x19870000 0x0 0x30000>,
 			      <0x0 0x198a0000 0x0 0x30000>,
 			      <0x0 0x11800000 0x0 0x10000>,
-			      <0x0 0x11840000 0x0 0x10000>,
-			      <0x0 0x11858000 0x0 0x10000>;
+			      <0x0 0x11840000 0x0 0x10000>;
 			reg-names = "mipi0", "vclk", "vrst", "mipi1", "sctrl",
-				    "isp0", "isp1", "tclk", "trst", "iopad";
-			interrupts = <119 109>;
+				    "isp0", "isp1", "tclk", "trst";
+			interrupts = <119 109 112>;
 			memory-region = <&vin_reserved>;
-			/*defaule config for imx219 vin&isp*/
-			format = <SRC_CSI2RX_VIN_ISP>;
-			frame-width = <800>;
-			frame-height =<480>;
-			isp0_enable;
-			csi-lane = <2>;
-			csi-dlane-swaps = /bits/ 8 <1>,/bits/ 8 <2>,/bits/ 8 <3>,/bits/ 8 <4>;
-			csi-dlane-pn-swaps = /bits/ 8 <0>,/bits/ 8 <0>,/bits/ 8 <0>,/bits/ 8 <0>;
-			csi-clane-swap = /bits/ 8 <0>;
-			csi-clane-pn-swap = /bits/ 8 <0>;
-			csi-mipiID = <0>;
-			csi-width = <1920>;
-			csi-height = <1080>;
-			csi-dt = <0x2b>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&dvpsensor_pins>;
+			status = "okay";
+
+			clocks =  <&clkgen JH7100_CLK_VIN_SRC>,
+				 <&clkgen JH7100_CLK_ISP0_AXI>,
+				 <&clkgen JH7100_CLK_ISP0NOC_AXI>,
+				 <&clkgen JH7100_CLK_ISPSLV_AXI>,
+				 <&clkgen JH7100_CLK_ISP1_AXI>,
+				 <&clkgen JH7100_CLK_ISP1NOC_AXI>,
+				 <&clkgen JH7100_CLK_VIN_AXI>,
+				 <&clkgen JH7100_CLK_VINNOC_AXI>;
+			//	 <&clkgen JH7100_CLK_CSI2RX_APB>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_0>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_1>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_2>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_3>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_SYS>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_0>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_1>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_2>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_3>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_SYS>,
+			// 	 <&clkgen JH7100_CLK_DPHY_CFGCLK>,
+			// 	 <&clkgen JH7100_CLK_DPHY_REFCLK>,
+			// 	 <&clkgen JH7100_CLK_DPHY_TXCLKESC>,
+			// 	 <&clkgen JH7100_CLK_ISP0_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP0_2X_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP0_MIPI_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_2X_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_MIPI_CTRL>;
+
+			clock-names = "vin_src",
+				      "isp0_axi",
+				      "isp0noc_axi",
+				      "ispslv_axi",
+				      "isp1_axi",
+				      "isp1noc_axi",
+				      "vin_axi",
+				      "vinnoc_axi";
+				// 	"csi2rx_apb_clk",
+				// 	"mipirx0_pixel0",
+				// 	"mipirx0_pixel1",
+				// 	"mipirx0_pixel2",
+				// 	"mipirx0_pixel3",
+				// 	"mipirx0_sys",
+				// 	"mipirx1_pixel0",
+				// 	"mipirx1_pixel1",
+				// 	"mipirx1_pixel2",
+				// 	"mipirx1_pixel3",
+				// 	"mipirx1_sys",
+				// 	"csidphy_cfgclk",
+				// 	"csidphy_regclk",
+				// 	"csidphy_txclkesc",
+				// 	"isp0_ctrl",
+				// 	"isp0_2x_ctrl",
+				// 	"isp0_mipi_ctrl",
+				// 	"isp1_ctrl",
+				// 	"isp1_2x_ctrl",
+				// 	"isp1_mipi_ctrl";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+
+					dphy0_out_csi2rx: endpoint {
+						remote-endpoint = <&csi2rx0_in_dphy>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "failed";
+					};
+				};
+
+				//port@1 {
+				//	reg = <1>;
+
+				//	dphy1_out_csi2rx: endpoint {
+				//		remote-endpoint = <&csi2rx1_in_dphy>;
+				//		clock-lanes = <0>;
+				//		data-lanes = <1 2>;
+				//		status = "failed";
+				//	};
+				//};
+
+				/* TODO: Used for EVB board, comment here for starlight board, remove it later*/
+				port@2 {
+					reg = <2>; // dvp sensor
+
+					// Parallel bus endpoint
+					parallel_from_ov5640: endpoint {
+						remote-endpoint = <&ov5640_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <0>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+				};
+				
+				port@3 {
+					reg = <2>; //dvp sensor
+
+					// Parallel bus endpoint
+					parallel_from_sc2235: endpoint {
+						remote-endpoint = <&sc2235_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <1>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+				};
+
+				port@4 {
+					reg = <3>; //csi2rx0 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx0_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx0>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "okay";
+					};
+				};
+
+				port@5 {
+					reg = <4>; // csi2rx1 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx1_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx1>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <5>;
+						data-lanes = <3 4>;
+						lane-polarities = <0 1 0>;
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		csi2rx: csi-bridge@19800000 {
+			compatible = "cdns,csi2rx";
+			reg = <0x0 0x19800000 0x0 0x10000>;
+			clocks = <&byteclock>, <&byteclock>,
+				 <&coreclock>, <&coreclock>,
+				 <&coreclock>, <&coreclock>;
+			clock-names = "sys_clk", "p_clk",
+				      "pixel_if0_clk", "pixel_if1_clk",
+				      "pixel_if2_clk", "pixel_if3_clk";
+		
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+		
+				port@0 {
+					reg = <0>;
+		
+					csi2rx0_in_dphy: endpoint {
+						remote-endpoint = <&dphy0_out_csi2rx>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+					};
+				};
+			};
 		};
 
 		sfctemp: tmon@124a0000 {
@@ -619,6 +879,154 @@
 			reg = <0x0 0x11810000 0x0 0x10000>;
 			fuse-count = <0x200>;
 			clocks = <&clkgen JH7100_CLK_OTP_APB>;
+		};
+
+		i2sadc0: i2sadc0@10400000 {
+			compatible = "snps,designware-i2sadc0";
+			reg = <0x0 0x10400000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			/* interrupts = <59>; */
+			/* interrupt-names = "rx"; */
+			clocks = <&apb1clk>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 28>;
+			dma-names = "rx";
+		};
+		
+		i2svad: i2svad@10420000 {
+			compatible = "sf,sf-i2svad";
+			reg = <0x0 0x10420000 0x0 0x1000> ;
+			interrupt-parent = <&plic>;
+			interrupts = <60>, <61>;
+			interrupt-names = "spintr", "slintr";
+			clocks = <&apb1clk>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+		};
+
+		i2sdac0: i2sdac0@10450000 {
+			compatible = "snps,designware-i2sdac0";
+			reg = <0x0 0x10450000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			/*interrupts = <64>; */
+			/*interrupt-names = "tx";*/
+			clocks = <&apb1clk>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 30>;
+			dma-names = "tx";
+		};
+		
+		i2sdac1: i2sdac1@10460000 {
+			compatible = "snps,designware-i2sdac1";
+			reg = <0x0 0x10460000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			/*interrupts = <66>;*/
+			/*interrupt-names = "tx";*/
+			clocks = <&apb1clk>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 31>;
+			dma-names = "tx";
+		};
+
+		i2sdac16k: i2sdac16k@10470000 {
+			compatible = "snps,designware-i2sdac16k";
+			reg = <0x0 0x10470000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			/* interrupts = <68>; */
+			/* interrupt-names = "tx"; */
+			clocks = <&apb1clk>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 29>;
+			dma-names = "tx";
+		};
+
+		spdif0: spdif0@10430000 {
+			compatible = "starfive,sf-spdif";
+			reg = <0x0 0x10430000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <62>;
+			interrupt-names = "tx";
+			clocks = <&audioclk>;
+			clock-names = "audioclk";
+			#sound-dai-cells = <0>;
+		};
+
+		pdm: pdm@10410000 {
+			compatible = "starfive,sf-pdm";
+			reg = <0x0 0x10410000 0x0 0x1000>, <0x0 0x10480000 0x0 0x1000>;
+			reg-names = "pdm", "audio-clk";
+			clocks = <&audioclk>;
+			clock-names = "audioclk";
+			#sound-dai-cells = <0>;
+		};
+	
+		ac108_mclk: ac108_mclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+		
+		wm8960_mclk: wm8960_mclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+
+		spdif_transmitter: spdif_transmitter {
+			compatible = "linux,spdif-dit";
+			#sound-dai-cells = <0>;
+		};	
+		
+		spdif_receiver: spdif_receiver {
+			compatible = "linux,spdif-dir";
+			#sound-dai-cells = <0>;
+		};
+		
+		pwmdac: pwmdac@10440000 {
+			compatible = "sf,pwmdac";
+			reg = <0x0 0x10440000 0x0 0x1000>;
+			clocks = <&apb1clk>;
+			dmas = <&dma2p 23>;
+			dma-names = "tx";
+			#sound-dai-cells = <0>;
+		};
+		
+		pwmdac_codec: pwmdac-transmitter {
+			compatible = "linux,pwmdac-dit";
+			#sound-dai-cells = <0>;
+		};
+		
+		dmic_codec: dmic_codec { 
+			compatible = "dmic-codec";
+			#sound-dai-cells = <0>;
+		}; 
+
+		sound:snd-card{
+			compatible = "simple-audio-card";
+			simple-audio-card,name = "Starfive-Multi-Sound-Card";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* pwmdac */
+			simple-audio-card,dai-link@0 {
+				reg = <0>;
+				status = "okay";
+				format = "left_j";
+				bitclock-master = <&sndcpu0>;
+				frame-master = <&sndcpu0>;
+				
+				sndcpu0: cpu {
+					sound-dai = <&pwmdac>;
+				};
+
+				codec {
+					sound-dai = <&pwmdac_codec>;
+				};
+			};
 		};
 	};
 };

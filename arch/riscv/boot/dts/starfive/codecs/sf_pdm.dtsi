@@ -1,0 +1,17 @@
+&sound {
+	/* pdm + i2s */
+	simple-audio-card,dai-link@1 {
+		reg = <1>;
+		format = "i2s";
+		bitclock-master = <&sndcodec1>;
+		frame-master = <&sndcodec1>;
+
+		cpu {
+			sound-dai = <&i2sadc0>;
+		};
+
+		sndcodec1: codec {
+			sound-dai = <&pdm>;
+		};
+	};
+};

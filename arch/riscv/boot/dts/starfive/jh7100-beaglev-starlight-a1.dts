@@ -21,5 +21,5 @@
 
 &gpio {
 	/* don't reset gpio mux for serial console and reset gpio */
-	starfive,keep-gpiomux = <13 14 63>;
+	starfive,keep-gpiomux = <13 14 63 0 2 3 45>;
 };

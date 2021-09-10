@@ -94,7 +94,7 @@
 
 &gpio {
 	/* don't reset gpio mux for serial console on uart3 */
-	starfive,keep-gpiomux = <13 14>;
+	starfive,keep-gpiomux = <13 14 0 2 3 45>;
 
 	gmac_pins: gmac-0 {
 		gtxclk-pins {
@@ -218,11 +218,11 @@
 				 <GPIOMUX(5,
 				  GPO_PWM_PAD_OUT_BIT1,
 				  GPO_PWM_PAD_OE_N_BIT1,
-				  GPI_NONE)>,
-				 <GPIOMUX(45,
-				  GPO_PWM_PAD_OUT_BIT2,
-				  GPO_PWM_PAD_OE_N_BIT2,
 				  GPI_NONE)>;
+				//  <GPIOMUX(45,
+				//   GPO_PWM_PAD_OUT_BIT2,
+				//   GPO_PWM_PAD_OE_N_BIT2,
+				//   GPI_NONE)>;
 			bias-disable;
 			drive-strength = <35>;
 			input-disable;
@@ -377,6 +377,115 @@
 			slew-rate = <0>;
 		};
 	};
+
+	dvpsensor_pins: dvp0 {
+		signal-pins {
+			pins = <PAD_FUNC_SHARE(98)>,
+			       <PAD_FUNC_SHARE(99)>,
+			       <PAD_FUNC_SHARE(100)>,
+			       <PAD_FUNC_SHARE(101)>,
+			       <PAD_FUNC_SHARE(102)>,
+			       <PAD_FUNC_SHARE(103)>,
+			       <PAD_FUNC_SHARE(104)>,
+			       <PAD_FUNC_SHARE(105)>,
+			       <PAD_FUNC_SHARE(106)>,
+			       <PAD_FUNC_SHARE(107)>,
+			       <PAD_FUNC_SHARE(108)>,
+			       <PAD_FUNC_SHARE(109)>,
+			       <PAD_FUNC_SHARE(110)>,
+			       <PAD_FUNC_SHARE(111)>,
+			       <PAD_FUNC_SHARE(112)>,
+			       <PAD_FUNC_SHARE(113)>,
+			       <PAD_FUNC_SHARE(114)>;
+			input-enable;
+		};
+	};
+
+	sensor0_default: sensor0 {
+		reset-pins {
+			pinmux = <GPIOMUX(58, GPO_LOW,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sensor0_reset_low: sensor0 {
+		reset-pins {
+			pinmux = <GPIOMUX(58, GPO_LOW,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sensor0_reset_high: sensor0 {
+		reset-pins {
+			pinmux = <GPIOMUX(58, GPO_HIGH,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sensor1_default: sensor1 {
+		reset-pins {
+			pinmux = <GPIOMUX(57, GPO_LOW,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sensor1_reset_low: sensor1 {
+		reset-pins {
+			pinmux = <GPIOMUX(57, GPO_LOW,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	sensor1_reset_high: sensor1 {
+		reset-pins {
+			pinmux = <GPIOMUX(57, GPO_HIGH,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+
+	pwmdac_pins: pwmdac_0 {
+		pwmdac_pins {
+			pinmux = <GPIOMUX(23, GPO_PWMDAC_LEFT_OUT,
+				  GPO_ENABLE, GPI_NONE)>,
+				  <GPIOMUX(24, GPO_PWMDAC_RIGHT_OUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
 };
 
 &i2c0 {
@@ -391,7 +500,27 @@
 	imx219@10 {
 		compatible = "imx219";
 		reg = <0x10>;
-		reset-gpio = <&gpio 58 GPIO_ACTIVE_HIGH>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		// powerdown-gpio = <&gpio 21 GPIO_ACTIVE_HIGH>;
+		// reset-gpio = <&gpio 58 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default", "reset_low", "reset_high";
+		pinctrl-0 = <&sensor0_default>;
+		pinctrl-1 = <&sensor0_reset_low>;
+		pinctrl-2 = <&sensor0_reset_high>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <0>;
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
 	};
 
 	pmic@5e {
@@ -407,6 +536,12 @@
 	tda998x@70 {
 		compatible = "nxp,tda998x";
 		reg = <0x70>;
+
+		port {
+			tda998x_0_input: endpoint {
+				remote-endpoint = <&hdmi_out>;
+			};
+		};
 	};
 };
 
@@ -418,6 +553,68 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pins>;
 	status = "okay";
+
+	ac108_a: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
+	};
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		#sound-dai-cells = <0>;
+		wlf,shared-lrclk;
+	};
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+	};
+
+	/* TODO: ov5640 and sc2235 used on EVB board, not support on starlight board, remove it here?*/
+	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		powerdown-gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 28 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <180>;
+		port {
+			// Parallel bus endpoint
+			ov5640_to_parallel: endpoint {
+				remote-endpoint = <&parallel_from_ov5640>;
+				bus-type = <5>;      // Parallel
+				bus-width = <8>;
+				data-shift = <2>; // lines 9:2 are used
+				hsync-active = <0>;
+				vsync-active = <1>;
+				pclk-sample = <1>;
+			};
+		};
+	};
+	sc2235@30 {
+		compatible = "sc2235";
+		reg = <0x30>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		powerdown-gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 28 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		port {
+			// Parallel bus endpoint
+			sc2235_to_parallel: endpoint {
+				remote-endpoint = <&parallel_from_sc2235>;
+				bus-type = <5>;      // Parallel
+				bus-width = <8>;
+				data-shift = <2>; // lines 13:6 are used
+				hsync-active = <1>;
+				vsync-active = <1>;
+				pclk-sample = <1>;
+			};
+		};
+	};
 };
 
 &i2c2 {
@@ -432,6 +629,38 @@
 	seeed_plane_i2c@45 {
 		compatible = "seeed_panel";
 		reg = <0x45>;
+
+		port {
+			panel_dsi_port: endpoint {
+				remote-endpoint = <&dsi_out_port>;
+			};
+		};
+	};
+
+	imx219sub@10 {
+		compatible = "imx219";
+		reg = <0x10>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		// powerdown-gpio = <&gpio 21 GPIO_ACTIVE_HIGH>;
+		// reset-gpio = <&gpio 57 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default", "reset_low", "reset_high";
+		pinctrl-0 = <&sensor1_default>;
+		pinctrl-1 = <&sensor1_reset_low>;
+		pinctrl-2 = <&sensor1_reset_high>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <0>;
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx1: endpoint {
+				remote-endpoint = <&csi2rx1_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
 	};
 };
 
@@ -513,18 +742,16 @@
 &sfivefb {
 	status = "okay";
 
-	/*
 	pp1 {
 		pp-id = <1>;
 		fifo-out;
 		src-format = <COLOR_YUV420_NV21>;
-		src-width = <800>;
-		src-height = <480>;
+		src-width = <1920>;
+		src-height = <1080>;
 		dst-format = <COLOR_RGB888_ARGB>;
-		dst-width = <800>;
-		dst-height = <480>;
+		dst-width = <1920>;
+		dst-height = <1080>;
 	};
-	*/
 
 	tda_998x_1080p {
 		compatible = "starfive,display-dev";
@@ -772,3 +999,15 @@
 	dr_mode = "host";
 	status = "okay";
 };
+
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac_pins>;
+	status = "okay";
+};
+
+/* #include "codecs/sf_pdm.dtsi" */
+/* #include "codecs/sf_spdif.dtsi" */
+/* #include "codecs/sf_ac108.dtsi" */
+/* #include "codecs/sf_wm8960.dtsi" */
+/* #include "codecs/sf_vad.dtsi" */
