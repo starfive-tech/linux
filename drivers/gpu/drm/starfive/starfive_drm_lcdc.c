@@ -3,7 +3,6 @@
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 #include <linux/module.h>
-#include <video/starfive_fb.h>
 #include <drm/drm_crtc.h>
 #include "starfive_drm_lcdc.h"
 #include "starfive_drm_vpp.h"

@@ -176,9 +176,9 @@ static int starfive_drm_bind(struct device *dev)
 	ret = drm_dev_register(drm_dev, 0);
 	if (ret)
 		goto err_drm_dev_register;
-
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	drm_fbdev_generic_setup(drm_dev, 16);
-
+#endif
 	return 0;
 
 err_drm_dev_register:

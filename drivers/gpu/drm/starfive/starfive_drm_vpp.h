@@ -33,6 +33,19 @@
 #define R2Y_COEF_B3       (0x400|21)
 #define R2Y_OFFSET3       128
 //*/
+
+//sys registers
+#define SYS_CONF_LCDC		0x00
+#define SYS_CONF_PP			0x04
+#define SYS_MAP_CONV		0x08
+
+//vout clk registers
+#define CLK_LCDC_OCLK_CTRL	0x14
+
+struct res_name {
+	char name[10];
+};
+
 enum PP_LCD_PATH
 {
 	SYS_BUS_OUTPUT = 0,

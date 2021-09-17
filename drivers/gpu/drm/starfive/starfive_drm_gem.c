@@ -185,9 +185,11 @@ starfive_drm_gem_create_with_handle(struct drm_file *file_priv,
 	struct starfive_drm_gem_obj *starfive_gem;
 	struct drm_gem_object *gem;
 	int ret;
-
-	starfive_gem = starfive_drm_gem_create_object(drm, size, true);
-	//starfive_gem = starfive_drm_gem_create_object(drm, size, true);//config true,for console display
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+	starfive_gem = starfive_drm_gem_create_object(drm, size, true);//config true,for console display
+#else	
+	starfive_gem = starfive_drm_gem_create_object(drm, size, false);
+#endif
 	if (IS_ERR(starfive_gem))
 		return ERR_CAST(starfive_gem);
 
