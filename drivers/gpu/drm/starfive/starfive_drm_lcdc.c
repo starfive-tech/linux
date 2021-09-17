@@ -452,7 +452,7 @@ static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_sta
 	case 1920:
 		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
 		tmp_val &= ~(0x3F);
-		tmp_val |= (20& 0x3F);//20 30MHz , 15  40Mhz ,10 60Mhz
+		tmp_val |= (10 & 0x3F);//20 30MHz , 15  40Mhz ,10 60Mhz
 		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
 		break;
 	case 2048:

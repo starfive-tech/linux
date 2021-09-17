@@ -115,7 +115,7 @@ static int sf_fb_lcdc_clk_cfg(struct sf_fb_data *sf_dev)
 	case 1920:
 		tmp_val = sf_fb_clkread32(sf_dev, CLK_LCDC_OCLK_CTRL);
 		tmp_val &= ~(0x3F);
-		tmp_val |= (24 & 0x3F);
+		tmp_val |= (10 & 0x3F);
 		sf_fb_clkwrite32(sf_dev, CLK_LCDC_OCLK_CTRL, tmp_val);
 		break;
 	default:
