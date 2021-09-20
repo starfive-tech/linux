@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/delay.h>
 #include "starfive_drm_vpp.h"
@@ -739,8 +740,8 @@ void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
 	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(24), BIT(24));
 	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 0);
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, BIT(31), BIT(31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, BIT(31), BIT(31));
+	clk_prepare_enable(sf_crtc->clk_disp_axi);
+	clk_prepare_enable(sf_crtc->clk_vout_src);
 	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(23));
 	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
 	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(24));
@@ -770,8 +771,8 @@ void vout_reset(struct starfive_crtc *sf_crtc)
 
 	iowrite32(0xFFFFFFFF, sf_crtc->base_rst);
 
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, BIT(31), BIT(31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, BIT(31), BIT(31));
+	clk_prepare_enable(sf_crtc->clk_disp_axi);
+	clk_prepare_enable(sf_crtc->clk_vout_src);
 
 	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(23));
 	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
@@ -807,8 +808,8 @@ void vout_disable(struct starfive_crtc *sf_crtc)
 {
 	iowrite32(0xFFFFFFFF, sf_crtc->base_rst);
 
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, 0, BIT(31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, 0, BIT(31));
+	clk_disable_unprepare(sf_crtc->clk_disp_axi);
+	clk_disable_unprepare(sf_crtc->clk_vout_src);
 
 	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(23), BIT(23));
 	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
