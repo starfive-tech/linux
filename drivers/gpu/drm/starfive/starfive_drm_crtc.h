@@ -47,7 +47,8 @@ struct starfive_crtc {
 	struct clk *clk_disp_axi;
 	struct clk *clk_vout_src;
 
-	void __iomem	*toprst;	// 0x11840000, 0x10000
+	struct reset_control *rst_disp_axi;
+	struct reset_control *rst_vout_src;
 
 	int		lcdc_irq;
 	int		vpp0_irq;
