@@ -22,20 +22,6 @@
 #include <soc/starfive/vic7100.h>
 //#include <video/sys_comm_regs.h>
 
-struct resource_name {
-	char name[10];
-};
-
-static const struct resource_name mem_res_name[] = {
-	{"lcdc"},
-	{"vpp0"},
-	{"vpp1"},
-	{"vpp2"},
-	{"clk"},
-	{"rst"},
-	{"sys"}
-};
-
 static inline struct drm_encoder *
 starfive_head_atom_get_encoder(struct starfive_crtc *sf_crtc)
 {
@@ -314,13 +300,14 @@ int starfive_crtc_create(struct drm_device *drm_dev,
 
 static int starfive_crtc_get_memres(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
 {
-	struct device *dev = &pdev->dev;
+	static const char *const mem_res_name[] = {
+		"lcdc", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys"
+	};
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(mem_res_name); i++) {
-		const char *name = mem_res_name[i].name;
-		struct resource *res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
-		void __iomem *regs = devm_ioremap_resource(dev, res);
+		const char *name = mem_res_name[i];
+		void __iomem *regs = devm_platform_ioremap_resource_byname(pdev, name);
 
 		if (IS_ERR(regs))
 			return PTR_ERR(regs);
@@ -422,7 +409,10 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 
 	spin_lock_init(&crtcp->reg_lock);
 
-	starfive_crtc_get_memres(pdev, crtcp);
+	ret = starfive_crtc_get_memres(pdev, crtcp);
+	if (ret)
+		return ret;
+
 	ret = starfive_parse_dt(dev, crtcp);
 
 	crtcp->pp_conn_lcdc = starfive_pp_get_2lcdc_id(crtcp);
