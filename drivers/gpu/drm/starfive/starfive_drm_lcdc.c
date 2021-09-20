@@ -7,16 +7,6 @@
 #include "starfive_drm_lcdc.h"
 #include "starfive_drm_vpp.h"
 
-static const struct res_name mem_res_name[] = {
-	{"lcdc"},
-	{"vpp0"},
-	{"vpp1"},
-	{"vpp2"},
-	{"clk"},
-	{"rst"},
-	{"sys"}
-};
-
 static u32 sf_fb_clkread32(struct starfive_crtc *sf_crtc, u32 reg)
 {
 	return ioread32(sf_crtc->base_clk + reg);

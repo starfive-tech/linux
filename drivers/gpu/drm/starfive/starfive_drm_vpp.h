@@ -40,10 +40,6 @@
 //vout clk registers
 #define CLK_LCDC_OCLK_CTRL	0x14
 
-struct res_name {
-	char name[10];
-};
-
 enum PP_LCD_PATH {
 	SYS_BUS_OUTPUT = 0,
 	FIFO_OUTPUT = 1,
