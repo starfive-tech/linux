@@ -5,6 +5,7 @@
 #include <linux/clk.h>
 #include <linux/component.h>
 #include <linux/of_device.h>
+#include <linux/reset.h>
 #include <linux/delay.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -330,8 +331,6 @@ static int starfive_crtc_get_memres(struct platform_device *pdev, struct starfiv
 			dev_err(&pdev->dev, "Could not match resource name\n");
 	}
 
-	sf_crtc->toprst = ioremap(0x11840000, 0x10000);
-
 	return 0;
 }
 
@@ -345,6 +344,19 @@ static int starfive_crtc_get_clks(struct platform_device *pdev, struct starfive_
 
 	sf_crtc->clk_disp_axi = clks[0].clk;
 	sf_crtc->clk_vout_src = clks[1].clk;
+	return ret;
+}
+
+static int starfive_crtc_get_resets(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
+{
+	struct reset_control_bulk_data resets[] = {
+		{ .id = "disp_axi" },
+		{ .id = "vout_src" },
+	};
+	int ret = devm_reset_control_bulk_get_exclusive(&pdev->dev, ARRAY_SIZE(resets), resets);
+
+	sf_crtc->rst_disp_axi = resets[0].rstc;
+	sf_crtc->rst_vout_src = resets[1].rstc;
 	return ret;
 }
 
@@ -426,6 +438,10 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 		return ret;
 
 	ret = starfive_crtc_get_clks(pdev, crtcp);
+	if (ret)
+		return ret;
+
+	ret = starfive_crtc_get_resets(pdev, crtcp);
 	if (ret)
 		return ret;
 
