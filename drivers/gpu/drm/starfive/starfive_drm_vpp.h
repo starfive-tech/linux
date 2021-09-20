@@ -162,8 +162,6 @@ struct pp_mode {
 #define PP_COEF_B1		0
 #define PP_OFFSET_1		16
 
-#define rstgen_assert1_REG			0x4
-#define rstgen_status1_REG			0x14
 #define vout_rstgen_assert0_REG			0x0
 #define vout_rstgen_status0_REG			0x4
 #define clk_vout_apb_ctrl_REG			0x0
