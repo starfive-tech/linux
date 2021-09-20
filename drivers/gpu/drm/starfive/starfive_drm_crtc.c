@@ -330,10 +330,22 @@ static int starfive_crtc_get_memres(struct platform_device *pdev, struct starfiv
 			dev_err(&pdev->dev, "Could not match resource name\n");
 	}
 
-	sf_crtc->topclk = ioremap(0x11800000, 0x10000);
 	sf_crtc->toprst = ioremap(0x11840000, 0x10000);
 
 	return 0;
+}
+
+static int starfive_crtc_get_clks(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
+{
+	struct clk_bulk_data clks[] = {
+		{ .id = "disp_axi" },
+		{ .id = "vout_src" },
+	};
+	int ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
+
+	sf_crtc->clk_disp_axi = clks[0].clk;
+	sf_crtc->clk_vout_src = clks[1].clk;
+	return ret;
 }
 
 static int starfive_parse_dt(struct device *dev, struct starfive_crtc *sf_crtc)
@@ -410,6 +422,10 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 	spin_lock_init(&crtcp->reg_lock);
 
 	ret = starfive_crtc_get_memres(pdev, crtcp);
+	if (ret)
+		return ret;
+
+	ret = starfive_crtc_get_clks(pdev, crtcp);
 	if (ret)
 		return ret;
 
