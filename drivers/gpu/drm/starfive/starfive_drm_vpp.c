@@ -4,6 +4,7 @@
  */
 #include <linux/clk.h>
 #include <linux/module.h>
+#include <linux/reset.h>
 #include <linux/delay.h>
 #include "starfive_drm_vpp.h"
 #include "starfive_drm_crtc.h"
@@ -16,16 +17,6 @@ static inline void sf_set_clear(void __iomem *addr, u32 reg, u32 set, u32 clear)
 	value &= ~clear;
 	value |= set;
 	iowrite32(value, addr + reg);
-}
-
-static inline void sf_reg_status_wait(void __iomem *addr, u32 reg, u8 offset, u8 value)
-{
-	u32 temp;
-
-	do {
-		temp = ioread32(addr + reg) >> offset;
-		temp &= 0x01;
-	} while (temp != value);
 }
 
 static u32 sf_fb_sysread32(struct starfive_crtc *sf_crtc, u32 reg)
@@ -736,16 +727,13 @@ void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 {
 	u32 temp;
 
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(23), BIT(23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(24), BIT(24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 0);
+	reset_control_assert(sf_crtc->rst_vout_src);
+	reset_control_assert(sf_crtc->rst_disp_axi);
 	clk_prepare_enable(sf_crtc->clk_disp_axi);
 	clk_prepare_enable(sf_crtc->clk_vout_src);
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 1);
+	reset_control_deassert(sf_crtc->rst_vout_src);
+	reset_control_deassert(sf_crtc->rst_disp_axi);
+
 	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, BIT(31), BIT(31));
 	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, BIT(31), BIT(31));
 	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, BIT(31), BIT(31));
@@ -773,12 +761,8 @@ void vout_reset(struct starfive_crtc *sf_crtc)
 
 	clk_prepare_enable(sf_crtc->clk_disp_axi);
 	clk_prepare_enable(sf_crtc->clk_vout_src);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, 0, BIT(24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 1);
+	reset_control_deassert(sf_crtc->rst_vout_src);
+	reset_control_deassert(sf_crtc->rst_disp_axi);
 
 	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, BIT(31), BIT(31));
 	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, BIT(31), BIT(31));
@@ -810,12 +794,8 @@ void vout_disable(struct starfive_crtc *sf_crtc)
 
 	clk_disable_unprepare(sf_crtc->clk_disp_axi);
 	clk_disable_unprepare(sf_crtc->clk_vout_src);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(23), BIT(23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, BIT(24), BIT(24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 0);
+	reset_control_assert(sf_crtc->rst_vout_src);
+	reset_control_assert(sf_crtc->rst_disp_axi);
 }
 
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");
