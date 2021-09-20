@@ -2,7 +2,9 @@
 /*
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
+#include <linux/clk.h>
 #include <linux/module.h>
+#include <linux/units.h>
 #include <drm/drm_crtc.h>
 #include "starfive_drm_lcdc.h"
 #include "starfive_drm_vpp.h"
@@ -394,7 +396,7 @@ void lcdc_run(struct starfive_crtc *sf_crtc, uint32_t winMode, uint32_t lcdTrig)
 
 static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
 {
-	u32 reg_val = 1485000 / state->mode.clock;
+	u32 reg_val = clk_get_rate(sf_crtc->clk_vout_src) / (state->mode.clock * HZ_PER_KHZ);
 	u32 tmp_val;
 
 	dev_dbg(sf_crtc->dev, "%s: reg_val = %u\n", __func__, reg_val);
