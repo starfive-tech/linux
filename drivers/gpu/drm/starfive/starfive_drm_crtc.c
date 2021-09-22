@@ -64,6 +64,7 @@ static int ddrfmt_to_ppfmt(struct starfive_crtc *sf_crtc)
 	case DRM_FORMAT_NV12:
 		sf_crtc->vpp_format = COLOR_YUV420_NV12;
 		break;
+	case DRM_FORMAT_XRGB8888:
 	case DRM_FORMAT_ARGB8888:
 		sf_crtc->vpp_format = COLOR_RGB888_ARGB;
 		break;
