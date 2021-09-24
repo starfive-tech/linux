@@ -63,6 +63,10 @@ static int sf_fb_pp_get_2lcdc_id(struct sf_fb_data *sf_dev);
 	#define FB_ERR(x...)  do{} while(0)
 #endif
 
+static int sf_fb_pp_init(struct sf_fb_data *sf_dev);
+static int sf_fb_lcdc_init(struct sf_fb_data *sf_dev);
+static void sf_fb_pp_enable_intr(struct sf_fb_data *sf_dev, int enable);
+static int sf_fb_pp_run(struct sf_fb_data *sf_dev) ;
 static const struct res_name mem_res_name[] = {
 	{"lcdc"},
 	{"dsitx"},

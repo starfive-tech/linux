@@ -235,7 +235,7 @@ static const struct of_device_id starfive_drm_dt_ids[] = {
 	{ .compatible = "starfive,display-subsystem", },
 	{ /* sentinel */ },
 };
-MODULE_DEVICE_TABLE(of, rockchip_drm_dt_ids);
+//MODULE_DEVICE_TABLE(of, rockchip_drm_dt_ids);
 
 static struct platform_driver starfive_drm_platform_driver = {
 	.probe	= starfive_drm_probe,
