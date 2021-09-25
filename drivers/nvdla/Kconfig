@@ -1,5 +1,4 @@
 config NVDLA
-	bool "The NVIDIA Deep Learning Accelerator"
-	default n
+	tristate "The NVIDIA Deep Learning Accelerator"
 	depends on DRM
 	select DRM_GEM_CMA_HELPER
