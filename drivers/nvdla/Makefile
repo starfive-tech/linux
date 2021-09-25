@@ -1,19 +1,21 @@
 
-ccflags-$(CONFIG_NVDLA) += -I$(srctree)/$(src)
-ccflags-$(CONFIG_NVDLA) += -I$(srctree)/$(src)/include
+ccflags-y += -I$(srctree)/$(src)
+ccflags-y += -I$(srctree)/$(src)/include
 
-obj-$(CONFIG_NVDLA) += scheduler.o
-obj-$(CONFIG_NVDLA) += engine.o
-obj-$(CONFIG_NVDLA) += bdma.o
-obj-$(CONFIG_NVDLA) += conv.o
-obj-$(CONFIG_NVDLA) += sdp.o
-obj-$(CONFIG_NVDLA) += cdp.o
-obj-$(CONFIG_NVDLA) += pdp.o
-obj-$(CONFIG_NVDLA) += rubik.o
-obj-$(CONFIG_NVDLA) += cache.o
-obj-$(CONFIG_NVDLA) += common.o
-obj-$(CONFIG_NVDLA) += engine_data.o
-obj-$(CONFIG_NVDLA) += engine_isr.o
-obj-$(CONFIG_NVDLA) += engine_debug.o
-obj-$(CONFIG_NVDLA) += nvdla_core_callbacks.o
-obj-$(CONFIG_NVDLA) += nvdla_gem.o
+nvdla-y := scheduler.o \
+	   engine.o \
+	   bdma.o \
+	   conv.o \
+	   sdp.o \
+	   cdp.o \
+	   pdp.o \
+	   rubik.o \
+	   cache.o \
+	   common.o \
+	   engine_data.o \
+	   engine_isr.o \
+	   engine_debug.o \
+	   nvdla_core_callbacks.o \
+	   nvdla_gem.o
+
+obj-$(CONFIG_NVDLA) += nvdla.o
