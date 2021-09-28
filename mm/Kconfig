@@ -640,7 +640,6 @@ config ZSWAP_ZPOOL_DEFAULT_Z3FOLD
 
 config ZSWAP_ZPOOL_DEFAULT_ZSMALLOC
 	bool "zsmalloc"
-	depends on !PREEMPT_RT
 	select ZSMALLOC
 	help
 	  Use the zsmalloc allocator as the default allocator.
@@ -691,7 +690,7 @@ config Z3FOLD
 
 config ZSMALLOC
 	tristate "Memory allocator for compressed pages"
-	depends on MMU && !PREEMPT_RT
+	depends on MMU
 	help
 	  zsmalloc is a slab-based memory allocator designed to store
 	  compressed RAM pages.  zsmalloc uses virtual memory mapping
