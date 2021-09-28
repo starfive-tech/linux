@@ -4845,8 +4845,12 @@ static struct rq *finish_task_switch(struct task_struct *prev)
 		if (prev->sched_class->task_dead)
 			prev->sched_class->task_dead(prev);
 
-		/* Task is done with its stack. */
-		put_task_stack(prev);
+		/*
+		 * Release VMAP'ed task stack immediate for reuse. On RT
+		 * enabled kernels this is delayed for latency reasons.
+		 */
+		if (!IS_ENABLED(CONFIG_PREEMPT_RT))
+			put_task_stack(prev);
 
 		put_task_struct_rcu_user(prev);
 	}

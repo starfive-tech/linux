@@ -172,6 +172,11 @@ static void delayed_put_task_struct(struct rcu_head *rhp)
 	kprobe_flush_task(tsk);
 	perf_event_delayed_put(tsk);
 	trace_sched_process_free(tsk);
+
+	/* RT enabled kernels delay freeing the VMAP'ed task stack */
+	if (IS_ENABLED(CONFIG_PREEMPT_RT))
+		put_task_stack(tsk);
+
 	put_task_struct(tsk);
 }
 

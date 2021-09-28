@@ -289,7 +289,10 @@ static inline void free_thread_stack(struct task_struct *tsk)
 			return;
 		}
 
-		vfree_atomic(tsk->stack);
+		if (!IS_ENABLED(CONFIG_PREEMPT_RT))
+			vfree_atomic(tsk->stack);
+		else
+			vfree(tsk->stack);
 		return;
 	}
 #endif
