@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 OBJECT_FILES_NON_STANDARD := y
 
-purgatory-y := purgatory.o sha256.o entry.o string.o ctype.o rvstring.o memset.o
+purgatory-y := purgatory.o sha256.o entry.o string.o ctype.o rvstring.o
 
 targets += $(purgatory-y)
 PURGATORY_OBJS = $(addprefix $(obj)/,$(purgatory-y))
@@ -14,9 +14,6 @@ $(obj)/ctype.o: $(srctree)/lib/ctype.c FORCE
 
 $(obj)/rvstring.o: $(srctree)/arch/riscv/lib/string.c FORCE
 	$(call if_changed_rule,cc_o_c)
-
-$(obj)/memset.o: $(srctree)/arch/riscv/lib/memset.S FORCE
-	$(call if_changed_rule,as_o_S)
 
 $(obj)/sha256.o: $(srctree)/lib/crypto/sha256.c FORCE
 	$(call if_changed_rule,cc_o_c)
