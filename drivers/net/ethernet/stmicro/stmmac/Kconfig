@@ -165,6 +165,18 @@ config DWMAC_SOCFPGA
 	  for the stmmac device driver. This driver is used for
 	  arria5 and cyclone5 FPGA SoCs.
 
+config DWMAC_STARFIVE
+	tristate "StarFive DWMAC support"
+	default m if SOC_STARFIVE
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select MFD_SYSCON
+	help
+	  Support for ethernet controller on StarFive SOCs.
+
+	  This selects StarFive SoC glue layer support for the stmmac device
+	  driver. This driver is used for the JH71x0 series GMAC ethernet
+	  controller.
+
 config DWMAC_STI
 	tristate "STi GMAC support"
 	default ARCH_STI
