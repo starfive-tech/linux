@@ -33,6 +33,28 @@
 				interrupt-controller;
 			};
 		};
+
+		cpu@1 {
+			compatible = "starfive,dubhe0", "riscv";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <65536>;
+			device_type = "cpu";
+			i-cache-block-size = <64>;
+			i-cache-sets = <512>;
+			i-cache-size = <65536>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			reg = <0x1>;
+			riscv,isa = "rv64imafdcbhnv";
+			tlb-split;
+			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
 	};
 
 	soc {
@@ -46,7 +68,9 @@
 			compatible = "riscv,clint0";
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			interrupts-extended = <&cpu0_intc 3>,
-					      <&cpu0_intc 7>;
+					      <&cpu0_intc 7>,
+					      <&cpu1_intc 3>,
+					      <&cpu1_intc 7>;
 		};
 
 		pbus_clk: subsystem_pbus_clock {
@@ -63,7 +87,9 @@
 			riscv,ndev = <25>;
 			interrupt-controller;
 			interrupts-extended = <&cpu0_intc 11>,
-					      <&cpu0_intc 9>;
+					      <&cpu0_intc 9>,
+					      <&cpu1_intc 11>,
+					      <&cpu1_intc 9>;
 		};
 
 		spi0: spi@10000000 {
