@@ -19,7 +19,7 @@
 #define PP_INTR_ENABLE	1
 #define PP_INTR_DISABLE	0
 //PP coefficients
-///*
+
 #define R2Y_COEF_R1       77
 #define R2Y_COEF_G1       150
 #define R2Y_COEF_B1       29
@@ -32,7 +32,6 @@
 #define R2Y_COEF_G3       (0x400|107)
 #define R2Y_COEF_B3       (0x400|21)
 #define R2Y_OFFSET3       128
-//*/
 
 //sys registers
 #define SYS_CONF_LCDC		0x00

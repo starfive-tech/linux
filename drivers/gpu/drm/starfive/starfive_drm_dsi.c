@@ -12,7 +12,6 @@
 #include <drm/drm_panel.h>
 #include <drm/drm_probe_helper.h>
 #include <video/mipi_display.h>
-#include <video/starfive_fb.h>
 #include <linux/clk.h>
 #include <linux/interrupt.h>
 #include <linux/iopoll.h>
