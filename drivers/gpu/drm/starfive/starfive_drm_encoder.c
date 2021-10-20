@@ -70,8 +70,10 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
 			&tmp_panel, &tmp_bridge);
-	if (ret)
-		dev_err(dev, "endpoint returns %d\n", ret);
+	if (ret) {
+		dev_err_probe(dev, ret, "endpoint returns %d\n", ret);
+		goto err_bridge;
+	}
 
 	if (tmp_panel)
 		DRM_INFO("found panel on endpoint\n");
