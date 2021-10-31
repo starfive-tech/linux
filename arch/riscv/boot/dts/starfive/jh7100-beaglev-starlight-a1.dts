@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
 /*
- * Copyright (C) 2021 StarFive Technology Co., Ltd.
  * Copyright (C) 2021 Emil Renner Berthing <kernel@esmil.dk>
  */
 
@@ -9,8 +8,8 @@
 #include <dt-bindings/gpio/gpio.h>
 
 / {
-	model = "StarFive VisionFive V1";
-	compatible = "starfive,visionfive-v1", "starfive,jh7100";
+	model = "BeagleV Starlight Beta A1";
+	compatible = "beagle,beaglev-starlight-jh7100-a1", "starfive,jh7100";
 
 	gpio-restart {
 		compatible = "gpio-restart";
@@ -24,16 +23,8 @@
 	starfive,keep-gpiomux = <13 14 63>;
 };
 
-&i2c0 {
-	eeprom@50 {
-		compatible = "atmel,24c04";
-		reg = <0x50>;
-		pagesize = <16>;
-	};
-};
-
 &mdio {
-	phy: ethernet-phy@0 {
-		reg = <0>;
+	phy: ethernet-phy@7 {
+		reg = <7>;
 	};
 };
