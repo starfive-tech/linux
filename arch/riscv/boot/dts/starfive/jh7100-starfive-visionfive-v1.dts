@@ -8,8 +8,8 @@
 #include <dt-bindings/gpio/gpio.h>
 
 / {
-	model = "BeagleV Starlight Beta";
-	compatible = "beagle,beaglev-starlight-jh7100-r0", "starfive,jh7100";
+	model = "StarFive VisionFive V1";
+	compatible = "starfive,visionfive-v1", "starfive,jh7100";
 };
 
 &gmac {
