@@ -258,6 +258,32 @@
 			reg = <0x0 0x11850000 0x0 0x10000>;
 		};
 
+		uart0: serial@11870000 {
+			compatible = "starfive,jh7100-hsuart", "snps,dw-apb-uart";
+			reg = <0x0 0x11870000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_UART0_CORE>,
+				 <&clkgen JH7100_CLK_UART0_APB>;
+			clock-names = "baudclk", "apb_pclk";
+			resets = <&rstgen JH7100_RSTN_UART0_APB>;
+			interrupts = <92>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			status = "disabled";
+		};
+
+		uart1: serial@11880000 {
+			compatible = "starfive,jh7100-hsuart", "snps,dw-apb-uart";
+			reg = <0x0 0x11880000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_UART1_CORE>,
+				 <&clkgen JH7100_CLK_UART1_APB>;
+			clock-names = "baudclk", "apb_pclk";
+			resets = <&rstgen JH7100_RSTN_UART1_APB>;
+			interrupts = <93>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			status = "disabled";
+		};
+
 		i2c0: i2c@118b0000 {
 			compatible = "snps,designware-i2c";
 			reg = <0x0 0x118b0000 0x0 0x10000>;
