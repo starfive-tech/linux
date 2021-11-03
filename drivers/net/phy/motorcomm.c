@@ -397,7 +397,6 @@ static int yt8521_config_init(struct phy_device *phydev)
 	}
 
 	/* disable rx delay */
-		printk(KERN_INFO ">>>>>>>>yt8521_config: disable rx delay\n");
 	val = ytphy_read_ext(phydev, 0xa001);
 	if (val < 0) {
 		printk(KERN_INFO "yt8521_config: read 0xa001 error!\n");
