@@ -7,9 +7,9 @@
  */
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
-#include <linux/of_irq.h>
-#include <linux/of_address.h>
-#include <linux/device.h>
+#include <linux/io.h>
+#include <linux/mod_devicetable.h>
+#include <linux/platform_device.h>
 #include <asm/cacheinfo.h>
 #include <soc/sifive/sifive_l2_cache.h>
 
@@ -95,12 +95,6 @@ static void l2_config_read(void)
 	regval = readl(l2_base + SIFIVE_L2_WAYENABLE);
 	pr_info("L2CACHE: Index of the largest way enabled: %d\n", regval);
 }
-
-static const struct of_device_id sifive_l2_ids[] = {
-	{ .compatible = "sifive,fu540-c000-ccache" },
-	{ .compatible = "sifive,fu740-c000-ccache" },
-	{ /* end of table */ },
-};
 
 static ATOMIC_NOTIFIER_HEAD(l2_err_chain);
 
@@ -192,36 +186,29 @@ static irqreturn_t l2_int_handler(int irq, void *device)
 	return IRQ_HANDLED;
 }
 
-static int __init sifive_l2_init(void)
+static int __init sifive_l2_probe(struct platform_device *pdev)
 {
-	struct device_node *np;
-	struct resource res;
-	int i, rc, intr_num;
+	struct device *dev = &pdev->dev;
+	int nirqs;
+	int ret;
+	int i;
 
-	np = of_find_matching_node(NULL, sifive_l2_ids);
-	if (!np)
-		return -ENODEV;
+	l2_base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(l2_base))
+		return PTR_ERR(l2_base);
 
-	if (of_address_to_resource(np, 0, &res))
-		return -ENODEV;
+	nirqs = platform_irq_count(pdev);
+	if (nirqs <= 0)
+		return dev_err_probe(dev, -ENODEV, "no interrupts\n");
 
-	l2_base = ioremap(res.start, resource_size(&res));
-	if (!l2_base)
-		return -ENOMEM;
+	for (i = 0; i < nirqs; i++) {
+		g_irq[i] = platform_get_irq(pdev, i);
+		if (g_irq[i] < 0)
+			return g_irq[i];
 
-	intr_num = of_property_count_u32_elems(np, "interrupts");
-	if (!intr_num) {
-		pr_err("L2CACHE: no interrupts property\n");
-		return -ENODEV;
-	}
-
-	for (i = 0; i < intr_num; i++) {
-		g_irq[i] = irq_of_parse_and_map(np, i);
-		rc = request_irq(g_irq[i], l2_int_handler, 0, "l2_ecc", NULL);
-		if (rc) {
-			pr_err("L2CACHE: Could not request IRQ %d\n", g_irq[i]);
-			return rc;
-		}
+		ret = devm_request_irq(dev, g_irq[i], l2_int_handler, 0, pdev->name, NULL);
+		if (ret)
+			return dev_err_probe(dev, ret, "Could not request IRQ %d\n", g_irq[i]);
 	}
 
 	l2_config_read();
@@ -234,4 +221,18 @@ static int __init sifive_l2_init(void)
 #endif
 	return 0;
 }
-device_initcall(sifive_l2_init);
+
+static const struct of_device_id sifive_l2_match[] = {
+	{ .compatible = "sifive,fu540-c000-ccache" },
+	{ .compatible = "sifive,fu740-c000-ccache" },
+	{ /* sentinel */ }
+};
+
+static struct platform_driver sifive_l2_driver = {
+	.driver = {
+		.name = "sifive_l2_cache",
+		.of_match_table = sifive_l2_match,
+		.suppress_bind_attrs = true,
+	},
+};
+builtin_platform_driver_probe(sifive_l2_driver, sifive_l2_probe);
