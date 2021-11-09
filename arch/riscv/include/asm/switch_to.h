@@ -79,6 +79,7 @@ static __always_inline bool has_vector(void)
 extern unsigned long riscv_vsize;
 extern void __vstate_save(struct __riscv_v_state *save_to, void *datap);
 extern void __vstate_restore(struct __riscv_v_state *restore_from, void *datap);
+void vector_flush_cpu_state(void);
 
 static inline void __vstate_clean(struct pt_regs *regs)
 {
