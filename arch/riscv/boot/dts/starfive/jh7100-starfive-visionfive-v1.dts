@@ -22,3 +22,11 @@
 	/* don't reset gpio mux for serial console and reset gpio */
 	starfive,keep-gpiomux = <13 14 63>;
 };
+
+&i2c0 {
+	eeprom_dev:eeprom@50 {
+               compatible = "atmel,24c04";
+               reg = <0x50>;
+               pagesize = <16>;
+        };
+};
