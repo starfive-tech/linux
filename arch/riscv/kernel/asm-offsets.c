@@ -72,6 +72,8 @@ void asm_offsets(void)
 	OFFSET(TSK_STACK_CANARY, task_struct, stack_canary);
 #endif
 
+	OFFSET(RISCV_V_STATE_MAGIC, __riscv_ctx_hdr, magic);
+	OFFSET(RISCV_V_STATE_SIZE, __riscv_ctx_hdr, size);
 	OFFSET(RISCV_V_STATE_VSTART, __riscv_v_state, vstart);
 	OFFSET(RISCV_V_STATE_VL, __riscv_v_state, vl);
 	OFFSET(RISCV_V_STATE_VTYPE, __riscv_v_state, vtype);
