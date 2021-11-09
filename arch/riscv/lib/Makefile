@@ -10,3 +10,4 @@ lib-$(CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE) += string.o
 CFLAGS_string.o := -ffreestanding
 
 obj-$(CONFIG_FUNCTION_ERROR_INJECTION) += error-inject.o
+lib-$(CONFIG_VECTOR)	+= xor.o
