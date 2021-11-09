@@ -411,7 +411,8 @@ static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_sta
 	int reg_val = 1485000/state->mode.clock;//148500
 	
 	LCDC_PRT("sf_fb_lcdc_clk_cfg reg_val = %d\n",reg_val);
-
+#if 0
+    // for adv7513
 	switch(state->adjusted_mode.crtc_hdisplay) {
 	case 640:
 		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
@@ -466,7 +467,13 @@ static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_sta
 		tmp_val |= (reg_val & 0x3F);
 		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
 	}
+#else
+    tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
+    tmp_val &= ~(0x3F);
+    tmp_val |= (reg_val & 0x3F);
+    sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
 
+#endif
 	return ret;
 }
 
