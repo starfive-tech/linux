@@ -566,6 +566,20 @@
 			status = "disabled";
 		};
 
+		wdt: wdt@12480000 {
+			compatible = "starfive,si5-wdt";
+			reg = <0x0 0x12480000 0x0 0x10000>;
+			interrupts = <80>;
+			clocks = <&clkgen JH7100_CLK_WDT_CORE>,
+				 <&clkgen JH7100_CLK_WDTIMER_APB>;
+			clock-names = "wdt_coreclk", "wdtimer_apb";
+			clock-frequency = <50000000>;
+			resets = <&rstgen JH7100_RSTN_WDTIMER_APB>,
+				 <&rstgen JH7100_RSTN_WDT>;
+			reset-names = "wdtimer_apb", "wdt";
+			status = "okay";
+		};
+
 		ptc: pwm@12490000 {
 			compatible = "starfive,pwm0";
 			reg = <0x0 0x12490000 0x0 0x10000>;
