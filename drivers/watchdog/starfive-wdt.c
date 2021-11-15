@@ -593,7 +593,6 @@ static int si5wdt_probe(struct platform_device *pdev)
 	int started = 0;
 	int ret;
 
-	printk(KERN_INFO ">>>>>>>>>starfive watchdog start...\n");
 	wdt = devm_kzalloc(dev, sizeof(*wdt), GFP_KERNEL);
 	if (!wdt)
 		return -ENOMEM;
@@ -678,7 +677,6 @@ static int si5wdt_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, wdt);
-	printk(KERN_INFO ">>>>>>>>>starfive watchdog loaded\n");
 
 	return 0;
 
