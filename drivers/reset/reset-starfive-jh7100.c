@@ -3,12 +3,14 @@
  * Reset driver for the StarFive JH7100 SoC
  *
  * Copyright (C) 2021 Emil Renner Berthing <kernel@esmil.dk>
+ *
  */
 
 #include <linux/io.h>
-#include <linux/iopoll.h>
-#include <linux/mod_devicetable.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <linux/reset-controller.h>
 #include <linux/spinlock.h>
 
@@ -24,147 +26,229 @@
 #define JH7100_RESET_STATUS2	0x18
 #define JH7100_RESET_STATUS3	0x1c
 
-/*
- * Writing a 1 to the n'th bit of the m'th ASSERT register asserts
- * line 32m + n, and writing a 0 deasserts the same line.
- * Most reset lines have their status inverted so a 0 bit in the STATUS
- * register means the line is asserted and a 1 means it's deasserted. A few
- * lines don't though, so store the expected value of the status registers when
- * all lines are asserted.
- */
+#define JH7100_AUDIO_RESET_STATUS0	0x4
+#define JH7100_ISP_RESET_STATUS0	0x4
+#define JH7100_VOUT_RESET_STATUS0	0x4
+
+enum jh7100_reset_ctrl_type {
+	PERIPHERAL = 0,
+	AUDIO,
+	ISP,
+};
+
+struct jh7100_reset_data {
+	struct reset_controller_dev rcdev;
+	spinlock_t lock;
+	//void __iomem *base;
+	struct regmap *regmap;
+};
+
+static inline struct jh7100_reset_data *
+jh7100_reset_from(struct reset_controller_dev *rcdev)
+{
+	return container_of(rcdev, struct jh7100_reset_data, rcdev);
+}
+
 static const u32 jh7100_reset_asserted[4] = {
-	/* STATUS0 register */
 	BIT(JH7100_RST_U74 % 32) |
 	BIT(JH7100_RST_VP6_DRESET % 32) |
 	BIT(JH7100_RST_VP6_BRESET % 32),
-	/* STATUS1 register */
+
 	BIT(JH7100_RST_HIFI4_DRESET % 32) |
 	BIT(JH7100_RST_HIFI4_BRESET % 32),
-	/* STATUS2 register */
-	BIT(JH7100_RST_E24 % 32),
-	/* STATUS3 register */
-	0,
+
+	BIT_MASK(JH7100_RST_E24	% 32)
 };
 
-struct jh7100_reset {
-	struct reset_controller_dev rcdev;
-	/* protect registers against concurrent read-modify-write */
-	spinlock_t lock;
-	void __iomem *base;
-};
-
-static inline struct jh7100_reset *
-jh7100_reset_from(struct reset_controller_dev *rcdev)
+static int jh7100_reset_update(struct reset_controller_dev *rcdev, unsigned long id,
+				unsigned int reg_status, bool assert)
 {
-	return container_of(rcdev, struct jh7100_reset, rcdev);
-}
-
-static int jh7100_reset_update(struct reset_controller_dev *rcdev,
-			       unsigned long id, bool assert)
-{
-	struct jh7100_reset *data = jh7100_reset_from(rcdev);
-	unsigned long offset = id / 32;
-	void __iomem *reg_assert = data->base + JH7100_RESET_ASSERT0 + 4 * offset;
-	void __iomem *reg_status = data->base + JH7100_RESET_STATUS0 + 4 * offset;
+	struct jh7100_reset_data *data = jh7100_reset_from(rcdev);
+	unsigned long bank = id / 32;
+	u32 offset = JH7100_RESET_ASSERT0 + 4 * bank;
+	u32 status = reg_status + 4 * bank;
 	u32 mask = BIT(id % 32);
-	u32 done = jh7100_reset_asserted[offset] & mask;
+	u32 done = jh7100_reset_asserted[bank] & mask; //0
 	unsigned long flags;
-	u32 value;
-	int ret;
+	u32 value = 0;
+	u32 tmp = 0;
 
 	if (!assert)
-		done ^= mask;
+		done ^= mask;// BIT(id % 32)
 
 	spin_lock_irqsave(&data->lock, flags);
 
-	value = readl(reg_assert);
+	regmap_read(data->regmap, offset, &value);
 	if (assert)
 		value |= mask;
 	else
 		value &= ~mask;
-	writel(value, reg_assert);
+	regmap_write(data->regmap, offset, value);
 
-	/* if the associated clock is gated, deasserting might otherwise hang forever */
-	ret = readl_poll_timeout_atomic(reg_status, value, (value & mask) == done, 0, 1000);
+	do {
+		regmap_read(data->regmap, status, &tmp);
+		value = tmp & mask;
+	} while (value != done);
 
 	spin_unlock_irqrestore(&data->lock, flags);
-	return ret;
+	return 0;
 }
 
-static int jh7100_reset_assert(struct reset_controller_dev *rcdev,
+static int jh7100_periph_reset_assert(struct reset_controller_dev *rcdev,
 			       unsigned long id)
 {
-	return jh7100_reset_update(rcdev, id, true);
+	dev_dbg(rcdev->dev, "assert(%lu)\n", id);
+	return jh7100_reset_update(rcdev, id, JH7100_RESET_STATUS0, true);
 }
 
-static int jh7100_reset_deassert(struct reset_controller_dev *rcdev,
+static int jh7100_periph_reset_deassert(struct reset_controller_dev *rcdev,
 				 unsigned long id)
 {
-	return jh7100_reset_update(rcdev, id, false);
+	dev_dbg(rcdev->dev, "deassert(%lu)\n", id);
+	return jh7100_reset_update(rcdev, id, JH7100_RESET_STATUS0, false);
 }
 
-static int jh7100_reset_reset(struct reset_controller_dev *rcdev,
-			      unsigned long id)
+static int jh7100_periph_reset_reset(struct reset_controller_dev *rcdev,
+					unsigned long id)
 {
 	int ret;
 
-	ret = jh7100_reset_assert(rcdev, id);
+	dev_dbg(rcdev->dev, "reset(%lu)\n", id);
+	ret = jh7100_periph_reset_assert(rcdev, id);
 	if (ret)
 		return ret;
 
-	return jh7100_reset_deassert(rcdev, id);
+	return jh7100_periph_reset_deassert(rcdev, id);
 }
 
-static int jh7100_reset_status(struct reset_controller_dev *rcdev,
-			       unsigned long id)
+static int jh7100_get_reset_status(struct reset_controller_dev *rcdev,
+					unsigned int reg_status,
+					unsigned long id)
 {
-	struct jh7100_reset *data = jh7100_reset_from(rcdev);
-	unsigned long offset = id / 32;
-	void __iomem *reg_status = data->base + JH7100_RESET_STATUS0 + 4 * offset;
+	struct jh7100_reset_data *data = jh7100_reset_from(rcdev);
+	unsigned long bank = id / 32;
 	u32 mask = BIT(id % 32);
+	u32 tmp = 0;
+	u32 value = 0;
 
-	return !((readl(reg_status) ^ jh7100_reset_asserted[offset]) & mask);
+	reg_status = reg_status + 4 * bank;
+	regmap_read(data->regmap, reg_status, &tmp);
+	value = (tmp ^ jh7100_reset_asserted[bank]) & mask;
+
+	dev_dbg(rcdev->dev, "status(%lu) = %d\n", id, !value);
+	return !value;
 }
 
-static const struct reset_control_ops jh7100_reset_ops = {
-	.assert		= jh7100_reset_assert,
-	.deassert	= jh7100_reset_deassert,
-	.reset		= jh7100_reset_reset,
-	.status		= jh7100_reset_status,
+static int jh7100_periph_reset_status(struct reset_controller_dev *rcdev,
+					unsigned long id)
+{
+	return jh7100_get_reset_status(rcdev, JH7100_RESET_STATUS0, id);
+}
+
+static const struct reset_control_ops jh7100_periph_reset_ops = {
+	.assert		= jh7100_periph_reset_assert,
+	.deassert	= jh7100_periph_reset_deassert,
+	.reset		= jh7100_periph_reset_reset,
+	.status		= jh7100_periph_reset_status,
 };
 
-static int __init jh7100_reset_probe(struct platform_device *pdev)
+static int jh7100_audio_reset_assert(struct reset_controller_dev *rcdev,
+			       unsigned long id)
 {
-	struct jh7100_reset *data;
+	dev_dbg(rcdev->dev, "assert(%lu)\n", id);
+	return jh7100_reset_update(rcdev, id, JH7100_AUDIO_RESET_STATUS0, true);
+}
 
-	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
+static int jh7100_audio_reset_deassert(struct reset_controller_dev *rcdev,
+				 unsigned long id)
+{
+	dev_dbg(rcdev->dev, "deassert(%lu)\n", id);
+	return jh7100_reset_update(rcdev, id, JH7100_AUDIO_RESET_STATUS0, false);
+}
+
+static int jh7100_audio_reset_reset(struct reset_controller_dev *rcdev,
+					unsigned long id)
+{
+	int ret;
+
+	dev_dbg(rcdev->dev, "reset(%lu)\n", id);
+	ret = jh7100_audio_reset_assert(rcdev, id);
+	if (ret)
+		return ret;
+
+	return jh7100_audio_reset_deassert(rcdev, id);
+}
+
+static int jh7100_audio_reset_status(struct reset_controller_dev *rcdev,
+					unsigned long id)
+{
+	return jh7100_get_reset_status(rcdev, JH7100_AUDIO_RESET_STATUS0, id);
+}
+
+static const struct reset_control_ops jh7100_audio_reset_ops = {
+	.assert		= jh7100_audio_reset_assert,
+	.deassert	= jh7100_audio_reset_deassert,
+	.reset		= jh7100_audio_reset_reset,
+	.status		= jh7100_audio_reset_status,
+};
+
+static int jh7100_reset_probe(struct platform_device *pdev)
+{
+	enum jh7100_reset_ctrl_type type;
+	struct jh7100_reset_data *data;
+	struct regmap *regmap;
+	struct device_node *np = pdev->dev.of_node;
+	struct device *dev = &pdev->dev;
+
+	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
-	data->base = devm_platform_ioremap_resource(pdev, 0);
-	if (IS_ERR(data->base))
-		return PTR_ERR(data->base);
+	type = (enum jh7100_reset_ctrl_type)of_device_get_match_data(dev);
 
-	data->rcdev.ops = &jh7100_reset_ops;
+	regmap = syscon_node_to_regmap(np);
+	if (IS_ERR(regmap)) {
+		dev_err(dev, "failed to get reset controller regmap\n");
+		return PTR_ERR(regmap);
+	}
+
+	data->regmap = regmap;
+	data->rcdev.of_node = np;
+	data->rcdev.dev = dev;
 	data->rcdev.owner = THIS_MODULE;
-	data->rcdev.nr_resets = JH7100_RSTN_END;
-	data->rcdev.dev = &pdev->dev;
-	data->rcdev.of_node = pdev->dev.of_node;
+
+	if (type == PERIPHERAL) { 
+		data->rcdev.ops = &jh7100_periph_reset_ops;
+		data->rcdev.nr_resets = JH7100_RSTN_END;
+	} else if (type == AUDIO) {
+		data->rcdev.ops = &jh7100_audio_reset_ops;
+		data->rcdev.nr_resets = JH7100_AUDIO_RSTN_END;
+	} else {
+		;
+	}
+
 	spin_lock_init(&data->lock);
 
 	return devm_reset_controller_register(&pdev->dev, &data->rcdev);
 }
 
 static const struct of_device_id jh7100_reset_dt_ids[] = {
-	{ .compatible = "starfive,jh7100-reset" },
-	{ /* sentinel */ }
+	{
+		.compatible = "starfive,jh7100-reset",
+		.data = (void *)PERIPHERAL,
+	},
+	{
+		.compatible = "starfive,jh7100-reset-audio",
+		.data = (void *)AUDIO,
+	},
+	{ /* sentinel */ },
 };
 
 static struct platform_driver jh7100_reset_driver = {
+	.probe = jh7100_reset_probe,
 	.driver = {
 		.name = "jh7100-reset",
 		.of_match_table = jh7100_reset_dt_ids,
-		.suppress_bind_attrs = true,
 	},
 };
-builtin_platform_driver_probe(jh7100_reset_driver, jh7100_reset_probe);
+builtin_platform_driver(jh7100_reset_driver);

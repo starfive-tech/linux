@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 
 #include <dt-bindings/clock/starfive-jh7100.h>
@@ -32,6 +33,276 @@
 #define JH7100_CLK_MUX_MASK	GENMASK(27, 24)
 #define JH7100_CLK_MUX_SHIFT	24
 #define JH7100_CLK_DIV_MASK	GENMASK(23, 0)
+
+struct jh7100_clk {
+	struct clk_hw hw;
+	unsigned int idx;
+	unsigned int max_div;
+};
+
+struct clk_starfive_jh7100_priv {
+	/* protect clk enable and set rate/parent from happening at the same time */
+	spinlock_t rmw_lock;
+	struct device *dev;
+	void __iomem *base;
+	struct clk_hw *extclk[6];
+	struct jh7100_clk reg[JH7100_CLK_PLL0_OUT];
+};
+
+static const char *audio_clk_sels[2] = {
+	[0] = "audio_src",
+	[1] = "audio_12288",
+};
+
+static const char *i2sadc_bclk_sels[2] = {
+	[0] = "adc_mclk",
+	[1] = "i2sadc_bclk_iopad",
+};
+
+static const char *i2sadc_lrclk_sels[3] = {
+	[0] = "i2sadc_bclk_inv",
+	[1] = "i2sadc_lrclk_iopad",
+	[2] = "i2sadc_bclk",
+};
+
+static struct jh7100_clk *jh7100_clk_from(struct clk_hw *hw)
+{
+	return container_of(hw, struct jh7100_clk, hw);
+}
+
+static struct clk_starfive_jh7100_priv *jh7100_priv_from(struct jh7100_clk *clk)
+{
+	return container_of(clk, struct clk_starfive_jh7100_priv, reg[clk->idx]);
+}
+
+static u32 jh7100_clk_reg_get(struct jh7100_clk *clk)
+{
+	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
+	void __iomem *reg = priv->base + 4 * clk->idx;
+
+	return readl_relaxed(reg);
+}
+
+static void jh7100_clk_reg_rmw(struct jh7100_clk *clk, u32 mask, u32 value)
+{
+	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
+	void __iomem *reg = priv->base + 4 * clk->idx;
+	unsigned long flags;
+
+	spin_lock_irqsave(&priv->rmw_lock, flags);
+	value |= readl_relaxed(reg) & ~mask;
+	writel_relaxed(value, reg);
+	spin_unlock_irqrestore(&priv->rmw_lock, flags);
+}
+static int jh7100_clk_enable(struct clk_hw *hw)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+
+	jh7100_clk_reg_rmw(clk, JH7100_CLK_ENABLE, JH7100_CLK_ENABLE);
+	return 0;
+}
+
+static void jh7100_clk_disable(struct clk_hw *hw)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+
+	jh7100_clk_reg_rmw(clk, JH7100_CLK_ENABLE, 0);
+}
+
+static int jh7100_clk_is_enabled(struct clk_hw *hw)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+
+	return !!(jh7100_clk_reg_get(clk) & JH7100_CLK_ENABLE);
+}
+
+static unsigned long jh7100_clk_recalc_rate(struct clk_hw *hw,
+					    unsigned long parent_rate)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	u32 div = jh7100_clk_reg_get(clk) & JH7100_CLK_DIV_MASK;
+
+	return div ? parent_rate / div : 0;
+}
+
+static unsigned long jh7100_clk_bestdiv(struct jh7100_clk *clk,
+					unsigned long rate, unsigned long parent)
+{
+	unsigned long max = clk->max_div;
+	unsigned long div = DIV_ROUND_UP(parent, rate);
+
+	return min(div, max);
+}
+
+static int jh7100_clk_determine_rate(struct clk_hw *hw,
+				     struct clk_rate_request *req)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	unsigned long parent = req->best_parent_rate;
+	unsigned long rate = clamp(req->rate, req->min_rate, req->max_rate);
+	unsigned long div = jh7100_clk_bestdiv(clk, rate, parent);
+	unsigned long result = parent / div;
+
+	/*
+	 * we want the result clamped by min_rate and max_rate if possible:
+	 * case 1: div hits the max divider value, which means it's less than
+	 * parent / rate, so the result is greater than rate and min_rate in
+	 * particular. we can't do anything about result > max_rate because the
+	 * divider doesn't go any further.
+	 * case 2: div = DIV_ROUND_UP(parent, rate) which means the result is
+	 * always lower or equal to rate and max_rate. however the result may
+	 * turn out lower than min_rate, but then the next higher rate is fine:
+	 *   div - 1 = ceil(parent / rate) - 1 < parent / rate
+	 * and thus
+	 *   min_rate <= rate < parent / (div - 1)
+	 */
+	if (result < req->min_rate && div > 1) {
+		div -= 1;
+		result = parent / div;
+	}
+
+	req->rate = result;
+	return 0;
+}
+
+static int jh7100_clk_set_rate(struct clk_hw *hw,
+			       unsigned long rate,
+			       unsigned long parent_rate)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	unsigned long div = jh7100_clk_bestdiv(clk, rate, parent_rate);
+
+	jh7100_clk_reg_rmw(clk, JH7100_CLK_DIV_MASK, div);
+	return 0;
+}
+
+static u8 jh7100_clk_get_parent(struct clk_hw *hw)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	u32 value = jh7100_clk_reg_get(clk);
+
+	return (value & JH7100_CLK_MUX_MASK) >> JH7100_CLK_MUX_SHIFT;
+}
+
+static int jh7100_clk_set_parent(struct clk_hw *hw, u8 index)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	u32 value = (u32)index << JH7100_CLK_MUX_SHIFT;
+
+	jh7100_clk_reg_rmw(clk, JH7100_CLK_MUX_MASK, value);
+	return 0;
+}
+
+static int jh7100_clk_mux_determine_rate(struct clk_hw *hw,
+					 struct clk_rate_request *req)
+{
+	return clk_mux_determine_rate_flags(hw, req, 0);
+}
+
+static int jh7100_clk_get_phase(struct clk_hw *hw)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	u32 value = jh7100_clk_reg_get(clk);
+
+	return (value & JH7100_CLK_INVERT) ? 180 : 0;
+}
+
+static int jh7100_clk_set_phase(struct clk_hw *hw, int degrees)
+{
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	u32 value;
+
+	if (degrees == 0)
+		value = 0;
+	else if (degrees == 180)
+		value = JH7100_CLK_INVERT;
+	else
+		return -EINVAL;
+
+	jh7100_clk_reg_rmw(clk, JH7100_CLK_INVERT, value);
+	return 0;
+}
+
+#ifdef CONFIG_DEBUG_FS
+static void jh7100_clk_debug_init(struct clk_hw *hw, struct dentry *dentry)
+{
+	static const struct debugfs_reg32 jh7100_clk_reg = {
+		.name = "CTRL",
+		.offset = 0,
+	};
+	struct jh7100_clk *clk = jh7100_clk_from(hw);
+	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
+	struct debugfs_regset32 *regset;
+
+	regset = devm_kzalloc(priv->dev, sizeof(*regset), GFP_KERNEL);
+	if (!regset)
+		return;
+
+	regset->regs = &jh7100_clk_reg;
+	regset->nregs = 1;
+	regset->base = priv->base + 4 * clk->idx;
+
+	debugfs_create_regset32("registers", 0400, dentry, regset);
+}
+#else
+#define jh7100_clk_debug_init NULL
+#endif
+
+static const struct clk_ops jh7100_clk_gate_ops = {
+	.enable = jh7100_clk_enable,
+	.disable = jh7100_clk_disable,
+	.is_enabled = jh7100_clk_is_enabled,
+	.debug_init = jh7100_clk_debug_init,
+};
+
+static const struct clk_ops jh7100_clk_div_ops = {
+	.recalc_rate = jh7100_clk_recalc_rate,
+	.determine_rate = jh7100_clk_determine_rate,
+	.set_rate = jh7100_clk_set_rate,
+	.debug_init = jh7100_clk_debug_init,
+};
+
+static const struct clk_ops jh7100_clk_gdiv_ops = {
+	.enable = jh7100_clk_enable,
+	.disable = jh7100_clk_disable,
+	.is_enabled = jh7100_clk_is_enabled,
+	.recalc_rate = jh7100_clk_recalc_rate,
+	.determine_rate = jh7100_clk_determine_rate,
+	.set_rate = jh7100_clk_set_rate,
+	.debug_init = jh7100_clk_debug_init,
+};
+
+static const struct clk_ops jh7100_clk_mux_ops = {
+	.get_parent = jh7100_clk_get_parent,
+	.set_parent = jh7100_clk_set_parent,
+	.determine_rate = jh7100_clk_mux_determine_rate,
+	.debug_init = jh7100_clk_debug_init,
+};
+
+static const struct clk_ops jh7100_clk_gmux_ops = {
+	.enable = jh7100_clk_enable,
+	.disable = jh7100_clk_disable,
+	.is_enabled = jh7100_clk_is_enabled,
+	.get_parent = jh7100_clk_get_parent,
+	.set_parent = jh7100_clk_set_parent,
+	.determine_rate = jh7100_clk_mux_determine_rate,
+	.debug_init = jh7100_clk_debug_init,
+};
+
+static const struct clk_ops jh7100_clk_gdiv_mux_ops = {
+	.enable = jh7100_clk_enable,
+	.disable = jh7100_clk_disable,
+	.is_enabled = jh7100_clk_is_enabled,
+	.recalc_rate = jh7100_clk_recalc_rate,
+	.determine_rate = jh7100_clk_determine_rate,
+	.set_rate = jh7100_clk_set_rate,
+	.debug_init = jh7100_clk_debug_init,
+};
+static const struct clk_ops jh7100_clk_inv_ops = {
+	.get_phase = jh7100_clk_get_phase,
+	.set_phase = jh7100_clk_set_phase,
+	.debug_init = jh7100_clk_debug_init,
+};
 
 /* clock data */
 #define JH7100_GATE(_idx, _name, _flags, _parent) [_idx] = {		\
@@ -70,6 +341,21 @@
 	.parents = { __VA_ARGS__ },					\
 }
 
+#define JH7100_DIV_MUX(_idx, _name, _flags, _max, _nparents, ...) [_idx] = {	\
+	.name = _name,							\
+	.flags = _flags,						\
+	.max = (_max) | (((_nparents) - 1) << JH7100_CLK_MUX_SHIFT),	\
+	.parents = { __VA_ARGS__ },					\
+}
+
+#define JH7100_GDIV_MUX(_idx, _name, _flags, _max, _nparents, ...) [_idx] = {	\
+	.name = _name,							\
+	.flags = _flags,						\
+	.max = JH7100_CLK_ENABLE | (_max) |				\
+		(((_nparents) - 1) << JH7100_CLK_MUX_SHIFT),		\
+	.parents = { __VA_ARGS__ },					\
+}
+
 #define JH7100__INV(_idx, _name, _parent) [_idx] = {			\
 	.name = _name,							\
 	.flags = CLK_SET_RATE_PARENT,					\
@@ -77,12 +363,71 @@
 	.parents = { [0] = _parent },					\
 }
 
-static const struct {
+#define STARFIVE_GATE(_idx, _name, _parent) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_gate_ops, \
+	.parent = _parent, \
+	.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, \
+	.max = 0, \
+}
+
+#define STARFIVE__DIV(_idx, _name, _parent, _max) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_div_ops, \
+	.parent = _parent, \
+	.flags = 0, \
+	.max = _max, \
+}
+
+#define STARFIVE_GDIV(_idx, _name, _parent, _max) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_gdiv_ops, \
+	.parent = _parent, \
+	.flags = 0, \
+	.max = _max, \
+}
+
+#define STARFIVE__MUX(_idx, _name, _parents) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_mux_ops, \
+	.parents = _parents, \
+	.flags = 0, \
+	.max = (ARRAY_SIZE(_parents) - 1) << JH7100_CLK_MUX_SHIFT, \
+}
+
+#define STARFIVE_GMUX(_idx, _name, _parents) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_gmux_ops, \
+	.parents = _parents, \
+	.flags = CLK_IS_CRITICAL, \
+	.max = (ARRAY_SIZE(_parents) - 1) << JH7100_CLK_MUX_SHIFT, \
+}
+
+#define STARFIVE_GDIV_MUX(_idx, _name, _parents, _max) [_idx] = { \
+        .name = _name, \
+        .ops = &jh7100_clk_gdiv_mux_ops, \
+        .parents = _parents, \
+        .flags = 0, \
+        .max = _max, \
+}
+
+#define STARFIVE__INV(_idx, _name, _parent) [_idx] = { \
+	.name = _name, \
+	.ops = &jh7100_clk_inv_ops, \
+	.parent = _parent, \
+	.flags = CLK_SET_RATE_PARENT, \
+	.max = 0, \
+}
+
+
+struct starfive_clk_attributes {
 	const char *name;
 	unsigned long flags;
 	u32 max;
 	u8 parents[4];
-} jh7100_clk_data[] __initconst = {
+};
+
+static const struct starfive_clk_attributes jh7100_clk_data[] __initconst = {
 	JH7100__MUX(JH7100_CLK_CPUNDBUS_ROOT, "cpundbus_root", 4,
 		    JH7100_CLK_OSC_SYS,
 		    JH7100_CLK_PLL0_OUT,
@@ -149,9 +494,9 @@ static const struct {
 	JH7100_GDIV(JH7100_CLK_U74_CORE1, "u74_core1", CLK_IS_CRITICAL, 8, JH7100_CLK_CPU_CORE),
 	JH7100_GATE(JH7100_CLK_U74_AXI, "u74_axi", CLK_IS_CRITICAL, JH7100_CLK_CPU_AXI),
 	JH7100_GATE(JH7100_CLK_U74RTC_TOGGLE, "u74rtc_toggle", CLK_IS_CRITICAL, JH7100_CLK_OSC_SYS),
-	JH7100_GATE(JH7100_CLK_SGDMA2P_AXI, "sgdma2p_axi", CLK_IGNORE_UNUSED, JH7100_CLK_CPU_AXI),
+	JH7100_GATE(JH7100_CLK_SGDMA2P_AXI, "sgdma2p_axi", CLK_IS_CRITICAL, JH7100_CLK_CPU_AXI),
 	JH7100_GATE(JH7100_CLK_DMA2PNOC_AXI, "dma2pnoc_axi", CLK_IGNORE_UNUSED, JH7100_CLK_CPU_AXI),
-	JH7100_GATE(JH7100_CLK_SGDMA2P_AHB, "sgdma2p_ahb", CLK_IGNORE_UNUSED, JH7100_CLK_AHB_BUS),
+	JH7100_GATE(JH7100_CLK_SGDMA2P_AHB, "sgdma2p_ahb", CLK_IS_CRITICAL, JH7100_CLK_AHB_BUS),
 	JH7100__DIV(JH7100_CLK_DLA_BUS, "dla_bus", 4, JH7100_CLK_DLA_ROOT),
 	JH7100_GATE(JH7100_CLK_DLA_AXI, "dla_axi", CLK_IGNORE_UNUSED, JH7100_CLK_DLA_BUS),
 	JH7100_GATE(JH7100_CLK_DLANOC_AXI, "dlanoc_axi", CLK_IGNORE_UNUSED, JH7100_CLK_DLA_BUS),
@@ -323,249 +668,62 @@ static const struct {
 	JH7100_GATE(JH7100_CLK_SYSERR_APB, "syserr_apb", 0, JH7100_CLK_APB2_BUS),
 };
 
-struct jh7100_clk {
-	struct clk_hw hw;
-	unsigned int idx;
-	unsigned int max_div;
-};
-
-struct clk_starfive_jh7100_priv {
-	/* protect clk enable and set rate/parent from happening at the same time */
-	spinlock_t rmw_lock;
-	struct device *dev;
-	void __iomem *base;
-	struct clk_hw *pll[3];
-	struct jh7100_clk reg[JH7100_CLK_PLL0_OUT];
-};
-
-static struct jh7100_clk *jh7100_clk_from(struct clk_hw *hw)
-{
-	return container_of(hw, struct jh7100_clk, hw);
-}
-
-static struct clk_starfive_jh7100_priv *jh7100_priv_from(struct jh7100_clk *clk)
-{
-	return container_of(clk, struct clk_starfive_jh7100_priv, reg[clk->idx]);
-}
-
-static u32 jh7100_clk_reg_get(struct jh7100_clk *clk)
-{
-	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
-	void __iomem *reg = priv->base + 4 * clk->idx;
-
-	return readl_relaxed(reg);
-}
-
-static void jh7100_clk_reg_rmw(struct jh7100_clk *clk, u32 mask, u32 value)
-{
-	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
-	void __iomem *reg = priv->base + 4 * clk->idx;
+struct starfive_clk_ops {
+	const char *name;
+	const struct clk_ops *ops;
+	union {
+		const char *parent;
+		const char *const *parents;
+	};
 	unsigned long flags;
+	u32 max;
+};
+
+static const struct starfive_clk_ops jh7100_audio[] __initconst = {
+	STARFIVE_GMUX(JH7100_CLK_ADC_MCLK, "adc_mclk", audio_clk_sels),
+	STARFIVE_GMUX(JH7100_CLK_I2S1_MCLK, "i2s1_mclk", audio_clk_sels),
+	STARFIVE_GATE(JH7100_CLK_APB_I2SADC, "i2sadc_apb", "apb2_bus"),
+	STARFIVE__MUX(JH7100_CLK_I2SADC_BCLK, "i2sadc_bclk", i2sadc_bclk_sels),
+	STARFIVE__INV(JH7100_CLK_I2SADC_BCLK_INV, "i2sadc_bclk_inv", "i2sadc_bclk"),
+	STARFIVE__MUX(JH7100_CLK_I2SADC_LRCLK, "i2sadc_lrclk", i2sadc_lrclk_sels),
+	STARFIVE_GATE(JH7100_CLK_APB_PDM, "pdm_apb", "apb2_bus"),
+	STARFIVE_GMUX(JH7100_CLK_PDM_MCLK, "pdm_mclk", audio_clk_sels),
+	STARFIVE_GATE(JH7100_CLK_APB_I2SVAD, "i2svad_apb", "apb2_bus"), 
+	STARFIVE_GMUX(JH7100_CLK_SPDIF, "spdif_mclk", audio_clk_sels),
+	STARFIVE_GATE(JH7100_CLK_APB_SPDIF, "spdif_apb", "apb2_bus"),
+	STARFIVE_GATE(JH7100_CLK_APB_PWMDAC, "pwmdac_apb", "apb2_bus"),
+	STARFIVE_GDIV(JH7100_CLK_DAC_MCLK, "dac_mclk", "audio_src", 8), //important !!!
+	STARFIVE_GATE(JH7100_CLK_APB_I2S0, "i2sdac_apb", "apb2_bus"),
+	STARFIVE__DIV(JH7100_CLK_I2S0_BCLK, "i2sdac0_bclk", "dac_mclk", 16),
+	STARFIVE__INV(JH7100_CLK_I2S0_BCLK_INV, "i2sdac0_bclk_inv", "i2sdac0_bclk"),
+	STARFIVE__DIV(JH7100_CLK_I2S0_LRCLK, "i2sdac0_lrclk", "i2sdac0_bclk_inv", 32),
+	STARFIVE_GATE(JH7100_CLK_APB_I2S1, "i2s1_apb", "apb2_bus"),
+	STARFIVE__DIV(JH7100_CLK_I2S1_BCLK, "i2sdac1_bclk", "i2s1_mclk", 16),
+	STARFIVE__INV(JH7100_CLK_I2S1_BCLK_INV, "i2sdac1_bclk_inv", "i2sdac1_bclk"),
+	STARFIVE__DIV(JH7100_CLK_I2S1_LRCLK, "i2sdac1_lrclk", "i2sdac1_bclk_inv", 32),
+	STARFIVE_GATE(JH7100_CLK_APB_I2SDAC16K, "i2sdac16k_apb", "apb2_bus"),
+	STARFIVE__DIV(JH7100_CLK_APB0_BUS, "apb0_bus", "ahb_bus", 8),
+	STARFIVE_GATE(JH7100_CLK_DMA1P_AHB, "dma1p_ahb", "ahb_bus"),
+	STARFIVE_GATE(JH7100_CLK_APB_USB, "usb_apb", "apb2_bus"),
+	STARFIVE_GDIV(JH7100_CLK_USB_LPM, "usb_lpm", "usb_apb", 4),
+	STARFIVE_GDIV(JH7100_CLK_USB_STB, "usb_stb", "usb_apb", 2),
+};
+
+static void jh7100_clk_set_divider(struct clk_starfive_jh7100_priv *priv,
+					unsigned int idx,
+					unsigned int mask,
+					unsigned int div)
+{
+	unsigned long flags;
+	unsigned int value;
+	void __iomem *reg = priv->base + 4 * idx;
 
 	spin_lock_irqsave(&priv->rmw_lock, flags);
-	value |= readl_relaxed(reg) & ~mask;
+	value = readl_relaxed(reg) & ~mask;
+	value |= div;
 	writel_relaxed(value, reg);
 	spin_unlock_irqrestore(&priv->rmw_lock, flags);
 }
-
-static int jh7100_clk_enable(struct clk_hw *hw)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-
-	jh7100_clk_reg_rmw(clk, JH7100_CLK_ENABLE, JH7100_CLK_ENABLE);
-	return 0;
-}
-
-static void jh7100_clk_disable(struct clk_hw *hw)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-
-	jh7100_clk_reg_rmw(clk, JH7100_CLK_ENABLE, 0);
-}
-
-static int jh7100_clk_is_enabled(struct clk_hw *hw)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-
-	return !!(jh7100_clk_reg_get(clk) & JH7100_CLK_ENABLE);
-}
-
-static unsigned long jh7100_clk_recalc_rate(struct clk_hw *hw,
-					    unsigned long parent_rate)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	u32 div = jh7100_clk_reg_get(clk) & JH7100_CLK_DIV_MASK;
-
-	return div ? parent_rate / div : 0;
-}
-
-static unsigned long jh7100_clk_bestdiv(struct jh7100_clk *clk,
-					unsigned long rate, unsigned long parent)
-{
-	unsigned long max = clk->max_div;
-	unsigned long div = DIV_ROUND_UP(parent, rate);
-
-	return min(div, max);
-}
-
-static int jh7100_clk_determine_rate(struct clk_hw *hw,
-				     struct clk_rate_request *req)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	unsigned long parent = req->best_parent_rate;
-	unsigned long rate = clamp(req->rate, req->min_rate, req->max_rate);
-	unsigned long div = jh7100_clk_bestdiv(clk, rate, parent);
-	unsigned long result = parent / div;
-
-	/*
-	 * we want the result clamped by min_rate and max_rate if possible:
-	 * case 1: div hits the max divider value, which means it's less than
-	 * parent / rate, so the result is greater than rate and min_rate in
-	 * particular. we can't do anything about result > max_rate because the
-	 * divider doesn't go any further.
-	 * case 2: div = DIV_ROUND_UP(parent, rate) which means the result is
-	 * always lower or equal to rate and max_rate. however the result may
-	 * turn out lower than min_rate, but then the next higher rate is fine:
-	 *   div - 1 = ceil(parent / rate) - 1 < parent / rate
-	 * and thus
-	 *   min_rate <= rate < parent / (div - 1)
-	 */
-	if (result < req->min_rate && div > 1)
-		result = parent / (div - 1);
-
-	req->rate = result;
-	return 0;
-}
-
-static int jh7100_clk_set_rate(struct clk_hw *hw,
-			       unsigned long rate,
-			       unsigned long parent_rate)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	unsigned long div = jh7100_clk_bestdiv(clk, rate, parent_rate);
-
-	jh7100_clk_reg_rmw(clk, JH7100_CLK_DIV_MASK, div);
-	return 0;
-}
-
-static u8 jh7100_clk_get_parent(struct clk_hw *hw)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	u32 value = jh7100_clk_reg_get(clk);
-
-	return (value & JH7100_CLK_MUX_MASK) >> JH7100_CLK_MUX_SHIFT;
-}
-
-static int jh7100_clk_set_parent(struct clk_hw *hw, u8 index)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	u32 value = (u32)index << JH7100_CLK_MUX_SHIFT;
-
-	jh7100_clk_reg_rmw(clk, JH7100_CLK_MUX_MASK, value);
-	return 0;
-}
-
-static int jh7100_clk_mux_determine_rate(struct clk_hw *hw,
-					 struct clk_rate_request *req)
-{
-	return clk_mux_determine_rate_flags(hw, req, 0);
-}
-
-static int jh7100_clk_get_phase(struct clk_hw *hw)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	u32 value = jh7100_clk_reg_get(clk);
-
-	return (value & JH7100_CLK_INVERT) ? 180 : 0;
-}
-
-static int jh7100_clk_set_phase(struct clk_hw *hw, int degrees)
-{
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	u32 value;
-
-	if (degrees == 0)
-		value = 0;
-	else if (degrees == 180)
-		value = JH7100_CLK_INVERT;
-	else
-		return -EINVAL;
-
-	jh7100_clk_reg_rmw(clk, JH7100_CLK_INVERT, value);
-	return 0;
-}
-
-#ifdef CONFIG_DEBUG_FS
-static void jh7100_clk_debug_init(struct clk_hw *hw, struct dentry *dentry)
-{
-	static const struct debugfs_reg32 jh7100_clk_reg = {
-		.name = "CTRL",
-		.offset = 0,
-	};
-	struct jh7100_clk *clk = jh7100_clk_from(hw);
-	struct clk_starfive_jh7100_priv *priv = jh7100_priv_from(clk);
-	struct debugfs_regset32 *regset;
-
-	regset = devm_kzalloc(priv->dev, sizeof(*regset), GFP_KERNEL);
-	if (!regset)
-		return;
-
-	regset->regs = &jh7100_clk_reg;
-	regset->nregs = 1;
-	regset->base = priv->base + 4 * clk->idx;
-
-	debugfs_create_regset32("registers", 0400, dentry, regset);
-}
-#else
-#define jh7100_clk_debug_init NULL
-#endif
-
-static const struct clk_ops jh7100_clk_gate_ops = {
-	.enable = jh7100_clk_enable,
-	.disable = jh7100_clk_disable,
-	.is_enabled = jh7100_clk_is_enabled,
-	.debug_init = jh7100_clk_debug_init,
-};
-
-static const struct clk_ops jh7100_clk_div_ops = {
-	.recalc_rate = jh7100_clk_recalc_rate,
-	.determine_rate = jh7100_clk_determine_rate,
-	.set_rate = jh7100_clk_set_rate,
-	.debug_init = jh7100_clk_debug_init,
-};
-
-static const struct clk_ops jh7100_clk_gdiv_ops = {
-	.enable = jh7100_clk_enable,
-	.disable = jh7100_clk_disable,
-	.is_enabled = jh7100_clk_is_enabled,
-	.recalc_rate = jh7100_clk_recalc_rate,
-	.determine_rate = jh7100_clk_determine_rate,
-	.set_rate = jh7100_clk_set_rate,
-	.debug_init = jh7100_clk_debug_init,
-};
-
-static const struct clk_ops jh7100_clk_mux_ops = {
-	.get_parent = jh7100_clk_get_parent,
-	.set_parent = jh7100_clk_set_parent,
-	.determine_rate = jh7100_clk_mux_determine_rate,
-	.debug_init = jh7100_clk_debug_init,
-};
-
-static const struct clk_ops jh7100_clk_gmux_ops = {
-	.enable = jh7100_clk_enable,
-	.disable = jh7100_clk_disable,
-	.is_enabled = jh7100_clk_is_enabled,
-	.get_parent = jh7100_clk_get_parent,
-	.set_parent = jh7100_clk_set_parent,
-	.determine_rate = jh7100_clk_mux_determine_rate,
-	.debug_init = jh7100_clk_debug_init,
-};
-
-static const struct clk_ops jh7100_clk_inv_ops = {
-	.get_phase = jh7100_clk_get_phase,
-	.set_phase = jh7100_clk_set_phase,
-	.debug_init = jh7100_clk_debug_init,
-};
 
 static const struct clk_ops *__init jh7100_clk_ops(u32 max)
 {
@@ -596,12 +754,12 @@ static struct clk_hw *clk_starfive_jh7100_get(struct of_phandle_args *clkspec, v
 		return &priv->reg[idx].hw;
 
 	if (idx < JH7100_CLK_END)
-		return priv->pll[idx - JH7100_CLK_PLL0_OUT];
+		return priv->extclk[idx - JH7100_CLK_PLL0_OUT];
 
 	return ERR_PTR(-EINVAL);
 }
 
-static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
+static int starfive_clk_sys_init(struct platform_device *pdev)
 {
 	struct clk_starfive_jh7100_priv *priv;
 	unsigned int idx;
@@ -617,20 +775,23 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	priv->pll[0] = devm_clk_hw_register_fixed_factor(priv->dev, "pll0_out",
+	priv->extclk[0] = devm_clk_hw_register_fixed_factor(priv->dev, "pll0_out",
 							 "osc_sys", 0, 40, 1);
-	if (IS_ERR(priv->pll[0]))
-		return PTR_ERR(priv->pll[0]);
+	if (IS_ERR(priv->extclk[0]))
+		return PTR_ERR(priv->extclk[0]);
 
-	priv->pll[1] = devm_clk_hw_register_fixed_factor(priv->dev, "pll1_out",
+	priv->extclk[1] = devm_clk_hw_register_fixed_factor(priv->dev, "pll1_out",
 							 "osc_sys", 0, 64, 1);
-	if (IS_ERR(priv->pll[1]))
-		return PTR_ERR(priv->pll[1]);
+	if (IS_ERR(priv->extclk[1]))
+		return PTR_ERR(priv->extclk[1]);
 
-	priv->pll[2] = devm_clk_hw_register_fixed_factor(priv->dev, "pll2_out",
+	priv->extclk[2] = devm_clk_hw_register_fixed_factor(priv->dev, "pll2_out",
 							 "pll2_refclk", 0, 55, 1);
-	if (IS_ERR(priv->pll[2]))
-		return PTR_ERR(priv->pll[2]);
+	if (IS_ERR(priv->extclk[2]))
+		return PTR_ERR(priv->extclk[2]);
+
+	//add some special items. walker
+	jh7100_clk_set_divider(priv, JH7100_CLK_AHB_BUS, 0xf, 0x4);
 
 	for (idx = 0; idx < JH7100_CLK_PLL0_OUT; idx++) {
 		u32 max = jh7100_clk_data[idx].max;
@@ -651,7 +812,7 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 			if (pidx < JH7100_CLK_PLL0_OUT)
 				parents[i].hw = &priv->reg[pidx].hw;
 			else if (pidx < JH7100_CLK_END)
-				parents[i].hw = priv->pll[pidx - JH7100_CLK_PLL0_OUT];
+				parents[i].hw = priv->extclk[pidx - JH7100_CLK_PLL0_OUT];
 			else if (pidx == JH7100_CLK_OSC_SYS)
 				parents[i].fw_name = "osc_sys";
 			else if (pidx == JH7100_CLK_OSC_AUD)
@@ -674,8 +835,92 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 	return devm_of_clk_add_hw_provider(priv->dev, clk_starfive_jh7100_get, priv);
 }
 
+static struct clk_hw *starfive_aud_clk_get(struct of_phandle_args *clkspec, void *data)
+{
+	struct clk_starfive_jh7100_priv *priv = data;
+	unsigned int idx = clkspec->args[0];
+
+	if (idx < JH7100_CLK_ADC_BCLK_IOPAD)
+		return &priv->reg[idx].hw;
+
+	if (idx < JH7100_CLK_AUD_END)
+		return priv->extclk[idx - JH7100_CLK_ADC_BCLK_IOPAD];
+
+	return ERR_PTR(-EINVAL);
+}
+
+static int starfive_clk_aud_init(struct platform_device *pdev)
+{
+	struct clk_starfive_jh7100_priv *priv;
+	unsigned int idx;
+	int ret;
+
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	spin_lock_init(&priv->rmw_lock);
+	priv->dev = &pdev->dev;
+	priv->base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(priv->base))
+		return PTR_ERR(priv->base);
+
+	priv->extclk[0] = clk_hw_register_fixed_rate(priv->dev, "i2sadc_bclk_iopad", NULL, 0, 12288000);
+	priv->extclk[1] = clk_hw_register_fixed_rate(priv->dev, "i2sadc_lrclk_iopad", NULL, 0, 12288000);
+	priv->extclk[2] = clk_hw_register_fixed_rate(priv->dev, "i2sdac_bclk_iopad", NULL, 0, 12288000);
+	priv->extclk[3] = clk_hw_register_fixed_rate(priv->dev, "i2sdac_lrclk_iopad", NULL, 0, 12288000);
+	priv->extclk[4] = clk_hw_register_fixed_rate(priv->dev, "codec_ext_clock", NULL, 0, 24576000);
+	priv->extclk[5] = clk_hw_register_fixed_rate(priv->dev, "audio_src_12288", NULL, 0, 12288000);
+
+	for (idx = 0; idx < JH7100_CLK_ADC_BCLK_IOPAD; idx++) {
+		struct clk_init_data init = {
+			.name = jh7100_audio[idx].name,
+			.ops = jh7100_audio[idx].ops,
+			.num_parents = (jh7100_audio[idx].max >> JH7100_CLK_MUX_SHIFT) + 1,
+			.flags = jh7100_audio[idx].flags,
+		};
+		struct jh7100_clk *clk = &priv->reg[idx];
+
+		if (init.num_parents > 1)
+			init.parent_names = jh7100_audio[idx].parents;
+		else
+			init.parent_names = &jh7100_audio[idx].parent;
+
+		clk->hw.init = &init;
+		clk->idx = idx;
+		clk->max_div = jh7100_audio[idx].max & JH7100_CLK_DIV_MASK;
+
+		ret = devm_clk_hw_register(priv->dev, &clk->hw);
+		if (ret)
+			return ret;
+	}
+
+	return devm_of_clk_add_hw_provider(priv->dev, starfive_aud_clk_get, priv);
+}
+
+static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	int (*init_func)(struct platform_device *pdev);
+
+	init_func = of_device_get_match_data(dev);
+	if (!init_func)
+		return -ENODEV;
+
+	init_func(pdev);
+
+	return 0;
+}
+
 static const struct of_device_id clk_starfive_jh7100_match[] = {
-	{ .compatible = "starfive,jh7100-clkgen" },
+	{
+		.compatible = "starfive,jh7100-clkgen",
+		.data = starfive_clk_sys_init
+	},
+	{
+		.compatible = "starfive,jh7100-audclk",
+		.data = starfive_clk_aud_init
+	},
 	{ /* sentinel */ }
 };
 

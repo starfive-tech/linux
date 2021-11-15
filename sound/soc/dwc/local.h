@@ -99,6 +99,13 @@ struct dw_i2s_dev {
 	u32 xfer_resolution;
 	u32 fifo_th;
 
+	struct clk *clk_dac_mclk;
+	struct clk *clk_i2sdac0_bclk;
+	struct clk *clk_i2sdac0_lrclk;
+	struct clk *clk_i2sdac_apb;
+	struct reset_control *rst_apb_i2sdac;
+        struct reset_control *rst_i2sdac_srst;
+
 	/* data related to DMA transfers b/w i2s and DMAC */
 	union dw_i2s_snd_dma_data play_dma_data;
 	union dw_i2s_snd_dma_data capture_dma_data;
