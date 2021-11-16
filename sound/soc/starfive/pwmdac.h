@@ -120,7 +120,6 @@ struct sf_pwmdac_dev {
 	struct clk *clk_dma1p_ahb;
 	struct clk *clk_pwmdac_apb;
 	struct clk *clk_dac_mclk;
-
 	struct reset_control *rst_apb_bus;
 	struct reset_control *rst_dma1p_ahb;
 	struct reset_control *rst_apb_pwmdac;

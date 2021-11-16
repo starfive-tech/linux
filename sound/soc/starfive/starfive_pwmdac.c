@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
+ * PWMDAC driver for the StarFive JH7100 SoC
+ *
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 #include <linux/clk.h>
@@ -873,7 +875,7 @@ static int sf_pwmdac_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 static const struct of_device_id sf_pwmdac_of_match[] = {
-	{ .compatible = "sf,pwmdac",	 },
+	{ .compatible = "starfive,pwmdac",	 },
 	{},
 };
 

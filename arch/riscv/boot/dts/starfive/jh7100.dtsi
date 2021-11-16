@@ -682,7 +682,7 @@
 		};
 		
 		i2svad: i2svad@10420000 {
-			compatible = "sf,sf-i2svad";
+			compatible = "starfive,sf-i2svad";
 			reg = <0x0 0x10420000 0x0 0x1000> ;
 			interrupt-parent = <&plic>;
 			interrupts = <60>, <61>;
@@ -756,7 +756,7 @@
 		};
 		
 		pwmdac: pwmdac@10440000 {
-			compatible = "sf,pwmdac";
+			compatible = "starfive,pwmdac";
 			reg = <0x0 0x10440000 0x0 0x1000>;
 			clocks = <&clkgen JH7100_CLK_AUDIO_ROOT>,
 				 <&clkgen JH7100_CLK_AUDIO_SRC>,
