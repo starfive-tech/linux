@@ -297,6 +297,7 @@ enum {
 	DWAXIDMAC_HWHS_POL_ACTIVE_LOW
 };
 #endif
+
 #define CH_CFG_H_HS_SEL_DST_POS		4
 #define CH_CFG_H_HS_SEL_SRC_POS		3
 enum {

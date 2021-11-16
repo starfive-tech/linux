@@ -1370,7 +1370,7 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 	chip->dw->hdata->nr_channels = tmp;
 
-	if(chip->dw->hdata->nr_channels > 8){
+	if (chip->dw->hdata->nr_channels > 8) {
 		chip->flag->nr_chan_8 = true;
 #ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 		chip->flag->need_flush = true;
