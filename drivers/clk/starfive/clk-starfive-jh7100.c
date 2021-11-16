@@ -5,6 +5,7 @@
  * Copyright 2021 Ahmad Fatoum, Pengutronix
  * Copyright (C) 2021 Glider bv
  * Copyright (C) 2021 Emil Renner Berthing <kernel@esmil.dk>
+ * Copyright (C) 2021 WalkerChenL <walker.chen@starfivetech.com>
  */
 
 #include <linux/bits.h>
@@ -401,14 +402,6 @@ static const struct clk_ops jh7100_clk_inv_ops = {
 	.parents = _parents, \
 	.flags = CLK_IS_CRITICAL, \
 	.max = (ARRAY_SIZE(_parents) - 1) << JH7100_CLK_MUX_SHIFT, \
-}
-
-#define STARFIVE_GDIV_MUX(_idx, _name, _parents, _max) [_idx] = { \
-        .name = _name, \
-        .ops = &jh7100_clk_gdiv_mux_ops, \
-        .parents = _parents, \
-        .flags = 0, \
-        .max = _max, \
 }
 
 #define STARFIVE__INV(_idx, _name, _parent) [_idx] = { \
