@@ -195,14 +195,14 @@ static int si5wdt_enable_clock(struct stf_si5_wdt *wdt)
 	wdt->rst_wdtimer_apb = resets[0].rstc;
 	wdt->rst_wdt = resets[1].rstc;
 
-	wdt->apb_clk =	devm_clk_get(wdt->dev, "wdtimer_apb");
+	wdt->apb_clk = devm_clk_get(wdt->dev, "wdtimer_apb");
 	if (!IS_ERR(wdt->apb_clk)) {
 		ret = clk_prepare_enable(wdt->apb_clk);
 		if(ret)
 			dev_warn(wdt->dev, "enable core_clk error.\n");
 	}
 
-	wdt->core_clk =  devm_clk_get(wdt->dev, "wdt_coreclk");
+	wdt->core_clk = devm_clk_get(wdt->dev, "wdt_coreclk");
 	if (!IS_ERR(wdt->core_clk)) {
 		ret = clk_prepare_enable(wdt->core_clk);
 		if(ret)
@@ -223,7 +223,7 @@ static int si5wdt_enable_clock(struct stf_si5_wdt *wdt)
 
 	ret = reset_control_deassert(wdt->rst_wdtimer_apb);
 	if (ret) {
-		printk(KERN_INFO "failed to deassert wdtimer_apb\n");
+		printk(KERN_INFO "failed to deassert wdtimer_apb, ret=%d\n", ret);
 		return ret;
 	}
 
