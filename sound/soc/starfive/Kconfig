@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2021 StarFive Technology Co., Ltd.
+
+config SND_STARFIVE_SPDIF
+	tristate "starfive spdif"
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for codecs attached to the
+	  I2S interface on VIC vic_starlight board. You will also need to select
+	  the drivers for the rest of VIC audio subsystem.
+
+config SND_STARFIVE_SPDIF_PCM
+	bool "PCM PIO extension for spdif driver"
+	depends on SND_STARFIVE_SPDIF
+	help
+	 Say Y or N if you want to add a custom ALSA extension that registers
+	 a PCM and uses PIO to transfer data.
+
+config SND_STARFIVE_PWMDAC
+	tristate "starfive pwmdac Device Driver"
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	help
+	 Say Y or M if you want to add support for sf pwmdac driver.
+
+config SND_STARFIVE_PWMDAC_PCM
+	bool "PCM PIO extension for pwmdac driver"
+	depends on SND_STARFIVE_PWMDAC
+	help
+	 Say Y or N if you want to add a custom ALSA extension that registers
+	 a PCM and uses PIO to transfer data.
+
+config SND_STARFIVE_PDM
+	tristate "starfive pdm Device Driver"
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select REGMAP_MMIO
+	help
+	 Say Y or M if you want to add support for sf pdm driver.
+
+config SND_STARFIVE_I2SVAD
+	tristate "starfive I2SVAD Device Driver"
+	depends on SOC_STARFIVE || COMPILE_TEST
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	help
+	 Say Y or M if you want to add support for I2SVAD driver for
+	 starfive I2SVAD device.
+
+config SND_STARFIVE_I2SVAD_PCM
+	bool "PCM PIO extension for I2SVAD driver"
+	depends on SND_STARFIVE_I2SVAD
+	help
+	 Say Y or N if you want to add a custom ALSA extension that registers
+	 a PCM and uses PIO to transfer data.
+
+	 This functionality is specially suited for I2SVAD devices that don't have
+	 DMA support.
+
