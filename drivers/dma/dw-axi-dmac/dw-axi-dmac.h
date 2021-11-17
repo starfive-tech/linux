@@ -292,13 +292,13 @@ enum {
 #define CH_CTL_L_SRC_MAST		BIT(0)
 
 /* CH_CFG_H */
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 #define CH_CFG_H_PRIORITY_POS		15
-#define CH_CFG_H_DST_HWHS_POL		6
-#define CH_CFG_H_SRC_HWHS_POL		5
-enum {
-	DWAXIDMAC_HWHS_POL_ACTIVE_HIGH	= 0,
-	DWAXIDMAC_HWHS_POL_ACTIVE_LOW
-};
+#else
+#define CH_CFG_H_PRIORITY_POS		17
+#endif
+#define CH_CFG_H_DST_PER_POS		12
+#define CH_CFG_H_SRC_PER_POS		7
 #define CH_CFG_H_HS_SEL_DST_POS		4
 #define CH_CFG_H_HS_SEL_SRC_POS		3
 enum {

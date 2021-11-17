@@ -32,7 +32,7 @@
 #include "../dmaengine.h"
 #include "../virt-dma.h"
 
-#include <soc/starfive/vic7100.h>
+#include <soc/sifive/sifive_l2_cache.h>
 
 /*
  * The set of bus widths supported by the DMA controller. DW AXI DMAC supports
@@ -88,7 +88,7 @@ static inline void axi_chan_config_write(struct axi_dma_chan *chan,
 
 	cfg_lo = (config->dst_multblk_type << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 		  config->src_multblk_type << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
-	if (chan->chip->dw->hdata->reg_map_8_channels) {
+	if (!IS_ENABLED(CONFIG_SOC_STARFIVE) && chan->chip->dw->hdata->reg_map_8_channels) {
 		cfg_hi = config->tt_fc << CH_CFG_H_TT_FC_POS |
 			 config->hs_sel_src << CH_CFG_H_HS_SEL_SRC_POS |
 			 config->hs_sel_dst << CH_CFG_H_HS_SEL_DST_POS |
@@ -358,7 +358,6 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 {
 	struct axi_dma_hw_desc *hw_desc = NULL;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
-	s32 descs_flush, descs_count;
 	struct axi_dma_chan_config config = {};
 	u32 irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
@@ -414,16 +413,24 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
 
-    /*flush all the desc */
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
-	if(chan->chip->flag->need_flush) {
-		descs_count =  atomic_read(&chan->descs_allocated);
-		for (descs_flush = 0; descs_flush < descs_count; descs_flush++) {
-			hw_desc = &first->hw_desc[descs_flush];
-			starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
+	/* flush all the desc */
+	if (IS_ENABLED(CONFIG_SOC_STARFIVE_VIC7100)) {
+		int count = atomic_read(&chan->descs_allocated);
+		int i;
+
+		for (i = 0; i < count; i++) {
+			sifive_l2_flush64_range(first->hw_desc[i].llp,
+						sizeof(*first->hw_desc[i].lli));
+
+			dev_dbg(chan->chip->dev,
+				"sar:%#llx dar:%#llx llp:%#llx ctl:0x%x:%08x\n",
+				first->hw_desc[i].lli->sar,
+				first->hw_desc[i].lli->dar,
+				first->hw_desc[i].lli->llp,
+				first->hw_desc[i].lli->ctl_hi,
+				first->hw_desc[i].lli->ctl_lo);
 		}
 	}
-#endif
 
 	axi_chan_enable(chan);
 }
@@ -636,13 +643,13 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
-	#ifdef CONFIG_SOC_STARFIVE_VIC7100
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
-	#else
+#else
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_SRC_MSIZE_POS;
-	#endif
+#endif
 	hw_desc->lli->ctl_lo = cpu_to_le32(ctllo);
 
 	set_desc_src_master(hw_desc);
@@ -1481,7 +1488,11 @@ static int dw_probe(struct platform_device *pdev)
 	 * Therefore, set constraint to 1024 * 4.
 	 */
 	dw->dma.dev->dma_parms = &dw->dma_parms;
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 	dma_set_max_seg_size(&pdev->dev, DMAC_MAX_BLK_SIZE);
+#else
+	dma_set_max_seg_size(&pdev->dev, MAX_BLOCK_SIZE);
+#endif
 	platform_set_drvdata(pdev, chip);
 
 	pm_runtime_enable(chip->dev);
