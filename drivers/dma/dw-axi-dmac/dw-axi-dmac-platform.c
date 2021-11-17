@@ -86,7 +86,7 @@ static inline void axi_chan_config_write(struct axi_dma_chan *chan,
 
 	cfg_lo = (config->dst_multblk_type << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 		  config->src_multblk_type << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
-	if (chan->chip->dw->hdata->reg_map_8_channels) {
+	if (!IS_ENABLED(CONFIG_SOC_STARFIVE) && chan->chip->dw->hdata->reg_map_8_channels) {
 		cfg_hi = config->tt_fc << CH_CFG_H_TT_FC_POS |
 			 config->hs_sel_src << CH_CFG_H_HS_SEL_SRC_POS |
 			 config->hs_sel_dst << CH_CFG_H_HS_SEL_DST_POS |
@@ -672,8 +672,13 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
+#ifdef CONFIG_SOC_STARFIVE
+	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
+		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
+#else
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_4 << CH_CTL_L_SRC_MSIZE_POS;
+#endif
 	hw_desc->lli->ctl_lo = cpu_to_le32(ctllo);
 
 	set_desc_src_master(hw_desc);
@@ -1484,7 +1489,11 @@ static int dw_probe(struct platform_device *pdev)
 	 * Therefore, set constraint to 1024 * 4.
 	 */
 	dw->dma.dev->dma_parms = &dw->dma_parms;
+#ifdef CONFIG_SOC_STARFIVE
+	dma_set_max_seg_size(&pdev->dev, DMAC_MAX_BLK_SIZE);
+#else
 	dma_set_max_seg_size(&pdev->dev, MAX_BLOCK_SIZE);
+#endif
 	platform_set_drvdata(pdev, chip);
 
 	pm_runtime_enable(chip->dev);
