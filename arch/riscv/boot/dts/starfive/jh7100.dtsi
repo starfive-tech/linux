@@ -295,8 +295,14 @@
 		};
 
 		rstgen: reset-controller@11840000 {
-			compatible = "starfive,jh7100-reset";
+			compatible = "starfive,jh7100-reset", "syscon";
 			reg = <0x0 0x11840000 0x0 0x10000>;
+			#reset-cells = <1>;
+		};
+
+		audrst: reset-controller@10490000 {
+			compatible = "starfive,jh7100-reset-audio", "syscon";
+			reg = <0x0 0x10490000 0x0 0x10000>;
 			#reset-cells = <1>;
 		};
 
