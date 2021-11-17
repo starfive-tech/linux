@@ -282,7 +282,11 @@ enum {
 #define CH_CTL_L_SRC_MAST		BIT(0)
 
 /* CH_CFG_H */
+#ifdef CONFIG_SOC_STARFIVE
+#define CH_CFG_H_PRIORITY_POS		15
+#else
 #define CH_CFG_H_PRIORITY_POS		17
+#endif
 #define CH_CFG_H_DST_PER_POS		12
 #define CH_CFG_H_SRC_PER_POS		7
 #define CH_CFG_H_HS_SEL_DST_POS		4
