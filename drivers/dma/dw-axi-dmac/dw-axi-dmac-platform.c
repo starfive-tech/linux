@@ -382,11 +382,13 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	u32 irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
+	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
-		return;
+		axi_chan_disable(chan);
+		chan->is_err = true;
 	}
 
 	axi_dma_enable(chan->chip);
@@ -1028,6 +1030,14 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 			axi_chan_name(chan));
 		goto out;
 	}
+	if (chan->is_err) {
+		struct axi_dma_desc *desc = vd_to_axi_desc(vd);
+
+		axi_chan_block_xfer_start(chan, desc);
+		chan->is_err = false;
+		goto out;
+	}
+
 	/* Remove the completed descriptor from issued list */
 	list_del(&vd->node);
 
