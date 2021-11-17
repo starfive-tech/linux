@@ -363,12 +363,13 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	u32 irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
+	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
 		axi_chan_disable(chan);
-		//return;
+		chan->is_err = true;
 	}
 
 	axi_dma_enable(chan->chip);
