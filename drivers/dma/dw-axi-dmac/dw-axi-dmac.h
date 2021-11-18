@@ -56,6 +56,7 @@ struct axi_dma_chan {
 	struct dma_slave_config		config;
 	enum dma_transfer_direction	direction;
 	bool				cyclic;
+	bool 				is_err;
 	/* these other elements are all protected by vc.lock */
 	bool				is_paused;
 };
@@ -203,8 +204,6 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 #define DMAC_APB_HALFWORD_WR_CH_EN	0x020 /* DMAC Halfword write enables */
 
 #define UNUSED_CHANNEL		0x3F /* Set unused DMA channel to 0x3F */
-#define DMA_APB_HS_SEL_BIT_SIZE	0x08 /* HW handshake bits per channel */
-#define DMA_APB_HS_SEL_MASK	0xFF /* HW handshake select masks */
 #define MAX_BLOCK_SIZE		0x1000 /* 1024 blocks * 4 bytes data width */
 
 /* DMAC_CFG */
@@ -290,8 +289,14 @@ enum {
 
 /* CH_CFG_H */
 #define CH_CFG_H_PRIORITY_POS		15
-#define CH_CFG_H_DST_PER_POS		12
-#define CH_CFG_H_SRC_PER_POS		7
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+#define CH_CFG_H_DST_HWHS_POL 		6
+#define CH_CFG_H_SRC_HWHS_POL 		5
+enum {
+	DWAXIDMAC_HWHS_POL_ACTIVE_HIGH  = 0,
+	DWAXIDMAC_HWHS_POL_ACTIVE_LOW
+};
+#endif
 #define CH_CFG_H_HS_SEL_DST_POS		4
 #define CH_CFG_H_HS_SEL_SRC_POS		3
 enum {
@@ -314,6 +319,11 @@ enum {
 /* CH_CFG_L */
 #define CH_CFG_L_DST_MULTBLK_TYPE_POS	2
 #define CH_CFG_L_SRC_MULTBLK_TYPE_POS	0
+#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+#define CH_CFG_L_DST_PER_POS 	4
+#define CH_CFG_L_SRC_PER_POS 	11
+#endif
+
 enum {
 	DWAXIDMAC_MBLK_TYPE_CONTIGUOUS	= 0,
 	DWAXIDMAC_MBLK_TYPE_RELOAD,

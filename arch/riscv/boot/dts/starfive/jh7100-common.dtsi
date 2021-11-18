@@ -413,6 +413,20 @@
 			slew-rate = <0>;
 		};
 	};
+
+	pwmdac_pins: pwmdac_0 {
+		pwmdac_pins {
+			pinmux = <GPIOMUX(23, GPO_PWMDAC_LEFT_OUT,
+				  GPO_ENABLE, GPI_NONE)>,
+				  <GPIOMUX(24, GPO_PWMDAC_RIGHT_OUT,
+				  GPO_ENABLE, GPI_NONE)>;
+			bias-disable;
+			drive-strength = <35>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
 };
 
 &i2c0 {
@@ -566,5 +580,11 @@
 
 &usb3 {
 	dr_mode = "host";
+	status = "okay";
+};
+
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac_pins>;
 	status = "okay";
 };

@@ -229,6 +229,8 @@
 			snps,block-size = <4096 4096 4096 4096>;
 			snps,priority = <0 1 2 3>;
 			snps,axi-max-burst-len = <128>;
+			status = "okay";
+			dma-coherent;
 		};
 
 		crypto: crypto@100d0000 {
@@ -277,6 +279,14 @@
 			#clock-cells = <1>;
 		};
 
+		audioclk: clock-controller@10480000 {
+			compatible = "starfive,jh7100-audclk";
+			reg = <0x0 0x10480000 0x0 0x10000>;
+			clocks = <&osc_sys>, <&osc_aud>;
+			clock-names = "osc_sys", "osc_aud";
+			#clock-cells = <1>;
+                };
+
 		otp: otp@11810000 {
 			compatible = "starfive,fu740-otp";
 			reg = <0x0 0x11810000 0x0 0x10000>;
@@ -285,8 +295,14 @@
 		};
 
 		rstgen: reset-controller@11840000 {
-			compatible = "starfive,jh7100-reset";
+			compatible = "starfive,jh7100-reset", "syscon";
 			reg = <0x0 0x11840000 0x0 0x10000>;
+			#reset-cells = <1>;
+		};
+
+		audrst: reset-controller@10490000 {
+			compatible = "starfive,jh7100-reset-audio", "syscon";
+			reg = <0x0 0x10490000 0x0 0x10000>;
 			#reset-cells = <1>;
 		};
 
@@ -566,6 +582,20 @@
 			status = "disabled";
 		};
 
+		wdt: wdt@12480000 {
+			compatible = "starfive,si5-wdt";
+			reg = <0x0 0x12480000 0x0 0x10000>;
+			interrupts = <80>;
+			clocks = <&clkgen JH7100_CLK_WDT_CORE>,
+				 <&clkgen JH7100_CLK_WDTIMER_APB>;
+			clock-names = "wdt_coreclk", "wdtimer_apb";
+			clock-frequency = <50000000>;
+			resets = <&rstgen JH7100_RSTN_WDTIMER_APB>,
+				 <&rstgen JH7100_RSTN_WDT>;
+			reset-names = "wdtimer_apb", "wdt";
+			status = "okay";
+		};
+
 		ptc: pwm@12490000 {
 			compatible = "starfive,pwm0";
 			reg = <0x0 0x12490000 0x0 0x10000>;
@@ -636,6 +666,138 @@
 			ranges = <0x40000000 0x0  0x40000000 0x01000000>,
 				 <0xb0000000 0x10 0x70000000 0x3000000>;
 			dsp@0 {
+			};
+		};
+
+		i2sadc0: i2sadc0@10400000 {
+			compatible = "snps,designware-i2sadc0";
+			reg = <0x0 0x10400000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			clocks = <&clkgen JH7100_CLK_APB1_BUS>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 28>;
+			dma-names = "rx";
+		};
+		
+		i2svad: i2svad@10420000 {
+			compatible = "starfive,sf-i2svad";
+			reg = <0x0 0x10420000 0x0 0x1000> ;
+			interrupt-parent = <&plic>;
+			interrupts = <60>, <61>;
+			interrupt-names = "spintr", "slintr";
+			clocks = <&audioclk JH7100_CLK_APB_I2SVAD>;
+			clock-names = "i2svad_apb";
+			resets = <&audrst JH7100_AUDRSTN_APB_I2SVAD>,
+				<&audrst JH7100_AUDRSTN_I2SVAD_SRST>;
+			reset-names = "apb_i2svad", "i2svad_srst";
+			#sound-dai-cells = <0>;
+		};
+
+		i2sdac0: i2sdac0@10450000 {
+			compatible = "snps,designware-i2sdac0";
+			reg = <0x0 0x10450000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			clocks = <&audioclk JH7100_CLK_DAC_MCLK>,
+				 <&audioclk JH7100_CLK_I2S0_BCLK>,
+				 <&audioclk JH7100_CLK_I2S0_LRCLK>,
+				 <&audioclk JH7100_CLK_APB_I2S0>;
+			clock-names = "dac_mclk", "i2sdac0_bclk", "i2sdac0_lrclk", "i2sdac_apb";
+			resets = <&audrst JH7100_AUDRSTN_APB_I2SDAC>,
+				<&audrst JH7100_AUDRSTN_I2SDAC_SRST>;
+			reset-names = "apb_i2sdac", "i2sdac_srst";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 30>;
+			dma-names = "tx";
+		};
+		
+		i2sdac1: i2sdac1@10460000 {
+			compatible = "snps,designware-i2sdac1";
+			reg = <0x0 0x10460000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			clocks = <&audioclk JH7100_CLK_DAC_MCLK>,
+				 <&audioclk JH7100_CLK_I2S1_BCLK>,
+				 <&audioclk JH7100_CLK_I2S1_LRCLK>,
+				 <&audioclk JH7100_CLK_APB_I2S1>;
+			clock-names = "dac_mclk", "i2sdac1_bclk", "i2sdac1_lrclk", "i2s1_apb";
+			resets = <&audrst JH7100_AUDRSTN_APB_I2S1>,
+				<&audrst JH7100_AUDRSTN_I2S1_SRST>;
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 31>;
+			dma-names = "tx";
+		};
+
+		i2sdac16k: i2sdac16k@10470000 {
+			compatible = "snps,designware-i2sdac16k";
+			reg = <0x0 0x10470000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			clocks = <&clkgen JH7100_CLK_APB1_BUS>;
+			clock-names = "i2sclk";
+			#sound-dai-cells = <0>;
+			dmas = <&dma2p 29>;
+			dma-names = "tx";
+		};
+
+		spdif_transmitter: spdif_transmitter {
+			compatible = "linux,spdif-dit";
+			#sound-dai-cells = <0>;
+		};	
+		
+		spdif_receiver: spdif_receiver {
+			compatible = "linux,spdif-dir";
+			#sound-dai-cells = <0>;
+		};
+		
+		pwmdac: pwmdac@10440000 {
+			compatible = "starfive,pwmdac";
+			reg = <0x0 0x10440000 0x0 0x1000>;
+			clocks = <&clkgen JH7100_CLK_AUDIO_ROOT>,
+				 <&clkgen JH7100_CLK_AUDIO_SRC>,
+				 <&clkgen JH7100_CLK_AUDIO_12288>,
+				 <&audioclk JH7100_CLK_DMA1P_AHB>,
+				 <&audioclk JH7100_CLK_APB_PWMDAC>,
+				 <&audioclk JH7100_CLK_DAC_MCLK>;
+			clock-names = "audio_root", "audio_src", "audio_12288", "dma1p_ahb", "pwmdac_apb", "dac_mclk";
+			resets = <&audrst JH7100_AUDRSTN_APB_BUS>,
+				<&audrst JH7100_AUDRSTN_DMA1P_AHB>,
+				<&audrst JH7100_AUDRSTN_APB_PWMDAC>;
+			reset-names = "apb_bus", "dma1p_ahb", "apb_pwmdac";
+			dmas = <&dma2p 23>;
+			dma-names = "tx";
+			#sound-dai-cells = <0>;
+		};
+		
+		pwmdac_codec: pwmdac-transmitter {
+			compatible = "linux,pwmdac-dit";
+			#sound-dai-cells = <0>;
+		};
+		
+		dmic_codec: dmic_codec { 
+			compatible = "dmic-codec";
+			#sound-dai-cells = <0>;
+		}; 
+
+		sound:snd-card{
+			compatible = "simple-audio-card";
+			simple-audio-card,name = "Starfive-Multi-Sound-Card";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* pwmdac */
+			simple-audio-card,dai-link@0 {
+				reg = <0>;
+				status = "okay";
+				format = "left_j";
+				bitclock-master = <&sndcpu0>;
+				frame-master = <&sndcpu0>;
+				
+				sndcpu0: cpu {
+					sound-dai = <&pwmdac>;
+				};
+
+				codec {
+					sound-dai = <&pwmdac_codec>;
+				};
 			};
 		};
 	};
