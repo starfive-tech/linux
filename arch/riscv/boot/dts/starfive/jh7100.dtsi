@@ -272,6 +272,16 @@
 			snps,axi-max-burst-len = <64>;
 		};
 
+		audclk: clock-controller@10480000 {
+			compatible = "starfive,jh7100-audclk";
+			reg = <0x0 0x10480000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_AUDIO_SRC>,
+				 <&clkgen JH7100_CLK_AUDIO_12288>,
+				 <&clkgen JH7100_CLK_DOM7AHB_BUS>;
+			clock-names = "audio_src", "audio_12288", "dom7ahb_bus";
+			#clock-cells = <1>;
+		};
+
 		clkgen: clock-controller@11800000 {
 			compatible = "starfive,jh7100-clkgen";
 			reg = <0x0 0x11800000 0x0 0x10000>;
@@ -755,16 +765,6 @@
 			#sound-dai-cells = <0>;
 			dmas = <&dma2p 29>;
 			dma-names = "tx";
-		};
-
-		audclk: clock-controller@10480000 {
-			compatible = "starfive,jh7100-audclk";
-			reg = <0x0 0x10480000 0x0 0x10000>;
-			clocks = <&clkgen JH7100_CLK_AUDIO_SRC>,
-				 <&clkgen JH7100_CLK_AUDIO_12288>,
-				 <&clkgen JH7100_CLK_DOM7AHB_BUS>;
-			clock-names = "audio_src", "audio_12288", "dom7ahb_bus";
-			#clock-cells = <1>;
 		};
 
 		audrst: reset-controller@10490000 {
