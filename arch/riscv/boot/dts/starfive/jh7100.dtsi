@@ -131,6 +131,12 @@
 			#clock-cells = <1>;
 		};
 
+		audrst: reset-controller@10490000 {
+			compatible = "starfive,jh7100-audrst";
+			reg = <0x0 0x10490000 0x0 0x10000>;
+			#reset-cells = <1>;
+		};
+
 		clkgen: clock-controller@11800000 {
 			compatible = "starfive,jh7100-clkgen";
 			reg = <0x0 0x11800000 0x0 0x10000>;
