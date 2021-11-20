@@ -16,6 +16,8 @@
 
 #include <dt-bindings/reset/starfive-jh7100.h>
 
+#include "reset-starfive-jh7100.h"
+
 /* register offsets */
 #define JH7100_RESET_ASSERT0	0x00
 #define JH7100_RESET_ASSERT1	0x04
@@ -52,7 +54,9 @@ struct jh7100_reset {
 	struct reset_controller_dev rcdev;
 	/* protect registers against concurrent read-modify-write */
 	spinlock_t lock;
-	void __iomem *base;
+	void __iomem *assert;
+	void __iomem *status;
+	const u32 *asserted;
 };
 
 static inline struct jh7100_reset *
@@ -67,9 +71,9 @@ static int jh7100_reset_update(struct reset_controller_dev *rcdev,
 	struct jh7100_reset *data = jh7100_reset_from(rcdev);
 	unsigned long offset = id / 32;
 	u32 mask = BIT(id % 32);
-	void __iomem *reg_assert = data->base + JH7100_RESET_ASSERT0 + offset * sizeof(u32);
-	void __iomem *reg_status = data->base + JH7100_RESET_STATUS0 + offset * sizeof(u32);
-	u32 done = jh7100_reset_asserted[offset] & mask;
+	void __iomem *reg_assert = data->assert + offset * sizeof(u32);
+	void __iomem *reg_status = data->status + offset * sizeof(u32);
+	u32 done = data->asserted[offset] & mask;
 	u32 value;
 	unsigned long flags;
 	int ret;
@@ -123,10 +127,10 @@ static int jh7100_reset_status(struct reset_controller_dev *rcdev,
 	struct jh7100_reset *data = jh7100_reset_from(rcdev);
 	unsigned long offset = id / 32;
 	u32 mask = BIT(id % 32);
-	void __iomem *reg_status = data->base + JH7100_RESET_STATUS0 + offset * sizeof(u32);
+	void __iomem *reg_status = data->status + offset * sizeof(u32);
 	u32 value = readl(reg_status);
 
-	return !((value ^ jh7100_reset_asserted[offset]) & mask);
+	return !((value ^ data->asserted[offset]) & mask);
 }
 
 static const struct reset_control_ops jh7100_reset_ops = {
@@ -136,7 +140,8 @@ static const struct reset_control_ops jh7100_reset_ops = {
 	.status		= jh7100_reset_status,
 };
 
-static int __init jh7100_reset_probe(struct platform_device *pdev)
+int reset_starfive_jh7100_generic_probe(struct platform_device *pdev, const u32 *asserted,
+					unsigned int status_offset, unsigned int nr_resets)
 {
 	struct jh7100_reset *data;
 
@@ -144,18 +149,28 @@ static int __init jh7100_reset_probe(struct platform_device *pdev)
 	if (!data)
 		return -ENOMEM;
 
-	data->base = devm_platform_ioremap_resource(pdev, 0);
-	if (IS_ERR(data->base))
-		return PTR_ERR(data->base);
+	data->assert = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(data->assert))
+		return PTR_ERR(data->assert);
 
 	data->rcdev.ops = &jh7100_reset_ops;
 	data->rcdev.owner = THIS_MODULE;
-	data->rcdev.nr_resets = JH7100_RSTN_END;
+	data->rcdev.nr_resets = nr_resets;
 	data->rcdev.dev = &pdev->dev;
 	data->rcdev.of_node = pdev->dev.of_node;
+
 	spin_lock_init(&data->lock);
+	data->status = data->assert + status_offset;
+	data->asserted = asserted;
 
 	return devm_reset_controller_register(&pdev->dev, &data->rcdev);
+}
+EXPORT_SYMBOL_GPL(reset_starfive_jh7100_generic_probe);
+
+static int __init jh7100_reset_probe(struct platform_device *pdev)
+{
+	return reset_starfive_jh7100_generic_probe(pdev, jh7100_reset_asserted,
+						   JH7100_RESET_STATUS0, JH7100_RSTN_END);
 }
 
 static const struct of_device_id jh7100_reset_dt_ids[] = {
