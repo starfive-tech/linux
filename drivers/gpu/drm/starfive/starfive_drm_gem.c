@@ -106,6 +106,7 @@ starfive_drm_gem_alloc_object(struct drm_device *drm, unsigned int size)
 	if (!starfive_obj)
 		return ERR_PTR(-ENOMEM);
 
+	starfive_obj->base.funcs = &starfive_gem_object_funcs;
 	obj = &starfive_obj->base;
 	ret = drm_gem_object_init(drm, obj, round_up(size, PAGE_SIZE));
 	if (ret)
@@ -164,8 +165,6 @@ starfive_drm_gem_create_object(struct drm_device *drm, unsigned int size,
 	ret = starfive_drm_gem_alloc_buf(starfive_obj, alloc_kmap);
 	if (ret)
 		goto err_free_obj;
-
-	starfive_obj->base.funcs = &starfive_gem_object_funcs;
 
 	return starfive_obj;
 
