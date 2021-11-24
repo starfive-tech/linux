@@ -444,3 +444,5 @@ module_platform_driver(nvdla_driver);
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("NVIDIA");
 MODULE_DESCRIPTION("Nvidia Deep Learning Accelerator driver");
+
+MODULE_IMPORT_NS(DMA_BUF);
