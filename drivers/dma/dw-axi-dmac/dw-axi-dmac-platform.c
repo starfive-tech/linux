@@ -365,7 +365,7 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	struct axi_dma_hw_desc *hw_desc = NULL;
 	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
-		dev_dbg(chan2dev(chan), "%s is non-idle!\n",
+		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
 		axi_chan_disable(chan);
@@ -1197,13 +1197,8 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
 					!(val & chan_active), 1000, 10000);
 	if (ret == -ETIMEDOUT)
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
-		dev_dbg(dchan2dev(dchan),
-			 "%s failed to stop\n", axi_chan_name(chan));
-#else
 		dev_warn(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
-#endif
 
 
 	if (chan->direction != DMA_MEM_TO_MEM)
