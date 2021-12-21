@@ -762,7 +762,7 @@ static int video_enum_frameintervals(struct file *file, void *fh,
 	fie.code = code.code;
 	ret = v4l2_subdev_call(subdev, pad, enum_frame_interval, NULL, &fie);
 	if (ret < 0)
-		return -EINVAL;
+		return ret;
 
 	fival->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 	fival->discrete = fie.interval;

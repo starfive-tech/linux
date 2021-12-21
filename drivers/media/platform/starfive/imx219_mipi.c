@@ -538,6 +538,8 @@ static const struct imx219_mode supported_modes[] = {
 		},
 	},
 };
+#define MODE_COUNT_MAX	ARRAY_SIZE(supported_modes)
+static int imx219_fps[MODE_COUNT_MAX] = {15, 30, 30, 30};
 
 struct sensor_pinctrl_info {
         struct pinctrl *pinctrl;
@@ -879,34 +881,32 @@ static int imx219_enum_frame_interval(struct v4l2_subdev *sd,
 			struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct imx219 *imx219 = to_imx219(sd);
-	const struct imx219_mode *mode;
 	u32 code;
+	int i = 0;
 
-	if (fie->index >= ARRAY_SIZE(supported_modes))
-		return -EINVAL;
-	if (fie->index)
+	if (fie->index >= ARRAY_SIZE(supported_modes) || fie->index)
 		return -EINVAL;
 
 	mutex_lock(&imx219->mutex);
-
 	code = imx219_get_format_code(imx219, fie->code);
+	mutex_unlock(&imx219->mutex);
 	if (fie->code != code)
 		return -EINVAL;
 
-	mode = v4l2_find_nearest_size(supported_modes,
-				ARRAY_SIZE(supported_modes), width, height,
-				fie->width, fie->height);
 	pr_debug("fie->width = %d, fie->height = %d \n", fie->width, fie->height);
-	if (fie->width == supported_modes[0].width && fie->height == supported_modes[0].height)
-		fie->interval.denominator = 15;
-	else
-		fie->interval.denominator = 30;
+	for (i = 0; i < MODE_COUNT_MAX; i++)
+	{
+		if (fie->width == supported_modes[i].width && fie->height == supported_modes[i].height)
+			break;
+	}
+	if (i == MODE_COUNT_MAX)
+		return -ENOTTY;
 
+	fie->interval.denominator = imx219_fps[i];
 	fie->interval.numerator = 1;
 	fie->code = code;
-	fie->width = mode->width;
-	fie->height = mode->height;
-	mutex_unlock(&imx219->mutex);
+	fie->width = supported_modes[i].width;
+	fie->height = supported_modes[i].height;
 
 	return 0;
 }
