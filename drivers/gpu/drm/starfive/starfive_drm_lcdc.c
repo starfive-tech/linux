@@ -396,66 +396,15 @@ void lcdc_run(struct starfive_crtc *sf_crtc, uint32_t winMode, uint32_t lcdTrig)
 
 static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
 {
-	u32 reg_val = clk_get_rate(sf_crtc->clk_vout_src) / (state->mode.clock * HZ_PER_KHZ);
 	u32 tmp_val;
+	u32 reg_val = clk_get_rate(sf_crtc->clk_vout_src) / (state->mode.clock * HZ_PER_KHZ);
 
 	dev_dbg(sf_crtc->dev, "%s: reg_val = %u\n", __func__, reg_val);
 
-	switch (state->adjusted_mode.crtc_hdisplay) {
-	case 640:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (59 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 840:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (54 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 1024:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (30 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 1280:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (30 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 1440:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (30 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 1680:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (24 & 0x3F);	//24 30MHZ
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 1920:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (10 & 0x3F); //20 30MHz , 15  40Mhz, 10 60Mhz
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	case 2048:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (10 & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-		break;
-	default:
-		tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
-		tmp_val &= ~(0x3F);
-		tmp_val |= (reg_val & 0x3F);
-		sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
-	}
+	tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
+	tmp_val &= ~(0x3F);
+	tmp_val |= (reg_val & 0x3F);
+	sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
 
 	return 0;
 }
