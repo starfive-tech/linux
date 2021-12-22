@@ -5,10 +5,12 @@
  */
 
 /dts-v1/;
+#include "starfive_vic7100_clk.dtsi"
 #include <dt-bindings/clock/starfive-jh7100.h>
 #include <dt-bindings/clock/starfive-jh7100-audio.h>
 #include <dt-bindings/reset/starfive-jh7100.h>
 #include <dt-bindings/reset/starfive-jh7100-audio.h>
+#include <dt-bindings/starfive_fb.h>
 
 / {
 	compatible = "starfive,jh7100";
@@ -395,6 +397,195 @@
 			interrupts = <98>;
 		};
 
+		vin_sysctl: vin_sysctl@19800000 {
+			compatible = "starfive,stf-vin";
+			reg = <0x0 0x19800000 0x0 0x10000>,
+			      <0x0 0x19810000 0x0 0x10000>,
+			      <0x0 0x19820000 0x0 0x10000>,
+			      <0x0 0x19830000 0x0 0x10000>,
+			      <0x0 0x19840000 0x0 0x10000>,
+			      <0x0 0x19870000 0x0 0x30000>,
+			      <0x0 0x198a0000 0x0 0x30000>,
+			      <0x0 0x11800000 0x0 0x10000>,
+			      <0x0 0x11840000 0x0 0x10000>,
+			      <0x0 0x11858000 0x0 0x10000>;
+			reg-names = "mipi0", "vclk", "vrst", "mipi1", "sctrl",
+			            "isp0", "isp1", "tclk", "trst", "iopad";
+			interrupts = <119 109 112>;
+			memory-region = <&vin_reserved>;
+
+			clocks =  <&clkgen JH7100_CLK_VIN_SRC>,
+				 <&clkgen JH7100_CLK_ISP0_AXI>,
+				 <&clkgen JH7100_CLK_ISP0NOC_AXI>,
+				 <&clkgen JH7100_CLK_ISPSLV_AXI>,
+				 <&clkgen JH7100_CLK_ISP1_AXI>,
+				 <&clkgen JH7100_CLK_ISP1NOC_AXI>,
+				 <&clkgen JH7100_CLK_VIN_AXI>,
+				 <&clkgen JH7100_CLK_VINNOC_AXI>;
+			//	 <&clkgen JH7100_CLK_CSI2RX_APB>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_0>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_1>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_2>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_PXL_3>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX0_SYS>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_0>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_1>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_2>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_PXL_3>,
+			// 	 <&clkgen JH7100_CLK_MIPI_RX1_SYS>,
+			// 	 <&clkgen JH7100_CLK_DPHY_CFGCLK>,
+			// 	 <&clkgen JH7100_CLK_DPHY_REFCLK>,
+			// 	 <&clkgen JH7100_CLK_DPHY_TXCLKESC>,
+			// 	 <&clkgen JH7100_CLK_ISP0_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP0_2X_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP0_MIPI_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_2X_CTRL>,
+			// 	 <&clkgen JH7100_CLK_ISP1_MIPI_CTRL>;
+
+			clock-names = "vin_src",
+				      "isp0_axi",
+				      "isp0noc_axi",
+				      "ispslv_axi",
+				      "isp1_axi",
+				      "isp1noc_axi",
+				      "vin_axi",
+				      "vinnoc_axi";
+				// 	"csi2rx_apb_clk",
+				// 	"mipirx0_pixel0",
+				// 	"mipirx0_pixel1",
+				// 	"mipirx0_pixel2",
+				// 	"mipirx0_pixel3",
+				// 	"mipirx0_sys",
+				// 	"mipirx1_pixel0",
+				// 	"mipirx1_pixel1",
+				// 	"mipirx1_pixel2",
+				// 	"mipirx1_pixel3",
+				// 	"mipirx1_sys",
+				// 	"csidphy_cfgclk",
+				// 	"csidphy_regclk",
+				// 	"csidphy_txclkesc",
+				// 	"isp0_ctrl",
+				// 	"isp0_2x_ctrl",
+				// 	"isp0_mipi_ctrl",
+				// 	"isp1_ctrl",
+				// 	"isp1_2x_ctrl",
+				// 	"isp1_mipi_ctrl";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					dphy0_out_csi2rx: endpoint {
+						remote-endpoint = <&csi2rx0_in_dphy>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "failed";
+					};
+				};
+
+				//port@1 {
+				//	reg = <1>;
+
+				//	dphy1_out_csi2rx: endpoint {
+				//		remote-endpoint = <&csi2rx1_in_dphy>;
+				//		clock-lanes = <0>;
+				//		data-lanes = <1 2>;
+				//		status = "failed";
+				//	};
+				//};
+
+				/* TODO: Used for EVB board, comment here for starlight board, remove it later*/
+				port@2 {
+					reg = <2>; // dvp sensor
+
+					// Parallel bus endpoint
+					parallel_from_ov5640: endpoint {
+						remote-endpoint = <&ov5640_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <0>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+				};
+
+				port@3 {
+					reg = <2>; //dvp sensor
+
+					// Parallel bus endpoint
+					parallel_from_sc2235: endpoint {
+						remote-endpoint = <&sc2235_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <1>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+				};
+
+				port@4 {
+					reg = <3>; //csi2rx0 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx0_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx0>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "okay";
+					};
+				};
+
+				port@5 {
+					reg = <4>; // csi2rx1 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx1_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx1>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <5>;
+						data-lanes = <3 4>;
+						lane-polarities = <0 1 0>;
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		csi2rx: csi-bridge@19800000 {
+			compatible = "cdns,csi2rx";
+			reg = <0x0 0x19800000 0x0 0x10000>;
+			clocks = <&byteclock>, <&byteclock>,
+				 <&coreclock>, <&coreclock>,
+				 <&coreclock>, <&coreclock>;
+			clock-names = "sys_clk", "p_clk",
+				      "pixel_if0_clk", "pixel_if1_clk",
+				      "pixel_if2_clk", "pixel_if3_clk";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					csi2rx0_in_dphy: endpoint {
+						remote-endpoint = <&dphy0_out_csi2rx>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+					};
+				};
+			};
+		};
+
 		vpu_enc: vpu_enc@118e0000 {
 			compatible = "cm,cm521-vpu";
 			reg = <0x0 0x118e0000 0x0 0x4000>;
@@ -445,6 +636,29 @@
 			status = "okay";
 		};
 
+		sfivefb: sfivefb@12000000 {
+			compatible = "starfive,vpp-lcdc";
+			interrupts = <101>, <103>;
+			interrupt-names = "lcdc_irq", "vpp1_irq";
+			reg = <0x0 0x12000000 0x0 0x10000>,
+			      <0x0 0x12100000 0x0 0x10000>,
+			      <0x0 0x12040000 0x0 0x10000>,
+			      <0x0 0x12080000 0x0 0x10000>,
+			      <0x0 0x120c0000 0x0 0x10000>,
+			      <0x0 0x12240000 0x0 0x10000>,
+			      <0x0 0x12250000 0x0 0x10000>,
+			      <0x0 0x12260000 0x0 0x10000>;
+			reg-names = "lcdc", "dsitx", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
+			memory-region = <&sffb_reserved>;
+#if 0 // FIXME uart clocks can't be right for lcdc
+			clocks = <&clkgen JH7100_CLK_UART>,
+				 <&clkgen JH7100_CLK_APB2>;
+#endif
+			clock-names = "baudclk", "apb_pclk";
+			ddr-format = <WIN_FMT_RGB565>;/*LCDC win_format*/
+			status = "disabled";
+		};
+
 		display: display-subsystem {
 			compatible = "starfive,display-subsystem";
 			dma-coherent;
@@ -486,6 +700,35 @@
 				dst-format = <7>; //<COLOR_RGB888_ARGB>;
 				dst-width = <1920>;
 				dst-height = <1080>;
+			};
+		};
+
+		mipi_dphy: mipi-dphy@12260000{
+				compatible = "starfive,jh7100-mipi-dphy-tx";
+				//reg = <0x0 0x12260000 0x0 0x10000>;
+				clocks = <&uartclk>, <&apb2clk>;
+				clock-names = "baudclk", "apb_pclk";
+				#phy-cells = <0>;
+		};
+
+		mipi_dsi: mipi@12100000 {
+			compatible = "cdns,dsi";
+			clocks = <&apb1clk>, <&apb2clk>;
+			clock-names = "dsi_p_clk", "dsi_sys_clk";
+			phys = <&mipi_dphy>;
+			phy-names = "dphy";
+			status = "okay";
+			reg = <0x0 0x12100000 0x0 0x10000>;
+			reg-names = "dsi";
+
+			port {
+				dsi_out_port: endpoint {
+					remote-endpoint = <&panel_dsi_port>;
+				};
+			};
+			mipi_panel: panel@0 {
+				//compatible = "";
+				status = "okay";
 			};
 		};
 
