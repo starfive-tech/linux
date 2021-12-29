@@ -130,6 +130,9 @@
 };
 
 &gpio {
+	/* don't reset gpio mux for serial console on uart3 */
+	starfive,keep-gpiomux = <13 14 0 2 3 45>;
+
 	gmac_pins: gmac-0 {
 		gtxclk-pins {
 			pins = <PAD_FUNC_SHARE(115)>;
@@ -266,11 +269,11 @@
 				 <GPIOMUX(5,
 				  GPO_PWM_PAD_OUT_BIT1,
 				  GPO_PWM_PAD_OE_N_BIT1,
-				  GPI_NONE)>,
-				 <GPIOMUX(45,
-				  GPO_PWM_PAD_OUT_BIT2,
-				  GPO_PWM_PAD_OE_N_BIT2,
 				  GPI_NONE)>;
+				// <GPIOMUX(45,
+				//  GPO_PWM_PAD_OUT_BIT2,
+				//  GPO_PWM_PAD_OE_N_BIT2,
+				//  GPI_NONE)>;
 			bias-disable;
 			drive-strength = <35>;
 			input-disable;
@@ -468,6 +471,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_pins>;
 	status = "okay";
+
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		#sound-dai-cells = <0>;
+		wlf,shared-lrclk;
+	};
 };
 
 &i2c2 {

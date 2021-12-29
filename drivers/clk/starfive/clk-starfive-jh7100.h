@@ -109,7 +109,7 @@ struct jh7100_clk_priv {
 	spinlock_t rmw_lock;
 	struct device *dev;
 	void __iomem *base;
-	struct clk_hw *pll[3];
+	struct clk_hw *pll[4];
 	struct jh7100_clk reg[];
 };
 

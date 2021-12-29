@@ -321,6 +321,22 @@ static int jh7100_clk_is_enabled(struct clk_hw *hw)
 	return !!(jh7100_clk_reg_get(clk) & JH7100_CLK_ENABLE);
 }
 
+static void jh7100_clk_set_divider(struct jh7100_clk_priv *priv,
+					unsigned int idx,
+					unsigned int mask,
+					unsigned int div)
+{
+	unsigned long flags;
+	unsigned int value;
+	void __iomem *reg = priv->base + 4 * idx;
+
+	spin_lock_irqsave(&priv->rmw_lock, flags);
+	value = readl_relaxed(reg) & ~mask;
+	value |= div;
+	writel_relaxed(value, reg);
+	spin_unlock_irqrestore(&priv->rmw_lock, flags);
+}
+
 static unsigned long jh7100_clk_recalc_rate(struct clk_hw *hw,
 					    unsigned long parent_rate)
 {
@@ -581,6 +597,8 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 							 "pll2_refclk", 0, 55, 1);
 	if (IS_ERR(priv->pll[2]))
 		return PTR_ERR(priv->pll[2]);
+
+	jh7100_clk_set_divider(priv, JH7100_CLK_AHB_BUS, 0xf, 0x4);
 
 	for (idx = 0; idx < JH7100_CLK_PLL0_OUT; idx++) {
 		u32 max = jh7100_clk_data[idx].max;
