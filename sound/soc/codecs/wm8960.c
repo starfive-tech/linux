@@ -25,6 +25,8 @@
 
 #include "wm8960.h"
 
+#define WM8960_MCLK		 24000000
+
 /* R25 - Power 1 */
 #define WM8960_VMID_MASK 0x180
 #define WM8960_VREF      0x40
@@ -742,16 +744,9 @@ static int wm8960_configure_clocking(struct snd_soc_component *component)
 	int i, j, k;
 	int ret;
 
-	/*
-	 * For Slave mode clocking should still be configured,
-	 * so this if statement should be removed, but some platform
-	 * may not work if the sysclk is not configured, to avoid such
-	 * compatible issue, just add '!wm8960->sysclk' condition in
-	 * this if statement.
-	 */
-	if (!(iface1 & (1 << 6)) && !wm8960->sysclk) {
-		dev_warn(component->dev,
-			 "slave mode, but proceeding with no clock configuration\n");
+	if (!(iface1 & (1<<6))) {
+		dev_dbg(component->dev,
+			"Codec is slave mode, no need to configure clock\n");
 		return 0;
 	}
 
@@ -1287,6 +1282,7 @@ static int wm8960_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 {
 	struct snd_soc_component *component = dai->component;
 	struct wm8960_priv *wm8960 = snd_soc_component_get_drvdata(component);
+	clk_id = WM8960_SYSCLK_PLL;
 
 	switch (clk_id) {
 	case WM8960_SYSCLK_MCLK:
@@ -1302,7 +1298,7 @@ static int wm8960_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 	default:
 		return -EINVAL;
 	}
-
+	wm8960->freq_in = WM8960_MCLK;
 	wm8960->sysclk = freq;
 	wm8960->clk_id = clk_id;
 
@@ -1353,6 +1349,22 @@ static int wm8960_probe(struct snd_soc_component *component)
 		wm8960->set_bias_level = wm8960_set_bias_level_capless;
 	else
 		wm8960->set_bias_level = wm8960_set_bias_level_out3;
+
+#if 1
+	snd_soc_component_update_bits(component, WM8960_LDAC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_RDAC, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LOUT1, 0x100, 0x100); 
+	snd_soc_component_update_bits(component, WM8960_ROUT1, 0x100, 0x100); 
+	snd_soc_component_update_bits(component, WM8960_LOUT2, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_ROUT2, 0x100, 0x100);
+	snd_soc_component_update_bits(component, WM8960_POWER2, 0x1fB, 0x198);
+	snd_soc_component_update_bits(component, WM8960_LOUTMIX, 0x1F0, 0x100);
+	snd_soc_component_update_bits(component, WM8960_ROUTMIX, 0x1F0, 0x100);
+	snd_soc_component_update_bits(component, WM8960_LOUT1, 0x7f, 0x6f);
+	snd_soc_component_update_bits(component, WM8960_ROUT1, 0x7f, 0x6f);
+	snd_soc_component_update_bits(component, WM8960_LOUT2, 0x7f, 0x7f);
+	snd_soc_component_update_bits(component, WM8960_ROUT2, 0x7f, 0x7f);
+#endif
 
 	snd_soc_add_component_controls(component, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));
@@ -1413,6 +1425,8 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 	if (wm8960 == NULL)
 		return -ENOMEM;
 
+	wm8960->clk_id = WM8960_SYSCLK_PLL;
+
 	wm8960->mclk = devm_clk_get(&i2c->dev, "mclk");
 	if (IS_ERR(wm8960->mclk)) {
 		if (PTR_ERR(wm8960->mclk) == -EPROBE_DEFER)
@@ -1455,6 +1469,13 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 	regmap_update_bits(wm8960->regmap, WM8960_ROUT1, 0x100, 0x100);
 	regmap_update_bits(wm8960->regmap, WM8960_LOUT2, 0x100, 0x100);
 	regmap_update_bits(wm8960->regmap, WM8960_ROUT2, 0x100, 0x100);
+
+	regmap_update_bits(wm8960->regmap, WM8960_LINPATH, 0x138, 0x138);
+	regmap_update_bits(wm8960->regmap, WM8960_RINPATH, 0x138, 0x138);
+	regmap_update_bits(wm8960->regmap, WM8960_POWER1, 0x7E, 0x7E);
+	regmap_update_bits(wm8960->regmap, WM8960_POWER3, 0x30, 0x30);
+	regmap_update_bits(wm8960->regmap, WM8960_LINVOL, 0x19F, 0x197);
+	regmap_update_bits(wm8960->regmap, WM8960_RINVOL, 0x19F, 0x197);
 
 	/* ADCLRC pin configured as GPIO. */
 	regmap_update_bits(wm8960->regmap, WM8960_IFACE2, 1 << 6,
