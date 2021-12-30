@@ -4,6 +4,7 @@
  */
 #include "stfcamss.h"
 #include <linux/sort.h>
+#include <linux/clk.h>
 
 static int stf_csiphy_clk_set(struct stf_csiphy_dev *csiphy_dev, int on)
 {
@@ -62,13 +63,13 @@ exit:
 
 static int stf_csiphy_clk_enable(struct stf_csiphy_dev *csiphy_dev)
 {
-
-
-// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 	// enable clk
 	struct stfcamss *stfcamss = csiphy_dev->stfcamss;
 	int ret = 0;
+	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_CFGCLK].clk, 100000000);
+	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_REFCLK].clk, 50000000);
+	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_TXCLKESC].clk, 20000000);
 	ret = stfcamss_enable_clocks(3, &stfcamss->sys_clk[STFCLK_CSIDPHY_CFGCLK],
 			stfcamss->dev);
 	if (ret < 0) {
@@ -83,9 +84,7 @@ static int stf_csiphy_clk_enable(struct stf_csiphy_dev *csiphy_dev)
 
 static int stf_csiphy_clk_disable(struct stf_csiphy_dev *csiphy_dev)
 {
-
-// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 	struct stfcamss *stfcamss = csiphy_dev->stfcamss;
 	stfcamss_disable_clocks(3, &stfcamss->sys_clk[STFCLK_CSIDPHY_CFGCLK]);
 	return 0;

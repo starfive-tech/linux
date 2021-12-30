@@ -3,6 +3,7 @@
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 #include "stfcamss.h"
+#include <linux/reset.h>
 
 static int vin_rstgen_assert_reset(struct stf_vin_dev *vin)
 {
@@ -89,6 +90,7 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 	struct stfcamss *stfcamss = vin_dev->stfcamss;
 	struct stf_vin_dev *vin = stfcamss->vin;
 	int ret = 0;
+	int i;
 
 #ifdef USE_CLK_TREE
 	// enable clk
@@ -99,19 +101,29 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 		return ret;
 	}
 
-	vin_rstgen_assert_reset(vin);
+	for (i = STFRST_VIN_SRC; i <= STFRST_ISP1NOC_AXI; i++) {
+		ret = reset_control_reset(stfcamss->sys_rst[i].rst);
+		if(ret){
+			st_err(ST_VIN, "%s reset rst %d failed\n", __func__, i);
+			return ret;
+		}
+	}
 
 	// hold vin resets for sub modules before csi2rx controller get configed
-	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0xffffffff);
-	mdelay(10);
+	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+		reset_control_assert(stfcamss->sys_rst[i].rst);
+	}
 
 	// clear reset for all vin submodules
 	// except dphy-rx (follow lunhai's advice)
-	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 1 << 17);
-	mdelay(10);
+	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+		if(i != STFRST_DPHY_HW_RSTN) {
+			reset_control_deassert(stfcamss->sys_rst[i].rst);
+		}
+	}
 
 	// disable clk
-	stfcamss_disable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC]);
+	// stfcamss_disable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC]);
 	return ret;
 #else
 	val = ioread32(vin->vin_top_clkgen_base + 0x124) >> 24;
@@ -166,6 +178,7 @@ static int stf_vin_clk_enable(struct stf_vin2_dev *vin_dev)
 	struct stfcamss *stfcamss = vin_dev->stfcamss;
 	struct stf_vin_dev *vin = stfcamss->vin;
 	int ret = 0;
+	int i;
 
 #ifdef USE_CLK_TREE
 	// enable clk
@@ -177,10 +190,14 @@ static int stf_vin_clk_enable(struct stf_vin2_dev *vin_dev)
 	}
 
 	/* rst disable */
-	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0xFFFFFFFF);
+	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+		reset_control_assert(stfcamss->sys_rst[i].rst);
+	}
 
 	/* rst enable */
-	reg_write(vin->rstgen_base, SOFTWARE_RESET_ASSERT0, 0x0);
+	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+		reset_control_deassert(stfcamss->sys_rst[i].rst);
+	}
 
 	return ret;
 #else

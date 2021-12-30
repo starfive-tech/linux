@@ -46,15 +46,17 @@ static const struct reg_name mem_reg_name[] = {
 #ifndef CONFIG_VIDEO_CADENCE_CSI2RX
 	{"mipi0"},
 #endif
-	{"vclk"},
-	{"vrst"},
 	{"mipi1"},
 	{"sctrl"},
 	{"isp0"},
 	{"isp1"},
-	// {"tclk"},
-	// {"trst"},
-	// {"iopad"}
+#ifndef USE_CLK_TREE
+	{"vclk"},
+	{"vrst"},
+	{"tclk"},
+	{"trst"},
+	{"iopad"},
+#endif
 };
 
 char * clocks[] = {
@@ -66,27 +68,68 @@ char * clocks[] = {
 	"isp1noc_axi",
 	"vin_axi",
 	"vinnoc_axi",
-	// "csi2rx_apb_clk",
-	// "mipirx0_pixel0",
-	// "mipirx0_pixel1",
-	// "mipirx0_pixel2",
-	// "mipirx0_pixel3",
-	// "mipirx0_sys",
-	// "mipirx1_pixel0",
-	// "mipirx1_pixel1",
-	// "mipirx1_pixel2",
-	// "mipirx1_pixel3",
-	// "mipirx1_sys",
-	// "csidphy_cfgclk",
-	// "csidphy_regclk",
-	// "csidphy_txclkesc",
-	// "isp0_ctrl",
-	// "isp0_2x_ctrl",
-	// "isp0_mipi_ctrl",
-	// "isp1_ctrl",
-	// "isp1_2x_ctrl",
-	// "isp1_mipi_ctrl",
+	"dphy_cfgclk",
+	"dphy_refclk",
+	"dphy_txclkesc",
+	"mipi_rx0_pxl",
+	"mipi_rx1_pxl",
+	"mipi_rx0_pxl_0",
+	"mipi_rx0_pxl_1",
+	"mipi_rx0_pxl_2",
+	"mipi_rx0_pxl_3",
+	"mipi_rx0_sys",
+	"mipi_rx1_pxl_0",
+	"mipi_rx1_pxl_1",
+	"mipi_rx1_pxl_2",
+	"mipi_rx1_pxl_3",
+	"mipi_rx1_sys",
+	"isp0",
+	"isp0_2x",
+	"isp0_mipi",
+	"isp1",
+	"isp1_2x",
+	"isp1_mipi",
+	"dom4_apb",
+	"csi2rx_apb",
+	"vin_axi_wr", 
+	"vin_axi_rd", 
+	"c_isp0", 
+	"c_isp1",
 
+	NULL,
+};
+
+char * resets[]={
+	"vin_src",
+	"ispslv_axi",
+	"vin_axi",
+	"vinnoc_axi",
+	"isp0_axi",
+	"isp0noc_axi",
+	"isp1_axi",
+	"isp1noc_axi",
+	"sys_clk", 
+	"pclk", 
+	"sys_clk_1", 
+	"pixel_clk_if0", 
+	"pixel_clk_if1", 
+	"pixel_clk_if2", 
+	"pixel_clk_if3", 
+	"pixel_clk_if10", 
+	"pixel_clk_if11", 
+	"pixel_clk_if12", 
+	"pixel_clk_if13", 
+	"isp_0", 
+	"isp_1", 
+	"p_axird", 
+	"p_axiwr", 
+	"p_isp0", 
+	"p_isp1", 
+	"dphy_hw_rstn", 
+	"dphy_rst09_alwy_on", 
+	"c_isp0", 
+	"c_isp1",
+	
 	NULL,
 };
 
@@ -163,14 +206,6 @@ int stfcamss_get_mem_res(struct platform_device *pdev, struct stf_vin_dev *vin)
 		else
 			st_err(ST_CAMSS, "Could not match resource name\n");
 	}
-
-	#ifdef USE_CLK_TREE
-		// vin->clkgen_base = ioremap(ISP_BASE_CLKGEN_ADDR, REG_B_LEN);
-		// vin->rstgen_base = ioremap(ISP_BASE_RSTGEN_ADDR, REG_B_LEN);
-		vin->vin_top_clkgen_base = ioremap(VIN_TOP_CLKGEN_BASE_ADDR, 0x10000);
-		vin->vin_top_rstgen_base = ioremap(VIN_TOP_RSTGEN_BASE_ADDR, 0x10000);
-		vin->vin_top_iopad_base = ioremap(VIN_TOP_IOPAD_BASE_ADDR, 0x10000);
-	#endif
 
 	return 0;
 }
@@ -1088,6 +1123,33 @@ static int stfcamss_probe(struct platform_device *pdev)
 		clock->name = clocks[i];
 	}
 
+	/* Resets */
+	
+	stfcamss->nrsts = 0;
+	while (resets[stfcamss->nrsts])
+		stfcamss->nrsts++;
+
+	st_info(ST_CAMSS, "stfcamss->nrsts %d\n", stfcamss->nrsts);
+	stfcamss->sys_rst = devm_kzalloc(dev, stfcamss->nrsts * sizeof(*stfcamss->sys_rst),
+			GFP_KERNEL);
+	if (!stfcamss->sys_rst) {
+		ret = -ENOMEM;
+		goto err_cam;
+	}
+
+	for (i = 0; i < stfcamss->nrsts; i++) {
+		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
+		reset->rst = devm_reset_control_get_exclusive(dev, resets[i]);
+		if (IS_ERR(reset->rst)) {
+			ret = -ENOMEM;
+			st_err(ST_CAMSS, "get %s resets name failed\n", resets[i]);
+			goto err_cam_rst;
+		}
+		st_debug(ST_CAMSS, "get %s resets name: \n", resets[i]);
+
+		reset->name = resets[i];
+	}
+
 	ret = stfcamss_get_mem_res(pdev, vin);
 	if (ret) {
 		st_err(ST_CAMSS, "Could not map registers\n");
@@ -1190,9 +1252,15 @@ err_cam_noti_med:
 	media_device_cleanup(&stfcamss->media_dev);
 err_cam_noti:
 	v4l2_async_notifier_cleanup(&stfcamss->notifier);
-	i = stfcamss->nclks;
+err_cam_rst:
+	for (i = stfcamss->nrsts; i > 0; i--) {
+		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
+
+		reset_control_put(reset->rst);
+		st_debug(ST_CAMSS, "put %s reset\n", reset->name);
+	}	
 err_cam_clk:
-	for (; i > 0; i--) {
+	for (i = stfcamss->nclks; i > 0; i--) {
 		struct stfcamss_clk *clock = &stfcamss->sys_clk[i];
 
 		devm_clk_put(dev, clock->clk);
