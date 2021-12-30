@@ -6,6 +6,7 @@
  *
  */
 #include "stfcamss.h"
+#include <linux/clk.h>
 
 #define CSI2RX_DEVICE_CFG_REG			0x000
 
@@ -68,10 +69,10 @@ static int stf_csi_clk_enable(struct stf_csi_dev *csi_dev)
 	struct stf_vin_dev *vin = stfcamss->vin;
 	int ret = 0;
 
-// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
+	clk_set_rate(stfcamss->sys_clk[STFCLK_DOM4_APB_CLK].clk, 400000000);
 	// enable clk
-	ret = stfcamss_enable_clocks(1, &stfcamss->sys_clk[STFCLK_CSI_2RX_APH_CLK],
+	ret = stfcamss_enable_clocks(1, &stfcamss->sys_clk[STFCLK_CSI_2RX_APB_CLK],
 			stfcamss->dev);
 	if (ret < 0) {
 		st_err(ST_CSI, "%s enable clk failed\n", __func__);
@@ -82,8 +83,9 @@ static int stf_csi_clk_enable(struct stf_csi_dev *csi_dev)
 #endif
 
 	if (csi_dev->id == 0) {
-	// #ifdef USE_CLK_TREE
-	#if 0
+	#ifdef USE_CLK_TREE
+		clk_set_rate(stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL].clk, 400000000);
+		clk_set_rate(stfcamss->sys_clk[STFCLK_MIPIRX0_SYS].clk, 400000000);
 		// enable clk
 		ret = stfcamss_enable_clocks(5, &stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL0],
 				stfcamss->dev);
@@ -100,8 +102,9 @@ static int stf_csi_clk_enable(struct stf_csi_dev *csi_dev)
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_SYS0_CTRL);
 	#endif
 	} else {
-	// #ifdef USE_CLK_TREE
-	#if 0
+	#ifdef USE_CLK_TREE
+		clk_set_rate(stfcamss->sys_clk[STFCLK_MIPIRX1_PIXEL].clk, 400000000);
+		clk_set_rate(stfcamss->sys_clk[STFCLK_MIPIRX1_SYS].clk, 400000000);
 		// enable clk
 		ret = stfcamss_enable_clocks(5, &stfcamss->sys_clk[STFCLK_MIPIRX1_PIXEL0],
 				stfcamss->dev);
@@ -127,17 +130,15 @@ static int stf_csi_clk_disable(struct stf_csi_dev *csi_dev)
 	struct stfcamss *stfcamss = csi_dev->stfcamss;
 	struct stf_vin_dev *vin = stfcamss->vin;
 
-// #ifdef USE_CLK_TREE
-#if 0
-	stfcamss_disable_clocks(1, &stfcamss->sys_clk[STFCLK_CSI_2RX_APH_CLK]);
+#ifdef USE_CLK_TREE
+	stfcamss_disable_clocks(1, &stfcamss->sys_clk[STFCLK_CSI_2RX_APB_CLK]);
 #else
 	// reg_clr_highest_bit(vin->clkgen_base, CLK_CSI2RX0_APB_CTRL);
 	apb_clk_set(vin, 0);
 #endif
 
 	if (csi_dev->id == 0) {
-	// #ifdef USE_CLK_TREE
-	#if 0
+	#ifdef USE_CLK_TREE
 		// disable clk
 		stfcamss_disable_clocks(5, &stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL0]);
 	#else
@@ -148,8 +149,7 @@ static int stf_csi_clk_disable(struct stf_csi_dev *csi_dev)
 		reg_clr_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_SYS0_CTRL);
 	#endif
 	} else {
-	// #ifdef USE_CLK_TREE
-	#if 0
+	#ifdef USE_CLK_TREE
 		// disable clk
 		stfcamss_disable_clocks(5, &stfcamss->sys_clk[STFCLK_MIPIRX1_PIXEL0]);
 	#else
@@ -176,9 +176,11 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 		st_info(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
 		break;
 	case SENSOR_ISP0:
-	// #ifdef USE_CLK_TREE
-	#if 0
-		st_err(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
+	#ifdef USE_CLK_TREE
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP0_MIPI_CTRL].clk, 
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP0_CTRL].clk, 
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
 		reg_set_bit(vin->clkgen_base, CLK_ISP0_MIPI_CTRL, BIT(24),
 				csi_dev->id << 24);
@@ -191,9 +193,11 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 				0xF, mipi_channel_sel);
 		break;
 	case SENSOR_ISP1:
-	// #ifdef USE_CLK_TREE
-	#if 0
-		st_err(ST_CSI, "%s, %d: need todo\n", __func__, __LINE__);
+	#ifdef USE_CLK_TREE
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP1_MIPI_CTRL].clk, 
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP1_CTRL].clk, 
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
 		reg_set_bit(vin->clkgen_base, CLK_ISP1_MIPI_CTRL,
 				BIT(24), csi_dev->id << 24);
