@@ -12,6 +12,7 @@
 #include <linux/module.h>
 #include <video/stf-vin.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
 
 static const regval_t isp_sc2235_reg_config_list[] = {
 	{0x00000014, 0x00000008, 0, 0},
@@ -174,9 +175,9 @@ static int stf_isp_clk_enable(struct stf_isp_dev *isp_dev)
 	int ret = 0;
 
 	if (isp_dev->id == 0) {
-	// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 		// enable clk
+		clk_set_rate(stfcamss->sys_clk[STFCLK_ISP0_CTRL].clk, 400000000);
 		ret = stfcamss_enable_clocks(3, &stfcamss->sys_clk[STFCLK_ISP0_CTRL],
 				stfcamss->dev);
 		if (ret < 0) {
@@ -189,9 +190,9 @@ static int stf_isp_clk_enable(struct stf_isp_dev *isp_dev)
 		reg_set_highest_bit(vin->clkgen_base, CLK_ISP0_MIPI_CTRL);
 #endif
 	} else {
-	//#ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 		// enable clk
+		clk_set_rate(stfcamss->sys_clk[STFCLK_ISP1_CTRL].clk, 400000000);
 		ret = stfcamss_enable_clocks(3, &stfcamss->sys_clk[STFCLK_ISP1_CTRL],
 				stfcamss->dev);
 		if (ret < 0) {
@@ -214,8 +215,7 @@ static int stf_isp_clk_disable(struct stf_isp_dev *isp_dev)
 	struct stf_vin_dev *vin = stfcamss->vin;
 
 	if (isp_dev->id == 0) {
-	// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 		stfcamss_disable_clocks(3, &stfcamss->sys_clk[STFCLK_ISP0_CTRL]);
 #else
 		reg_clr_highest_bit(vin->clkgen_base, CLK_ISP0_CTRL);
@@ -223,8 +223,7 @@ static int stf_isp_clk_disable(struct stf_isp_dev *isp_dev)
 		reg_clr_highest_bit(vin->clkgen_base, CLK_ISP0_MIPI_CTRL);
 #endif
 	} else {
-	// #ifdef USE_CLK_TREE
-#if 0
+#ifdef USE_CLK_TREE
 		stfcamss_disable_clocks(3, &stfcamss->sys_clk[STFCLK_ISP1_CTRL]);
 #else
 		reg_clr_highest_bit(vin->clkgen_base, CLK_ISP1_CTRL);

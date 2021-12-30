@@ -9,7 +9,6 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
-#include <dt-bindings/starfive_fb.h>
 
 / {
 	aliases {
