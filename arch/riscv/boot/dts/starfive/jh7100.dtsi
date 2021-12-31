@@ -455,8 +455,18 @@
 		vpu_dec: vpu_dec@118f0000 {
 			compatible = "c&m,cm511-vpu";
 			reg = <0 0x118f0000 0 0x10000>;
-			clocks = <&clkgen JH7100_CLK_VP6_CORE>;
-			clock-names = "vcodec";
+			clocks =<&clkgen JH7100_CLK_VDEC_AXI>,
+					<&clkgen JH7100_CLK_VDECBRG_MAIN>,
+					<&clkgen JH7100_CLK_VDEC_BCLK>,
+					<&clkgen JH7100_CLK_VDEC_CCLK>,
+					<&clkgen JH7100_CLK_VDEC_APB>;
+			clock-names = "vdec_axi", "vdecbrg_main", "vdec_bclk", "vdec_cclk", "vdec_apb";
+			resets = <&rstgen JH7100_RSTN_VDEC_AXI>,
+					<&rstgen JH7100_RSTN_VDECBRG_MAIN>,
+					<&rstgen JH7100_RSTN_VDEC_BCLK>,
+					<&rstgen JH7100_RSTN_VDEC_CCLK>,
+					<&rstgen JH7100_RSTN_VDEC_APB>;
+			reset-names = "vdec_axi", "vdecbrg_main", "vdec_bclk", "vdec_cclk", "vdec_apb";
 			interrupts = <23>;
 			//memory-region = <&vpu_reserved>;
 		};
