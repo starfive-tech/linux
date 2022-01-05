@@ -10,6 +10,8 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
 
+#undef WM8960_ENABLED
+
 / {
 	aliases {
 		mshc0 = &sdio0;
@@ -495,12 +497,14 @@
 	pinctrl-0 = <&i2c1_pins>;
 	status = "okay";
 
+#ifdef WM8960_ENABLED
 	wm8960: codec@1a {
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
 		#sound-dai-cells = <0>;
 		wlf,shared-lrclk;
 	};
+#endif
 
 	seeed_plane_i2c@45 {
 		compatible = "seeed_panel";

@@ -23,4 +23,6 @@
 	starfive,keep-gpiomux = <13 14 63 0 2 3 45>;
 };
 
+#ifdef WM8960_ENABLED
 #include "codecs/sf_wm8960.dtsi"
+#endif
