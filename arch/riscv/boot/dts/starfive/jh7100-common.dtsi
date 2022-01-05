@@ -10,6 +10,8 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
 
+#undef WM8960_ENABLED
+
 / {
 	aliases {
 		mshc0 = &sdio0;
@@ -472,12 +474,64 @@
 	pinctrl-0 = <&i2c1_pins>;
 	status = "okay";
 
+#ifdef WM8960_ENABLED
 	wm8960: codec@1a {
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
 		#sound-dai-cells = <0>;
 		wlf,shared-lrclk;
 	};
+#endif
+
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+	};
+
+	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
+	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		powerdown-gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 28 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <180>;
+		port {
+			// Parallel bus endpoint
+			ov5640_to_parallel: endpoint {
+				remote-endpoint = <&parallel_from_ov5640>;
+				bus-type = <5>;      // Parallel
+				bus-width = <8>;
+				data-shift = <2>; // lines 9:2 are used
+				hsync-active = <0>;
+				vsync-active = <1>;
+				pclk-sample = <1>;
+			};
+		};
+	};
+	sc2235@30 {
+		compatible = "sc2235";
+		reg = <0x30>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		powerdown-gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 28 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		port {
+			// Parallel bus endpoint
+			sc2235_to_parallel: endpoint {
+				remote-endpoint = <&parallel_from_sc2235>;
+				bus-type = <5>;      // Parallel
+				bus-width = <8>;
+				data-shift = <2>; // lines 13:6 are used
+				hsync-active = <1>;
+				vsync-active = <1>;
+				pclk-sample = <1>;
+			};
+		};
+	};	
 };
 
 &i2c2 {
