@@ -88,7 +88,8 @@ static void pp_output_cfg(struct starfive_crtc *sf_crtc,
 	int cfg = outSel | progInter << PP_INTERLACE |
 		desformat << PP_DES_FORMAT |
 		ptMode << PP_POINTER_MODE;
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xffff8f0U;
+	//int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xffff8f0U;	//20211229 disabled
+	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xfffff8f0U;	//20211229 changed
 
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL1, cfg | preCfg);
 	dev_dbg(sf_crtc->dev, "PP%d outSel: %d, outFormat: 0x%x, Out Interlace: %d, ptMode: %d\n",
@@ -297,11 +298,10 @@ static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_vi
 		break;
 	case COLOR_YUV420_NV21:
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
-				COLOR_YUV420_NV21 - COLOR_YUV420_NV21, 0x0);
-		break;
+				COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0x0);
 	case COLOR_YUV420_NV12:
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
-				COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0x0);
+				COLOR_YUV420_NV12 - COLOR_YUV420_NV12, 0x0);
 		break;
 	case COLOR_RGB888_ARGB:
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
@@ -694,10 +694,7 @@ int starfive_pp_update(struct starfive_crtc *sf_crtc)
 		if (sf_crtc->pp[pp_id].inited == 1) {
 			ret = starfive_pp_video_mode_init(sf_crtc, &src, &dst, pp_id);
 			if (!ret) {
-				if (sf_crtc->ddr_format_change)
 					pp_format_set(sf_crtc, pp_id, &src, &dst);
-
-				if (sf_crtc->dma_addr_change)
 					pp_size_set(sf_crtc, pp_id, &src, &dst);
 			}
 		}

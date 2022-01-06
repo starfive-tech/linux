@@ -716,12 +716,12 @@
 		display: display-subsystem {
 			compatible = "starfive,display-subsystem";
 			dma-coherent;
-			status = "disabled";
+			status = "okay";
 		};
 
 		encoder: display-encoder {
 			compatible = "starfive,display-encoder";
-			status = "disabled";
+			status = "okay";
 		};
 
 		crtc: crtc@12000000 {
@@ -742,8 +742,7 @@
 			interrupt-names = "lcdc_irq", "vpp1_irq";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			status = "disabled";
-
+			status = "okay";
 			pp1 {
 				pp-id = <1>;
 				fifo-out;
@@ -755,6 +754,14 @@
 				dst-width = <1920>;
 				dst-height = <1080>;
 			};
+
+				port: port@0 {
+				reg = <0>;
+				crtc_0_out: endpoint {
+					remote-endpoint = <&hdmi_input0>;
+				};
+			};
+
 		};
 
 		mipi_dphy: mipi-dphy@12260000{

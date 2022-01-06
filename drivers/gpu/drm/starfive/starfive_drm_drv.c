@@ -98,18 +98,6 @@ static void starfive_drm_match_add(struct device *dev,
 	}
 }
 
-static void starfive_cleanup(struct drm_device *ddev)
-{
-	struct starfive_drm_private *private = ddev->dev_private;
-
-	drm_kms_helper_poll_fini(ddev);
-	drm_atomic_helper_shutdown(ddev);
-	drm_mode_config_cleanup(ddev);
-	component_unbind_all(ddev->dev, ddev);
-	kfree(private);
-	ddev->dev_private = NULL;
-}
-
 static int starfive_drm_bind(struct device *dev)
 {
 	struct drm_device *drm_dev;
@@ -176,9 +164,10 @@ static int starfive_drm_bind(struct device *dev)
 	return 0;
 
 err_drm_dev_register:
-err_component_bind_all:
-	starfive_cleanup(drm_dev);
+	drm_kms_helper_poll_fini(drm_dev);
 err_drm_vblank_init:
+err_component_bind_all:
+	component_unbind_all(dev, drm_dev);
 err_free:
 	drm_dev_put(drm_dev);
 
@@ -190,6 +179,12 @@ static void starfive_drm_unbind(struct device *dev)
 	struct drm_device *drm_dev = dev_get_drvdata(dev);
 
 	drm_dev_unregister(drm_dev);
+	drm_kms_helper_poll_fini(drm_dev);
+	drm_atomic_helper_shutdown(drm_dev);
+	component_unbind_all(dev, drm_dev);
+	drm_mode_config_cleanup(drm_dev);
+
+	drm_dev_put(drm_dev);
 }
 
 static const struct component_master_ops starfive_drm_ops = {
@@ -199,9 +194,7 @@ static const struct component_master_ops starfive_drm_ops = {
 
 static struct platform_driver * const starfive_component_drivers[] = {
 	&starfive_crtc_driver,
-#ifdef CONFIG_DRM_STARFIVE_MIPI_DSI
 	&starfive_dsi_platform_driver,
-#endif
 	&starfive_encoder_driver,
 };
 
@@ -255,9 +248,9 @@ static int __init starfive_drm_init(void)
 
 static void __exit starfive_drm_exit(void)
 {
+	platform_driver_unregister(&starfive_drm_platform_driver);
 	platform_unregister_drivers(starfive_component_drivers,
 				    ARRAY_SIZE(starfive_component_drivers));
-	platform_driver_unregister(&starfive_drm_platform_driver);
 }
 
 module_init(starfive_drm_init);

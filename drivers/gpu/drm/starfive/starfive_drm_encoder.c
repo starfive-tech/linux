@@ -19,7 +19,6 @@
 static void starfive_encoder_destroy(struct drm_encoder *encoder)
 {
 	drm_encoder_cleanup(encoder);
-	kfree(encoder);
 }
 
 static const struct drm_encoder_funcs starfive_encoder_funcs = {
@@ -54,6 +53,12 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 		}
 	}
 
+#ifdef CONFIG_DRM_STARFIVE_MIPI_DSI
+	encoderp->encoder_type = DRM_MODE_ENCODER_DSI;
+#else
+	encoderp->encoder_type = DRM_MODE_ENCODER_TMDS;
+#endif
+
 	/* If no CRTCs were found, fall back to our old behaviour */
 	if (crtcs == 0) {
 		dev_warn(dev, "Falling back to first CRTC\n");
@@ -68,8 +73,13 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 	if (ret)
 		goto err_encoder;
 
+#ifdef CONFIG_DRM_STARFIVE_MIPI_DSI
+	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0,
+									&tmp_panel, &tmp_bridge);
+#else
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
-			&tmp_panel, &tmp_bridge);
+									&tmp_panel, &tmp_bridge);
+#endif
 	if (ret) {
 		dev_err_probe(dev, ret, "endpoint returns %d\n", ret);
 		goto err_bridge;
@@ -96,8 +106,6 @@ err_encoder:
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)
 {
 	struct starfive_encoder *encoderp = dev_get_drvdata(dev);
-
-	starfive_encoder_destroy(&encoderp->encoder);
 }
 
 static const struct component_ops starfive_encoder_component_ops = {
