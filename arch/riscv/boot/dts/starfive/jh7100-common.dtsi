@@ -110,19 +110,31 @@
 	status = "okay";
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		port@0 {
+			reg = <0>;
 			hdmi_out: endpoint {
 				remote-endpoint = <&tda998x_0_input>;
 			};
 		};
 
 		port@1 {
+			reg = <1>;
+			mipi_out: endpoint {
+				remote-endpoint = <&dsi_out_port>;
+			};
+		};
+
+		port@2 {
+			reg = <2>;
 			hdmi_input0: endpoint {
 				remote-endpoint = <&crtc_0_out>;
 			};
 		};
 
 	};
+
 };
 
 &gmac {
@@ -505,11 +517,6 @@
 		wlf,shared-lrclk;
 	};
 #endif
-
-	seeed_plane_i2c@45 {
-		compatible = "seeed_panel";
-		reg = <0x45>;
-	};
 
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {

@@ -336,27 +336,41 @@ static int starfive_crtc_get_memres(struct platform_device *pdev, struct starfiv
 
 static int starfive_crtc_get_clks(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
 {
-	struct clk_bulk_data clks[] = {
-		{ .id = "disp_axi" },
-		{ .id = "vout_src" },
-	};
-	int ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
+	int ret = 0;
 
-	sf_crtc->clk_disp_axi = clks[0].clk;
-	sf_crtc->clk_vout_src = clks[1].clk;
+	sf_crtc->clk_disp_axi = devm_clk_get(&pdev->dev, "disp_axi");
+	if (IS_ERR(sf_crtc->clk_disp_axi)) {
+		dev_warn(&pdev->dev, "Can't get disp_axi clock\n");
+		return PTR_ERR(sf_crtc->clk_disp_axi);
+	}
+	sf_crtc->clk_vout_src = devm_clk_get(&pdev->dev, "vout_src");
+	if (IS_ERR(sf_crtc->clk_vout_src)) {
+		dev_warn(&pdev->dev, "Can't get vout_src clock\n");
+		devm_clk_put(&pdev->dev, sf_crtc->clk_disp_axi);
+		return PTR_ERR(sf_crtc->clk_vout_src);
+	}
+
+
 	return ret;
 }
 
 static int starfive_crtc_get_resets(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
 {
-	struct reset_control_bulk_data resets[] = {
-		{ .id = "disp_axi" },
-		{ .id = "vout_src" },
-	};
-	int ret = devm_reset_control_bulk_get_exclusive(&pdev->dev, ARRAY_SIZE(resets), resets);
+	int ret = 0;
 
-	sf_crtc->rst_disp_axi = resets[0].rstc;
-	sf_crtc->rst_vout_src = resets[1].rstc;
+	sf_crtc->rst_disp_axi = devm_reset_control_get_exclusive(&pdev->dev, "disp_axi");
+	if (IS_ERR(sf_crtc->rst_disp_axi)) {
+		dev_warn(&pdev->dev, "Can't get disp_axi reset_control\n");
+		return PTR_ERR(sf_crtc->rst_disp_axi);
+	}
+
+	sf_crtc->rst_vout_src = devm_reset_control_get_exclusive(&pdev->dev, "vout_src");
+	if (IS_ERR(sf_crtc->rst_vout_src)) {
+		dev_warn(&pdev->dev, "Can't get vout_src reset_control\n");
+	    reset_control_put(sf_crtc->rst_disp_axi);
+		return PTR_ERR(sf_crtc->rst_vout_src);
+	}
+
 	return ret;
 }
 
@@ -489,7 +503,14 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 
 	crtcp->is_enabled = false;
 
-	/* starfive_set_crtc_possible_masks(drm_dev, crtcp); */
+#ifdef CONFIG_DRM_STARFIVE_MIPI_DSI
+	dsitx_vout_init(crtcp);
+	lcdc_dsi_sel(crtcp);
+#else
+	vout_reset(crtcp);
+#endif
+
+	/*starfive_set_crtc_possible_masks(drm_dev, crtcp);*/
 
 	/*
 	ret = drm_self_refresh_helper_init(crtcp);
@@ -507,7 +528,11 @@ static void starfive_crtc_unbind(struct device *dev, struct device *master, void
 	struct platform_device *pdev = to_platform_device(dev);
 	struct starfive_crtc *crtcp = dev_get_drvdata(dev);
 
-	drm_crtc_cleanup(&crtcp->crtc);
+	vout_disable(crtcp);// disable crtc HW
+
+	crtcp->is_enabled = false;
+
+	//drm_crtc_cleanup(&crtcp->crtc);
 	platform_set_drvdata(pdev, NULL);
 }
 

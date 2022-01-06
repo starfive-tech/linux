@@ -21,5 +21,7 @@ struct starfive_drm_private {
 extern struct platform_driver starfive_crtc_driver;
 extern struct platform_driver starfive_encoder_driver;
 extern struct platform_driver starfive_dsi_platform_driver;
+extern int init_seeed_panel(void);
+extern void exit_seeed_panel(void);
 
 #endif /* _STARFIVE_DRM_DRV_H_ */
