@@ -250,8 +250,22 @@ t_delta_vfp_last(DSI - DPI):	0.00ns (0.00% dsi line)
 */
 
 static const struct drm_display_mode seeed_panel_modes[] = {
+#if 0 //for seeed panel
 	{
 		.clock = 27500000/1000,
+		.hdisplay = 800,
+		.hsync_start = 800 + 50,
+		.hsync_end = 800 + 50 + 20,
+		.htotal = 800 + 50 + 20+ 10,
+		.vdisplay = 480,
+		.vsync_start = 480 + 135,
+		.vsync_end = 480 + 135 + 5,
+		.vtotal = 480 + 135 + 5 + 5,
+	},
+#endif
+    // for visionfive panel
+	{
+		.clock = 33000000/1000,
 		.hdisplay = 800,
 		.hsync_start = 800 + 50,
 		.hsync_end = 800 + 50 + 20,
@@ -267,7 +281,7 @@ static int seeed_panel_disable(struct drm_panel *panel)
 {
 	struct seeed_panel_dev *sp = panel_to_seeed(panel);
 	
-	seeed_panel_i2c_write(sp->client, REG_POWERON, 1);
+	//seeed_panel_i2c_write(sp->client, REG_POWERON, 1);
 	seeed_panel_i2c_write(sp->client, REG_PWM, 0);
 	seeed_panel_i2c_write(sp->client, REG_POWERON, 0);
 	udelay(1);
@@ -308,8 +322,9 @@ static int seeed_panel_enable(struct drm_panel *panel)
 	for (i = 0; i < 100; i++) {
 		seeed_panel_i2c_read(sp->client, REG_PORTB, &reg_value);
 		if (reg_value & 1)
-	break;
+			break;
 	}
+	mdelay(50);
 
 	seeed_dsi_write(panel, DSI_LANEENABLE,
 				DSI_LANEENABLE_CLOCK |
@@ -426,14 +441,14 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 			return -ENODEV;
 	}
 
-	seeed_panel_i2c_write(client, REG_POWERON, 1);
-	mdelay(5);
+	seeed_panel_i2c_write(client, REG_POWERON, 0);
+	mdelay(50);
 	/* Wait for nPWRDWN to go low to indicate poweron is done. */
-    for (i = 0; i < 100; i++) {
-		seeed_panel_i2c_read(client, REG_PORTB, &reg_value);
-		if (reg_value & 1)
-			break;
-	}
+	//for (i = 0; i < 100; i++) {
+	//	seeed_panel_i2c_read(client, REG_PORTB, &reg_value);
+	//	if (reg_value & 1)
+	//		break;
+	//}
 
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!endpoint)

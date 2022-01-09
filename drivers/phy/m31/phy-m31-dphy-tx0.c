@@ -414,7 +414,7 @@ static int sf_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 {
 	struct sf_dphy *dphy = phy_get_drvdata(phy);
 
-	uint32_t bit_rate = 700000000/1000000UL;//(1920 * 1080 * bpp / dlanes * fps / 1000000 + 99) / 100 * 100;
+	uint32_t bit_rate = 800000000/1000000UL;
 
 	dphy_config(dphy, bit_rate);
 	reset_dphy(dphy, 1);

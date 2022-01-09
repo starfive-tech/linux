@@ -583,9 +583,9 @@ static int cdns_dsi_mode2cfg(struct cdns_dsi *dsi,
 	//dpi to dsi transfer can not match , reconfig those parms
 	if(800 == mode->hdisplay)
 	{
-		dsi_cfg->hsa = 16;
-		dsi_cfg->hbp = 199;
-		dsi_cfg->hfp = 153;
+		dsi_cfg->hsa = 30-14;//16
+		dsi_cfg->hbp = 85-12;//73
+		dsi_cfg->hfp = 152-6;//146
 	}
 
 	return 0;
