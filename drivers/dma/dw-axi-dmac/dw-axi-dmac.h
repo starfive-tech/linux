@@ -79,6 +79,7 @@ struct axi_dma_chan {
 	bool				is_err;
 	/* these other elements are all protected by vc.lock */
 	bool				is_paused;
+	struct tasklet_struct		dma_tasklet;
 };
 
 struct dw_axi_dma {
