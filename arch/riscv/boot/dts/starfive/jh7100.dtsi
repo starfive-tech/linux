@@ -133,6 +133,20 @@
 			reg-names = "control";
 		};
 
+		wdog: wdog@12480000 {
+			compatible = "starfive,si5-wdt";
+			reg = <0x0 0x12480000 0x0 0x10000>;
+			interrupt-parent = <&plic>;
+			interrupts = <80>;
+			interrupt-names = "wdog";
+			clocks = <&clkgen JH7100_CLK_WDT_CORE>,
+				<&clkgen JH7100_CLK_WDTIMER_APB>;
+			clock-names = "core_clk", "apb_clk";
+			clock-frequency = <50000000>;
+			timeout-sec = <15>;
+			status = "okay";
+		};
+
 		plic: interrupt-controller@c000000 {
 			#interrupt-cells = <1>;
 			compatible = "riscv,plic0";
