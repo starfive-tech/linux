@@ -456,6 +456,8 @@ static int __init starfive_clkgen_init(struct clk_starfive_jh7100_priv *priv)
 	#define CLK_GMAC	16
 	#define CLK_HF		17
 	#define CLK_RTC		18
+	#define CLK_WDT_APB		19
+	#define CLK_WDT_CORE	20
 
 	struct clk_hw **hws = priv->clk_hws.hws;
 	extern bool clk_ignore_unused;
@@ -483,7 +485,9 @@ static int __init starfive_clkgen_init(struct clk_starfive_jh7100_priv *priv)
 		[CLK_SPI] =       { "spi",       .mult =   2, .div =   1 },
 		[CLK_GMAC] =      { "gmac",      .mult =   1, .div =   1 },
 		[CLK_HF] =        { "hf",        .mult =   1, .div =   1 },
-		[CLK_RTC] =       { "rtc",       .mult =   1, .div =   4 }
+		[CLK_RTC] =       { "rtc",       .mult =   1, .div =   4 },
+		[CLK_WDT_APB] =   { "wdt_apb",   .mult =   5, .div =   1},
+		[CLK_WDT_CORE] =  { "wdt_core",  .mult =   2, .div =   1},
 	};
 	unsigned int i;
 
@@ -515,6 +519,9 @@ static int __init starfive_clkgen_init(struct clk_starfive_jh7100_priv *priv)
 //	hws[JH7100_CLK_SPI1_CORE]	= tmp_clks[CLK_SPI].hw;
 	hws[JH7100_CLK_SPI2_CORE]	= tmp_clks[CLK_SPI].hw;
 //	hws[JH7100_CLK_SPI3_CORE]	= tmp_clks[CLK_SPI].hw;
+
+	hws[JH7100_CLK_WDTIMER_APB]	= tmp_clks[CLK_WDT_APB].hw;
+	hws[JH7100_CLK_WDT_CORE]	= tmp_clks[CLK_WDT_CORE].hw;
 
 	clk_ignore_unused = true;
 }

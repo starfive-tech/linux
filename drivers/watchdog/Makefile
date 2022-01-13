@@ -202,6 +202,9 @@ obj-$(CONFIG_WATCHDOG_SUN4V)		+= sun4v_wdt.o
 # Xen
 obj-$(CONFIG_XEN_WDT) += xen_wdt.o
 
+# RISCV Architecture
+obj-$(CONFIG_STARFIVE_WATCHDOG) += starfive-wdt.o
+
 # Architecture Independent
 obj-$(CONFIG_BD70528_WATCHDOG) += bd70528_wdt.o
 obj-$(CONFIG_BD957XMUF_WATCHDOG) += bd9576_wdt.o
