@@ -634,8 +634,18 @@
 			compatible = "cm,cm521-vpu";
 			reg = <0x0 0x118e0000 0x0 0x4000>;
 			reg-names = "control";
-			clocks = <&clkgen JH7100_CLK_VP6_CORE>;
-			clock-names = "vcodec";
+			clocks =<&clkgen JH7100_CLK_VENC_AXI>,
+					<&clkgen JH7100_CLK_VENCBRG_MAIN>,
+					<&clkgen JH7100_CLK_VENC_BCLK>,
+					<&clkgen JH7100_CLK_VENC_CCLK>,
+					<&clkgen JH7100_CLK_VENC_APB>;
+			clock-names = "venc_axi", "vencbrg_main", "venc_bclk", "venc_cclk", "venc_apb";
+			resets = <&rstgen JH7100_RSTN_VENC_AXI>,
+					<&rstgen JH7100_RSTN_VENCBRG_MAIN>,
+					<&rstgen JH7100_RSTN_VENC_BCLK>,
+					<&rstgen JH7100_RSTN_VENC_CCLK>,
+					<&rstgen JH7100_RSTN_VENC_APB>;
+			reset-names = "venc_axi", "vencbrg_main", "venc_bclk", "venc_cclk", "venc_apb";
 			interrupts = <26>;
 		};
 
