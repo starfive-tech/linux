@@ -1,4 +1,4 @@
-Display Subsystem:(default FBdev)
+﻿Display Subsystem:(default FBdev)
 
 Steps switch to DRM:
 1、Disable fbdev,close below config items：
@@ -11,6 +11,7 @@ CONFIG_DRM_I2C_NXP_TDA998X=y
 CONFIG_DRM_I2C_NXP_TDA9950=y
 CONFIG_DRM_STARFIVE=y
 CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_PHY_M31_DPHY_RX0=y
 
 Precautions：when use DRM hdmi pipeline,please make sure CONFIG_DRM_STARFIVE_MIPI_DSI is disable ,
 			 or will cause color abnormal.
@@ -18,31 +19,9 @@ Precautions：when use DRM hdmi pipeline,please make sure CONFIG_DRM_STARFIVE_MI
 3、open DRM mipi pipeline
 
 enable items:
-	CONFIG_PHY_M31_DPHY_RX0=y
 	CONFIG_DRM_STARFIVE_MIPI_DSI=y
 
 
-change jh7100.dtsi display-encoder as below：
-
-	display-encoder {
-		compatible = "starfive,display-encoder";
-		encoder-type = <6>; //2-TMDS, 3-LVDS, 6-DSI, 8-DPI
-		status = "okay";
-
-		ports {
-			port@0 {
-				endpoint {
-					remote-endpoint = <&dsi_out_port>;
-				};
-			};
-
-			port@1 {
-				endpoint {
-					remote-endpoint = <&crtc_0_out>;
-				};
-			};
-		};
-	};
 
 install libdrm:
 make buildroot_initramfs-menuconfig
