@@ -135,6 +135,7 @@ static int jh7100_audclk_probe(struct platform_device *pdev)
 	priv->pll[1] = clk_hw_register_fixed_rate(priv->dev, "i2sadc_lrclk_iopad", NULL, 0, 12288000);
 	priv->pll[2] = clk_hw_register_fixed_rate(priv->dev, "i2sdac_bclk_iopad", NULL, 0, 12288000);
 	priv->pll[3] = clk_hw_register_fixed_rate(priv->dev, "i2sdac_lrclk_iopad", NULL, 0, 12288000);
+	priv->pll[4] = clk_hw_register_fixed_rate(priv->dev, "audio_codec_clk", NULL, 0, 24576000);
 
 	// for special initialization
 	jh7100_clk_set_divider(priv, JH7100_AUDCLK_I2SADC_BCLK, 0x1f, 0x1);
