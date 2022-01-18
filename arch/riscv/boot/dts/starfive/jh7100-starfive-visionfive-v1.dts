@@ -34,3 +34,7 @@
 #ifdef WM8960_ENABLED
 #include "codecs/sf_wm8960.dtsi"
 #endif
+
+#ifdef AC108_ENABLED
+#include "codecs/sf_ac108.dtsi"
+#endif
