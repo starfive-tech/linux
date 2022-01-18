@@ -961,12 +961,6 @@
 			};
 		};
 
-		wm8960_mclk: wm8960_mclk {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <24576000>;
-		};
-
 		i2sadc0: i2sadc0@10400000 {
 			compatible = "snps,designware-i2sadc0";
 			reg = <0x0 0x10400000 0x0 0x1000>;

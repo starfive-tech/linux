@@ -11,6 +11,7 @@
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
 
 #undef WM8960_ENABLED
+#define AC108_ENABLED
 
 / {
 	aliases {
@@ -510,6 +511,15 @@
 		compatible = "seeed_panel";
 		reg = <0x45>;
 	};
+
+#ifdef AC108_ENABLED
+	ac108_a: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
+	};
+#endif
 
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
