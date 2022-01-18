@@ -11,7 +11,7 @@
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
 
 #undef WM8960_ENABLED
-#define AC108_ENABLED
+#undef AC108_ENABLED
 
 / {
 	aliases {
