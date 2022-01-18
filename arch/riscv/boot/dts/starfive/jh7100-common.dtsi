@@ -11,6 +11,7 @@
 #include <dt-bindings/pinctrl/pinctrl-starfive.h>
 
 #undef WM8960_ENABLED
+#define AC108_ENABLED
 
 / {
 	aliases {
@@ -482,6 +483,15 @@
 		reg = <0x1a>;
 		#sound-dai-cells = <0>;
 		wlf,shared-lrclk;
+	};
+#endif
+
+#ifdef AC108_ENABLED
+	ac108_a: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
 	};
 #endif
 
