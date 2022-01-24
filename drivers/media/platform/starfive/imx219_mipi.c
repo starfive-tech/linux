@@ -805,6 +805,9 @@ static int imx219_set_ctrl(struct v4l2_ctrl *ctrl)
 		ret = imx219_write_reg(imx219, IMX219_REG_VTS, IMX219_REG_VALUE_16BIT,
 				imx219->mode->height + ctrl->val);
 		break;
+	case V4L2_CID_HBLANK:
+		ret = 0;
+		break;
 	case V4L2_CID_TEST_PATTERN_RED:
 		ret = imx219_write_reg(imx219, IMX219_REG_TESTP_RED,
 				IMX219_REG_VALUE_16BIT, ctrl->val);
