@@ -968,7 +968,7 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 	int ret;
 	
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 10, 1000);
+					!(val & chan_active), 10, 2000);
 	if (ret == -ETIMEDOUT)
 		dev_warn(chan2dev(chan),
 			 "irq %s failed to stop\n", axi_chan_name(chan));
@@ -1012,13 +1012,12 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 	unsigned long flags;
 	
 	spin_lock_irqsave(&chan->vc.lock, flags);
-
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		axi_chan_disable(chan);
 	}
-
-	tasklet_schedule(&chan->dma_tasklet);
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
+	
+	tasklet_schedule(&chan->dma_tasklet);
 }
 
 static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
