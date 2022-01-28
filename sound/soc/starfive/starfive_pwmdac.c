@@ -61,9 +61,8 @@ static int pwmdac_shift_bit_info(struct snd_kcontrol *kcontrol,
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_ENUMERATED;
 	uinfo->count = 1;
 	uinfo->value.enumerated.items = items;
-	if (uinfo->value.enumerated.item >= items) {
+	if (uinfo->value.enumerated.item >= items)
 		uinfo->value.enumerated.item = items - 1;
-	}
 	strcpy(uinfo->value.enumerated.name,
 			pwmdac_ct_shift_bit[uinfo->value.enumerated.item].name);
 
@@ -147,43 +146,6 @@ static int pwmdac_duty_cycle_put(struct snd_kcontrol *kcontrol,
 		return 0;
 
 	dev->duty_cycle = pwmdac_ct_duty_cycle[sel].vals;
-	return 0;
-}
-
-static int pwmdac_datan_info(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_info *uinfo)
-{
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 1;
-	uinfo->value.integer.min = 1;
-	uinfo->value.integer.max = PWMDAC_SAMPLE_CNT_511;
-	uinfo->value.integer.step = 1;
-	return 0;
-}
-
-static int pwmdac_datan_get(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sf_pwmdac_dev *dev = snd_soc_component_get_drvdata(component);
-
-	ucontrol->value.integer.value[0] = dev->datan;
-
-	return 0;
-}
-
-static int pwmdac_datan_put(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sf_pwmdac_dev *dev = snd_soc_component_get_drvdata(component);
-	int sel = ucontrol->value.integer.value[0];
-
-	if (sel > PWMDAC_SAMPLE_CNT_511)
-		return 0;
-
-	dev->datan = sel;
-
 	return 0;
 }
 
@@ -460,9 +422,7 @@ static void pwmdac_set(struct sf_pwmdac_dev *dev)
 
 	pwmdac_LR_data_change(dev, dev->lr_change);
 	pwmdac_data_mode(dev, dev->data_mode);
-	if (dev->shift) {
-		pwmdac_data_shift(dev, dev->shift);
-	}
+	pwmdac_data_shift(dev, dev->shift);
 }
 
 static void pwmdac_stop(struct sf_pwmdac_dev *dev)
@@ -526,8 +486,6 @@ static int pwmdac_config(struct sf_pwmdac_dev *dev)
 static int sf_pwmdac_prepare(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
-	struct sf_pwmdac_dev *dev = snd_soc_dai_get_drvdata(dai);
-	//pwmdac_set(dev);
 	return 0;
 }
 
@@ -592,6 +550,35 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
+{
+	struct sf_pwmdac_dev *dev = dev_get_drvdata(dai->dev);
+
+	dev->play_dma_data.addr = dev->mapbase + PWMDAC_WDATA;
+
+	switch (params_channels(params)) {
+	case 2:
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+		break;
+	case 1:
+		dev->play_dma_data.addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
+		break;
+	default:
+		dev_err(dai->dev, "%d channels not supported\n",
+				params_channels(params));
+		return -EINVAL;
+	}
+
+	dev->play_dma_data.fifo_size = 1;
+	dev->play_dma_data.maxburst = 16;
+
+	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, NULL);
+	snd_soc_dai_set_drvdata(dai, dev);
+
+	return 0;
+}
+
 static int sf_pwmdac_dai_probe(struct snd_soc_dai *dai)
 {
 	struct sf_pwmdac_dev *dev = dev_get_drvdata(dai->dev);
@@ -624,7 +611,6 @@ static const struct snd_kcontrol_new pwmdac_snd_controls[] = {
 };
 static int pwmdac_probe(struct snd_soc_component *component)
 {
-	struct sf_pwmdac_dev *priv = snd_soc_component_get_drvdata(component);
 	snd_soc_add_component_controls(component, pwmdac_snd_controls,
 				ARRAY_SIZE(pwmdac_snd_controls));
 	return 0;
@@ -632,6 +618,7 @@ static int pwmdac_probe(struct snd_soc_component *component)
 
 
 static const struct snd_soc_dai_ops sf_pwmdac_dai_ops = {
+	.hw_params	= sf_pwmdac_hw_params,
 	.prepare	= sf_pwmdac_prepare,
 	.trigger	= sf_pwmdac_trigger,
 };

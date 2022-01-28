@@ -41,7 +41,6 @@
  *  Compatibility
  */
 
-#define CONFIG_SND_STARFIVE
 struct snd_pcm_hw_params_old {
 	unsigned int flags;
 	unsigned int masks[SNDRV_PCM_HW_PARAM_SUBFORMAT -
@@ -730,11 +729,6 @@ static int snd_pcm_hw_params(struct snd_pcm_substream *substream,
 	runtime->subformat = params_subformat(params);
 	runtime->channels = params_channels(params);
 	runtime->rate = params_rate(params);
-#ifdef CONFIG_SND_STARFIVE
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
-		runtime->period_size = params_period_size(params)/2;
-	else
-#endif
 	runtime->period_size = params_period_size(params);
 	runtime->periods = params_periods(params);
 	runtime->buffer_size = params_buffer_size(params);

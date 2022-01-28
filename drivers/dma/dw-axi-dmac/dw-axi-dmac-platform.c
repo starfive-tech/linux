@@ -309,12 +309,11 @@ dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
 		len = vd_to_axi_desc(vdesc)->hw_desc[0].len;
 		completed_length = completed_blocks * len;
 		bytes = length - completed_length;
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		dma_set_residue(txstate, bytes);
 	} else {
-		bytes = vd_to_axi_desc(vdesc)->length;
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
 	}
-
-	spin_unlock_irqrestore(&chan->vc.lock, flags);
-	dma_set_residue(txstate, bytes);
 
 	return status;
 }
@@ -329,64 +328,29 @@ static void write_chan_llp(struct axi_dma_chan *chan, dma_addr_t adr)
 	axi_chan_iowrite64(chan, CH_LLP, adr);
 }
 
-static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
-{
-	u32 offset = DMAC_APB_BYTE_WR_CH_EN;
-	u32 reg_width, val;
-
-	if (!chan->chip->apb_regs) {
-		dev_dbg(chan->chip->dev, "apb_regs not initialized\n");
-		return;
-	}
-
-	reg_width = __ffs(chan->config.dst_addr_width);
-	if (reg_width == DWAXIDMAC_TRANS_WIDTH_16)
-		offset = DMAC_APB_HALFWORD_WR_CH_EN;
-
-	val = ioread32(chan->chip->apb_regs + offset);
-
-	if (set)
-		val |= BIT(chan->id);
-	else
-		val &= ~BIT(chan->id);
-
-	iowrite32(val, chan->chip->apb_regs + offset);
-}
 /* Called in chan locked context */
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
+	struct axi_dma_hw_desc *hw_desc = NULL;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	u32 reg, irq_mask;
+	s32 descs_flush, descs_count;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
-	s32 descs_flush, descs_count;
-	struct axi_dma_hw_desc *hw_desc = NULL;
-	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
 		axi_chan_disable(chan);
-		chan->is_err = true;
 		//return;
 	}
-#else
-	if (unlikely(axi_chan_is_hw_enable(chan))) {
-		dev_err(chan2dev(chan), "%s is non-idle!\n",
-			axi_chan_name(chan));
-
-		return;
-	}
-#endif
 
 	axi_dma_enable(chan->chip);
 
 	reg = (DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 	       DWAXIDMAC_MBLK_TYPE_LL << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
 
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	if (chan->hw_handshake_num) {
 		switch (chan->direction) {
 		case DMA_MEM_TO_DEV:
@@ -399,7 +363,6 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 			break;
 		}
 	}
-#endif
 
 	axi_chan_iowrite32(chan, CH_CFG_L, reg);
 
@@ -409,7 +372,6 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	       DWAXIDMAC_HS_SEL_HW << CH_CFG_H_HS_SEL_SRC_POS);
 	switch (chan->direction) {
 	case DMA_MEM_TO_DEV:
-		dw_axi_dma_set_byte_halfword(chan, true);
 		reg |= (chan->config.device_fc ?
 			DWAXIDMAC_TT_FC_MEM_TO_PER_DST :
 			DWAXIDMAC_TT_FC_MEM_TO_PER_DMAC)
@@ -435,23 +397,13 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
 
-	/* flush all the desc */
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+    /*flush all the desc */
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 	if(chan->chip->flag->need_flush) {
-		int count = atomic_read(&chan->descs_allocated);
-		int i;
-
-		for (i = 0; i < count; i++) {
-			starfive_flush_dcache(first->hw_desc[i].llp,
-					      sizeof(*first->hw_desc[i].lli));
-
-			dev_dbg(chan->chip->dev,
-				"sar:%#llx dar:%#llx llp:%#llx ctl:0x%x:%08x\n",
-				first->hw_desc[i].lli->sar,
-				first->hw_desc[i].lli->dar,
-				first->hw_desc[i].lli->llp,
-				first->hw_desc[i].lli->ctl_hi,
-				first->hw_desc[i].lli->ctl_lo);
+		descs_count =  atomic_read(&chan->descs_allocated);
+		for (descs_flush = 0; descs_flush < descs_count; descs_flush++) {
+			hw_desc = &first->hw_desc[descs_flush];
+			starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
 		}
 	}
 #endif
@@ -540,48 +492,6 @@ static void dma_chan_free_chan_resources(struct dma_chan *dchan)
 		 axi_chan_name(chan), atomic_read(&chan->descs_allocated));
 
 	pm_runtime_put(chan->chip->dev);
-}
-
-static void dw_axi_dma_set_hw_channel(struct axi_dma_chip *chip,
-				      u32 handshake_num, bool set)
-{
-	unsigned long start = 0;
-	unsigned long reg_value;
-	unsigned long reg_mask;
-	unsigned long reg_set;
-	unsigned long mask;
-	unsigned long val;
-
-	if (!chip->apb_regs) {
-		dev_dbg(chip->dev, "apb_regs not initialized\n");
-		return;
-	}
-
-	/*
-	 * An unused DMA channel has a default value of 0x3F.
-	 * Lock the DMA channel by assign a handshake number to the channel.
-	 * Unlock the DMA channel by assign 0x3F to the channel.
-	 */
-	if (set) {
-		reg_set = UNUSED_CHANNEL;
-		val = handshake_num;
-	} else {
-		reg_set = handshake_num;
-		val = UNUSED_CHANNEL;
-	}
-
-	reg_value = lo_hi_readq(chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-
-	for_each_set_clump8(start, reg_mask, &reg_value, 64) {
-		if (reg_mask == reg_set) {
-			mask = GENMASK_ULL(start + 7, start);
-			reg_value &= ~mask;
-			reg_value |= rol64(val, start);
-			lo_hi_writeq(reg_value,
-				     chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-			break;
-		}
-	}
 }
 
 /*
@@ -709,7 +619,7 @@ static int dw_axi_dma_set_hw_desc(struct axi_dma_chan *chan,
 
 	hw_desc->lli->block_ts_lo = cpu_to_le32(block_ts - 1);
 
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+	#ifdef CONFIG_SOC_STARFIVE_VIC7100
 	ctllo |= DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_DST_MSIZE_POS |
 		 DWAXIDMAC_BURST_TRANS_LEN_16 << CH_CTL_L_SRC_MSIZE_POS;
 #else
@@ -819,8 +729,6 @@ dw_axi_dma_chan_prep_cyclic(struct dma_chan *dchan, dma_addr_t dma_addr,
 		llp = hw_desc->llp;
 	} while (total_segments);
 
-	dw_axi_dma_set_hw_channel(chan->chip, chan->hw_handshake_num, true);
-
 	return vchan_tx_prep(&chan->vc, &desc->vd, flags);
 
 err_desc_get:
@@ -898,8 +806,6 @@ dw_axi_dma_chan_prep_slave_sg(struct dma_chan *dchan, struct scatterlist *sgl,
 		write_desc_llp(hw_desc, llp | lms);
 		llp = hw_desc->llp;
 	} while (num_sgs);
-
-	dw_axi_dma_set_hw_channel(chan->chip, chan->hw_handshake_num, true);
 
 	return vchan_tx_prep(&chan->vc, &desc->vd, flags);
 
@@ -996,6 +902,10 @@ dma_chan_prep_dma_memcpy(struct dma_chan *dchan, dma_addr_t dst_adr,
 		num++;
 	}
 
+	/* Total len of src/dest sg == 0, so no descriptor were allocated */
+	if (unlikely(!desc))
+		return NULL;
+
 	/* Set end-of-link to the last link descriptor of list */
 	set_desc_last(&desc->hw_desc[num - 1]);
 	/* Managed transfer list */
@@ -1046,16 +956,23 @@ static void axi_chan_list_dump_lli(struct axi_dma_chan *chan,
 		axi_chan_dump_lli(chan, &desc_head->hw_desc[i]);
 }
 
-static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
-{
-	struct virt_dma_desc *vd;
-	unsigned long flags;
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
-	struct axi_dma_desc *desc;
-#endif
-	spin_lock_irqsave(&chan->vc.lock, flags);
 
-	axi_chan_disable(chan);
+static void axi_chan_tasklet(struct tasklet_struct *t)
+{
+	struct axi_dma_chan *chan = from_tasklet(chan, t, dma_tasklet);
+	struct virt_dma_desc *vd;
+	u32 chan_active = BIT(chan->id) << DMAC_CHAN_EN_SHIFT;
+	unsigned long flags;
+	u32 val;
+	int ret;
+
+	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
+					!(val & chan_active), 10, 2000);
+	if (ret == -ETIMEDOUT)
+		dev_warn(chan2dev(chan),
+			 "irq %s failed to stop\n", axi_chan_name(chan));
+
+	spin_lock_irqsave(&chan->vc.lock, flags);
 
 	/* The bad descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
@@ -1065,31 +982,41 @@ static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 		return; 
 	}
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
-	if (chan->is_err) {
-		desc = vd_to_axi_desc(vd);
-		axi_chan_block_xfer_start(chan, desc);
-		chan->is_err = false;
+
+	if (chan->cyclic) {
+		vchan_cyclic_callback(vd);
+		axi_chan_enable(chan);
 	} else {
-#endif
 		/* Remove the completed descriptor from issued list */
 		list_del(&vd->node);
 
 		/* WARN about bad descriptor */
 		dev_err(chan2dev(chan),
-			"Bad descriptor submitted for %s, cookie: %d, irq: 0x%08x\n",
-			axi_chan_name(chan), vd->tx.cookie, status);
+			"Bad descriptor submitted for %s, cookie: %d\n",
+			axi_chan_name(chan), vd->tx.cookie);
 		axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
 
 		vchan_cookie_complete(vd);
 
 		/* Try to restart the controller */
 		axi_chan_start_first_queued(chan);
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	}
-#endif
 
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
+}
+
+
+static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&chan->vc.lock, flags);
+	if (unlikely(axi_chan_is_hw_enable(chan))) {
+		axi_chan_disable(chan);
+	}
+	spin_unlock_irqrestore(&chan->vc.lock, flags);
+
+	tasklet_schedule(&chan->dma_tasklet);
 }
 
 static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
@@ -1127,6 +1054,9 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
+					#ifdef CONFIG_SOC_STARFIVE_VIC7100
+					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
+					#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1169,11 +1099,11 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 		dev_vdbg(chip->dev, "%s %u IRQ status: 0x%08x\n",
 			axi_chan_name(chan), i, status);
 
-		if (status & DWAXIDMAC_IRQ_ALL_ERR)
+		if (status & DWAXIDMAC_IRQ_ALL_ERR) {
 			axi_chan_handle_err(chan, status);
+		}
 		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
 			axi_chan_block_xfer_complete(chan);
-			dev_dbg(chip->dev, "axi_chan_block_xfer_complete.\n");
 		}
 	}
 
@@ -1199,13 +1129,6 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	if (ret == -ETIMEDOUT)
 		dev_warn(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
-
-
-	if (chan->direction != DMA_MEM_TO_MEM)
-		dw_axi_dma_set_hw_channel(chan->chip,
-					  chan->hw_handshake_num, false);
-	if (chan->direction == DMA_MEM_TO_DEV)
-		dw_axi_dma_set_byte_halfword(chan, false);
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
@@ -1367,7 +1290,7 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 	if(chip->dw->hdata->nr_channels > 8){
 		chip->flag->nr_chan_8 = true;
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 		chip->flag->need_flush = true;
 #endif
 	}
@@ -1428,7 +1351,6 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 static int dw_probe(struct platform_device *pdev)
 {
-	struct device_node *node = pdev->dev.of_node;
 	struct axi_dma_chip *chip;
 	struct resource *mem;
 	struct dw_axi_dma *dw;
@@ -1467,12 +1389,6 @@ static int dw_probe(struct platform_device *pdev)
 	if (IS_ERR(chip->regs))
 		return PTR_ERR(chip->regs);
 
-	if (of_device_is_compatible(node, "intel,kmb-axi-dma")) {
-		chip->apb_regs = devm_platform_ioremap_resource(pdev, 1);
-		if (IS_ERR(chip->apb_regs))
-			return PTR_ERR(chip->apb_regs);
-	}
-
 	chip->core_clk = devm_clk_get(chip->dev, "core-clk");
 	if (IS_ERR(chip->core_clk))
 		return PTR_ERR(chip->core_clk);
@@ -1507,6 +1423,8 @@ static int dw_probe(struct platform_device *pdev)
 
 		chan->vc.desc_free = vchan_desc_put;
 		vchan_init(&chan->vc, &dw->dma);
+
+		tasklet_setup(&chan->dma_tasklet, axi_chan_tasklet);
 	}
 
 	/* Set capabilities */
@@ -1544,11 +1462,7 @@ static int dw_probe(struct platform_device *pdev)
 	 * Therefore, set constraint to 1024 * 4.
 	 */
 	dw->dma.dev->dma_parms = &dw->dma_parms;
-#ifdef CONFIG_DW_AXI_DMAC_STARFIVE
 	dma_set_max_seg_size(&pdev->dev, DMAC_MAX_BLK_SIZE);
-#else
-	dma_set_max_seg_size(&pdev->dev, MAX_BLOCK_SIZE);
-#endif
 	platform_set_drvdata(pdev, chip);
 
 	pm_runtime_enable(chip->dev);
@@ -1603,6 +1517,7 @@ static int dw_remove(struct platform_device *pdev)
 	for (i = 0; i < dw->hdata->nr_channels; i++) {
 		axi_chan_disable(&chip->dw->chan[i]);
 		axi_chan_irq_disable(&chip->dw->chan[i], DWAXIDMAC_IRQ_ALL);
+		tasklet_kill(&chan->dma_tasklet);
 	}
 	axi_dma_disable(chip);
 
@@ -1628,7 +1543,6 @@ static const struct dev_pm_ops dw_axi_dma_pm_ops = {
 
 static const struct of_device_id dw_dma_of_id_table[] = {
 	{ .compatible = "snps,axi-dma-1.01a" },
-	{ .compatible = "intel,kmb-axi-dma" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, dw_dma_of_id_table);
@@ -1638,7 +1552,7 @@ static struct platform_driver dw_driver = {
 	.remove		= dw_remove,
 	.driver = {
 		.name	= KBUILD_MODNAME,
-		.of_match_table = dw_dma_of_id_table,
+		.of_match_table = of_match_ptr(dw_dma_of_id_table),
 		.pm = &dw_axi_dma_pm_ops,
 	},
 };
