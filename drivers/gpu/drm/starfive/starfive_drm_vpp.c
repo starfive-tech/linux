@@ -299,6 +299,7 @@ static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_vi
 	case COLOR_YUV420_NV21:
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
 				COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0x0);
+		break;
 	case COLOR_YUV420_NV12:
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
 				COLOR_YUV420_NV12 - COLOR_YUV420_NV12, 0x0);
