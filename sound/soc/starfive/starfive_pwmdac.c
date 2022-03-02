@@ -571,9 +571,50 @@ static int sf_pwmdac_trigger(struct snd_pcm_substream *substream,
 static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
+	int ret = 0;
+	unsigned long mclk_dac_value;
+	unsigned long clk_audio_src;
 	struct sf_pwmdac_dev *dev = dev_get_drvdata(dai->dev);
 
 	dev->play_dma_data.addr = dev->mapbase + PWMDAC_WDATA;
+
+	switch (params_rate(params)) {
+	case 8000:
+		dev->datan = PWMDAC_SAMPLE_CNT_3;
+		clk_audio_src = 12288000;
+		/* we want 6144kHz but the clock driver always rounds down so add a little slack */
+		mclk_dac_value = 6144000 + 64;
+		break;
+	case 16000:
+		dev->datan = PWMDAC_SAMPLE_CNT_3;
+		clk_audio_src = 12288000;
+		mclk_dac_value = 12288000 + 64;
+		break;
+	case 22050:
+		dev->datan = PWMDAC_SAMPLE_CNT_1;
+		clk_audio_src = 11289600;
+		mclk_dac_value = 5644800 + 64;
+		break;
+	case 32000:
+		dev->datan = PWMDAC_SAMPLE_CNT_1;
+		clk_audio_src = 8192000;
+		mclk_dac_value = 8192000 + 64;
+		break;
+	case 44100:
+		dev->datan = PWMDAC_SAMPLE_CNT_1;
+		clk_audio_src = 11289600;
+		mclk_dac_value = 11289600 + 64;
+		break;
+	case 48000:
+		dev->datan = PWMDAC_SAMPLE_CNT_1;
+		clk_audio_src = 12288000;
+		mclk_dac_value = 12288000 + 64;
+		break;
+	default:
+		dev_err(dai->dev, "%d rate not supported\n",
+				params_rate(params));
+		return -EINVAL;
+	}
 
 	switch (params_channels(params)) {
 	case 2:
@@ -588,6 +629,27 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
+	pwmdac_set(dev);
+
+	ret = clk_set_rate(dev->clk_audio_src, clk_audio_src);
+	if (ret) {
+		dev_err(dai->dev, "failed to set %lu  rate for clk_audio_src\n", clk_audio_src);
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_dac_mclk);
+	if (ret) {
+		dev_err(dai->dev, "failed to prepare enable clk_dac_mclk\n");
+		goto err_clk_pwmdac;
+	}
+
+	/* we want 4096kHz but the clock driver always rounds down so add a little slack */
+	ret = clk_set_rate(dev->clk_dac_mclk, mclk_dac_value);
+	if (ret) {
+		dev_err(dai->dev, "failed to set rate for clk_dac_mclk %lu\n", mclk_dac_value);
+		goto err_clk_pwmdac;
+	}
+
 	dev->play_dma_data.fifo_size = 1; 
 	dev->play_dma_data.maxburst = 16; 
 
@@ -595,6 +657,10 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_dai_set_drvdata(dai, dev);
 	
 	return 0;
+
+err_clk_pwmdac:
+	return ret;
+
 }
 
 static int sf_pwmdac_dai_probe(struct snd_soc_dai *dai)
@@ -656,7 +722,7 @@ static struct snd_soc_dai_driver pwmdac_dai = {
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_16000,
+		.rates = SNDRV_PCM_RATE_8000_48000,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	},
 	.ops = &sf_pwmdac_dai_ops,
