@@ -40,6 +40,9 @@
 #include "../pinmux.h"
 #include "pinctrl-starfive.h"
 
+#define PINMUX_GPIO_NUM_MASK			0xFF
+#define PINMUX_GPIO_FUNC			0x100
+
 #define IO_PAD_SCFG_QSPI_IOCTRL			0x19c
 #define IO_PADSHARE_SEL_REG_REG			0x1a0
 #define IO_PAD_CTRL_SEL_FUNC_0_REG_ADDR    	0x0
@@ -80,6 +83,17 @@
 #define GPIO_MIS_HIGH  				0x44
 #define GPIO_DIN_LOW   				0x48
 #define GPIO_DIN_HIGH  				0x4c
+
+#define PAD_SLEW_RATE_MASK		0xe00U
+#define PAD_SLEW_RATE_POS		9
+#define PAD_BIAS_STRONG_PULL_UP		0x100U
+#define PAD_INPUT_ENABLE		0x080U
+#define PAD_INPUT_SCHMITT_ENABLE	0x040U
+#define PAD_BIAS_DISABLE		0x020U
+#define PAD_BIAS_PULL_DOWN		0x010U
+#define PAD_BIAS_MASK			0x130U
+#define PAD_DRIVE_STRENGTH_MASK		0x007U
+#define PAD_DRIVE_STRENGTH_POS		0
 
 
 enum starfive_vic700_pads {
@@ -824,41 +838,40 @@ static irqreturn_t starfive_vic7100_irq_handler(int irq, void *gc)
 
 
 static int starfive_vic7100_gpio_register(struct platform_device *pdev,
-					struct starfive_pinctrl *ipctl)
+					struct starfive_pinctrl *pctl)
 {
 	struct device *dev = &pdev->dev;
-	struct resource *res;
 	int irq, ret, ngpio;
 
 	ngpio = MAX_GPIO;
 	
-	ipctl->gc.direction_input = starfive_vic7100_direction_input;
-	ipctl->gc.direction_output = starfive_vic7100_direction_output;
-	ipctl->gc.get_direction = starfive_vic7100_get_direction;
-	ipctl->gc.get = starfive_vic7100_get_value;
-	ipctl->gc.set = starfive_vic7100_set_value;
-	ipctl->gc.base = 0;
-	ipctl->gc.ngpio = ngpio;
-	ipctl->gc.label = dev_name(dev);
-	ipctl->gc.parent = dev;
-	ipctl->gc.owner = THIS_MODULE;
+	pctl->gc.direction_input = starfive_vic7100_direction_input;
+	pctl->gc.direction_output = starfive_vic7100_direction_output;
+	pctl->gc.get_direction = starfive_vic7100_get_direction;
+	pctl->gc.get = starfive_vic7100_get_value;
+	pctl->gc.set = starfive_vic7100_set_value;
+	pctl->gc.base = 0;
+	pctl->gc.ngpio = ngpio;
+	pctl->gc.label = dev_name(dev);
+	pctl->gc.parent = dev;
+	pctl->gc.owner = THIS_MODULE;
 
-	ret = gpiochip_add_data(&ipctl->gc, ipctl);
+	ret = gpiochip_add_data(&pctl->gc, pctl);
 	if (ret){
 		dev_err(dev, "gpiochip_add_data ret=%d!\n", ret);
 		return ret;
 	}
 
 	/* Disable all GPIO interrupts before enabling parent interrupts */
-	iowrite32(0, ipctl->gpio_base + GPIO_IE_HIGH);
-	iowrite32(0, ipctl->gpio_base + GPIO_IE_LOW);
-	ipctl->enabled = 0;
+	iowrite32(0, pctl->gpio_base + GPIO_IE_HIGH);
+	iowrite32(0, pctl->gpio_base + GPIO_IE_LOW);
+	pctl->enabled = 0;
 
-	ret = gpiochip_irqchip_add(&ipctl->gc, &starfive_irqchip, 0,
+	ret = gpiochip_irqchip_add(&pctl->gc, &starfive_irqchip, 0,
 				   handle_simple_irq, IRQ_TYPE_NONE);
 	if (ret) {
 		dev_err(dev, "could not add irqchip\n");
-		gpiochip_remove(&ipctl->gc);
+		gpiochip_remove(&pctl->gc);
 		return ret;
 	}
 	irq = platform_get_irq(pdev, 0);
@@ -868,13 +881,13 @@ static int starfive_vic7100_gpio_register(struct platform_device *pdev,
 	}
 
 	ret = devm_request_irq(dev, irq, starfive_vic7100_irq_handler, IRQF_SHARED,
-			       dev_name(dev), ipctl);
+			       dev_name(dev), pctl);
 	if (ret) {
 		dev_err(dev, "IRQ handler registering failed (%d)\n", ret);
 		return ret;
 	}
 
-	writel_relaxed(1, ipctl->gpio_base + GPIO_EN);
+	writel_relaxed(1, pctl->gpio_base + GPIO_EN);
 
 	return 0;
 }
@@ -883,19 +896,19 @@ static int starfive_vic7100_gpio_register(struct platform_device *pdev,
 static int starfive_vic7100_pinconf_get(struct pinctrl_dev *pctldev, unsigned pin_id,
 				unsigned long *config)
 {
-	struct starfive_pinctrl *ipctl = pinctrl_dev_get_drvdata(pctldev);
-	const struct starfive_pinctrl_soc_info *info = ipctl->info;
-	const struct starfive_pin_reg *pin_reg = &ipctl->pin_regs[pin_id];
+	struct starfive_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
+	const struct starfive_pinctrl_soc_info *info = pctl->info;
+	const struct starfive_pin_reg *pin_reg = &pctl->pin_regs[pin_id];
 	unsigned int offset_reg;
 	u32 value;
 		
 	if (pin_reg->io_conf_reg == -1) {
-		dev_err(ipctl->dev, "Pin(%s) does not support config function\n",
+		dev_err(pctl->dev, "Pin(%s) does not support config function\n",
 			info->pins[pin_id].name);
 		return -EINVAL;
 	}
 	offset_reg = (pin_reg->io_conf_reg/2)*4;
-	value = readl_relaxed(ipctl->padctl_base + offset_reg);
+	value = readl_relaxed(pctl->padctl_base + offset_reg);
 
 	if(pin_reg->io_conf_reg%2)
 		*config = value >> 16; //high 16bit
@@ -905,119 +918,191 @@ static int starfive_vic7100_pinconf_get(struct pinctrl_dev *pctldev, unsigned pi
 	return 0;
 }
 
-		       
 static int starfive_vic7100_pinconf_set(struct pinctrl_dev *pctldev,
 				unsigned pin_id, unsigned long *configs,
 				unsigned num_configs)
 {
-	struct starfive_pinctrl *ipctl = pinctrl_dev_get_drvdata(pctldev);
-	const struct starfive_pinctrl_soc_info *info = ipctl->info;
-	const struct starfive_pin_reg *pin_reg = &ipctl->pin_regs[pin_id];
+	struct starfive_pinctrl *pctl = pinctrl_dev_get_drvdata(pctldev);
+	const struct starfive_pinctrl_soc_info *info = pctl->info;
+	const struct starfive_pin_reg *pin_reg = &pctl->pin_regs[pin_id];
 	int i;
 	unsigned int offset_reg;
 	u32 value;
 	unsigned long flags;
 
 	if (pin_reg->io_conf_reg == -1) {
-		dev_err(ipctl->dev, "Pin(%s) does not support config function\n",
+		dev_err(pctl->dev, "Pin(%s) does not support config function\n",
 			info->pins[pin_id].name);
 		return -EINVAL;
 	}
 	
-	raw_spin_lock_irqsave(&ipctl->lock, flags);
+	raw_spin_lock_irqsave(&pctl->lock, flags);
 	for (i = 0; i < num_configs; i++) {
 	
 		offset_reg = (pin_reg->io_conf_reg/2)*4;
-		value = readl_relaxed(ipctl->padctl_base + offset_reg);
+		value = readl_relaxed(pctl->padctl_base + offset_reg);
 	
 		if(pin_reg->io_conf_reg%2)
 			value = value|((configs[i] & 0xFFFF) << 16);//high 16bit
 		else
 			value = value|(configs[i] & 0xFFFF);//low 16bit
 	
-		writel_relaxed(value, ipctl->padctl_base + offset_reg);
+		writel_relaxed(value, pctl->padctl_base + offset_reg);
 	} 
-	raw_spin_unlock_irqrestore(&ipctl->lock, flags);
+	raw_spin_unlock_irqrestore(&pctl->lock, flags);
 
 	return 0;
 }
 
-static int starfive_vic7100_iopad_sel_func(struct starfive_pinctrl *ipctl, unsigned int func_id)
+static int starfive_vic7100_iopad_sel_func(struct platform_device *pdev,
+					struct starfive_pinctrl *pctl,
+					unsigned int func_id)
 {
-	unsigned int value;
+	u32 value;
 
-	value = readl_relaxed(ipctl->padctl_base + IO_PADSHARE_SEL_REG_REG);
+	value = readl_relaxed(pctl->padctl_base + IO_PADSHARE_SEL_REG_REG);
 	value &= 0x7;
 
 	if (value <= IO_PADSHARE_SEL_REG_MAX){
 		switch (value) {
 			case 0:
-				ipctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_0_REG_ADDR;
-				ipctl->padctl_gpio0 = PAD_GPIO_0;
+				pctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_0_REG_ADDR;
+				pctl->padctl_gpio0 = PAD_GPIO_0;
 				break;
 			case 1:
-				ipctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_1_REG_ADDR;
-				ipctl->padctl_gpio0 = PAD_GPIO_0;
+				pctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_1_REG_ADDR;
+				pctl->padctl_gpio0 = PAD_GPIO_0;
 				break;
 			case 2:
-				ipctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_2_REG_ADDR;
-				ipctl->padctl_gpio0 = PAD_FUNC_SHARE_72;
+				pctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_2_REG_ADDR;
+				pctl->padctl_gpio0 = PAD_FUNC_SHARE_72;
 				break;
 			case 3:
-				ipctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_3_REG_ADDR;
-				ipctl->padctl_gpio0 = PAD_FUNC_SHARE_70;
+				pctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_3_REG_ADDR;
+				pctl->padctl_gpio0 = PAD_FUNC_SHARE_70;
 				break;
 			case 4: case 5: case 6:
-				ipctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_4_REG_ADDR;
-				ipctl->padctl_gpio0 = PAD_FUNC_SHARE_0;
+				pctl->padctl_gpio_base = IO_PAD_CTRL_SEL_FUNC_4_REG_ADDR;
+				pctl->padctl_gpio0 = PAD_FUNC_SHARE_0;
 				break;
 			default:
-				dev_err(ipctl->dev, "invalid signal group %u\n", func_id);
+				dev_err(pctl->dev, "invalid signal group %u\n", func_id);
 				return -EINVAL;
 		}
 		return 0;
 	}
 	else{
-		dev_err(ipctl->dev,"invalid signal group %u\n", func_id);
+		dev_err(pctl->dev,"invalid signal group %u\n", func_id);
 		return -EINVAL;
 	}
 }
 
 
-static int starfive_vic7100_pmx_set_one_pin_mux(struct starfive_pinctrl *ipctl,
+static int starfive_vic7100_pmx_set_one_pin_mux(struct starfive_pinctrl *pctl,
 				    struct starfive_pin *pin)
 {
-	const struct starfive_pinctrl_soc_info *info = ipctl->info;
+	const struct starfive_pinctrl_soc_info *info = pctl->info;
 	struct starfive_pin_config *pin_config = &pin->pin_config;
 	const struct starfive_pin_reg *pin_reg;
 	unsigned int pin_id;
-	u32 value;
 	int i;
 	unsigned long flags;
 	
 	pin_id = pin->pin;
-	pin_reg = &ipctl->pin_regs[pin_id];
+	pin_reg = &pctl->pin_regs[pin_id];
 	
-	raw_spin_lock_irqsave(&ipctl->lock, flags);
+	raw_spin_lock_irqsave(&pctl->lock, flags);
 	if(pin_config->pinmux_func == PINMUX_GPIO_FUNC){
 		if(pin_reg->gpo_dout_reg != -1){
-			writel_relaxed(pin_config->gpio_dout, ipctl->gpio_base + pin_reg->gpo_dout_reg);
+			writel_relaxed(pin_config->gpio_dout, pctl->gpio_base + pin_reg->gpo_dout_reg);
 		}
 
 		if(pin_reg->gpo_doen_reg != -1){
-			writel_relaxed(pin_config->gpio_doen, ipctl->gpio_base + pin_reg->gpo_doen_reg);
+			writel_relaxed(pin_config->gpio_doen, pctl->gpio_base + pin_reg->gpo_doen_reg);
 		}
 
 		for(i = 0; i < pin_config->gpio_din_num; i++){
 			if((pin_config->gpio_din_reg[i] >= info->din_reg_base) &&
 			  (pin_config->gpio_din_reg[i] <= info->din_reg_base + GPI_DIN_ADDR_END*info->din_reg_offset)){
-				writel_relaxed((pin_config->gpio_num + 2), ipctl->gpio_base + pin_config->gpio_din_reg[i]);
+				writel_relaxed((pin_config->gpio_num + 2), pctl->gpio_base + pin_config->gpio_din_reg[i]);
 			}
 		}
 	}
-	raw_spin_unlock_irqrestore(&ipctl->lock, flags);
+	raw_spin_unlock_irqrestore(&pctl->lock, flags);
 	
 	return 0;
+}
+
+
+static void starfive_vic7100_sys_parse_pin_config(struct starfive_pinctrl *pctl,
+						unsigned int *pins_id,
+						struct starfive_pin *pin_data,
+						const __be32 *list_p,
+						struct device_node *np)
+{
+	const struct starfive_pinctrl_soc_info *info = pctl->info;
+	struct starfive_pin_reg *pin_reg;
+	const __be32 *list = list_p;
+	const __be32 *list_din;
+	int size_din, pin_size;
+	u32 value;
+	int i;
+
+	pin_size = 4;
+	*pins_id = be32_to_cpu(*list);
+	pin_reg = &pctl->pin_regs[*pins_id];
+	pin_data->pin = *pins_id;
+	pin_reg->io_conf_reg = *pins_id;
+
+	if(pin_data->pin > PAD_FUNC_SHARE_141){
+		dev_err(pctl->dev,"err pin num\n");
+		return;
+	}
+
+	if (!of_property_read_u32(np, "sf,pin-ioconfig", &value)) {
+		pin_data->pin_config.io_config = value;
+	}
+
+	if((pin_data->pin >= pctl->padctl_gpio0) &&
+	(pin_data->pin < pctl->padctl_gpio0 + MAX_GPIO)){
+		pin_data->pin_config.gpio_num = pin_data->pin - pctl->padctl_gpio0;
+		pin_data->pin_config.pinmux_func = PINMUX_GPIO_FUNC;
+	}
+
+	if(pin_data->pin_config.pinmux_func == PINMUX_GPIO_FUNC){
+		if (!of_property_read_u32(np, "sf,pin-gpio-dout", &value)) {
+			pin_data->pin_config.gpio_dout = value;
+			pin_reg->gpo_dout_reg = info->dout_reg_base +
+					(pin_data->pin_config.gpio_num * info->dout_reg_offset);
+		}
+
+		if (!of_property_read_u32(np, "sf,pin-gpio-doen", &value)) {
+			pin_data->pin_config.gpio_doen = value;
+			pin_reg->gpo_doen_reg = info->doen_reg_base +
+					(pin_data->pin_config.gpio_num * info->doen_reg_offset);
+		}
+
+		list_din = of_get_property(np, "sf,pin-gpio-din", &size_din);
+		if (list_din) {
+			if (!size_din || size_din % pin_size) {
+				dev_err(pctl->dev,
+					"Invalid sf,pin-gpio-din or pins property in node %pOF\n", np);
+				return;
+			}
+
+			pin_data->pin_config.gpio_din_num = size_din / pin_size;
+			pin_data->pin_config.gpio_din_reg = devm_kcalloc(pctl->dev,
+						 pin_data->pin_config.gpio_din_num, sizeof(s32),
+						 GFP_KERNEL);
+
+			for(i = 0; i < pin_data->pin_config.gpio_din_num; i++){
+				value = be32_to_cpu(*list_din++);
+				pin_data->pin_config.gpio_din_reg[i] = info->din_reg_base +
+								value*info->din_reg_offset;
+			}
+		}
+	}
+	return;
 }
 
 
@@ -1035,6 +1120,7 @@ static const struct starfive_pinctrl_soc_info starfive_vic7100_pinctrl_info = {
 	.starfive_pinconf_set = starfive_vic7100_pinconf_set,
 	.starfive_pmx_set_one_pin_mux = starfive_vic7100_pmx_set_one_pin_mux,
 	.starfive_gpio_register = starfive_vic7100_gpio_register,
+	.starfive_pinctrl_parse_pin = starfive_vic7100_sys_parse_pin_config,
 };
 
 

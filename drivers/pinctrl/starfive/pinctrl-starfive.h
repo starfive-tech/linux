@@ -3,7 +3,7 @@
   * @file  pinctrl-starfive.h
   * @author  StarFive Technology
   * @version  V1.0
-  * @date  05/27/2021
+  * @date  11/30/2021
   * @brief
   ******************************************************************************
   * @copy
@@ -24,27 +24,11 @@
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/pinctrl/pinmux.h>
 
+#define MAX_GPIO				64
 
-#define MAX_GPIO			64
+#define STARFIVE_PINS_SIZE 			4
 
-#define PAD_SLEW_RATE_MASK		0xe00U
-#define PAD_SLEW_RATE_POS		9
-#define PAD_BIAS_STRONG_PULL_UP		0x100U
-#define PAD_INPUT_ENABLE		0x080U
-#define PAD_INPUT_SCHMITT_ENABLE	0x040U
-#define PAD_BIAS_DISABLE		0x020U
-#define PAD_BIAS_PULL_DOWN		0x010U
-#define PAD_BIAS_MASK			0x130U
-#define PAD_DRIVE_STRENGTH_MASK		0x007U
-#define PAD_DRIVE_STRENGTH_POS		0
-
-
-#define STARFIVE_PINS_SIZE 		4
-
-//pinmux
-#define PINMUX_GPIO_NUM_MASK		0xFF
-#define PINMUX_GPIO_FUNC_MASK		0xF00
-#define PINMUX_GPIO_FUNC		0x100
+#define STARFIVE_USE_SCU			BIT(0)
 
 struct platform_device;
 
@@ -59,6 +43,7 @@ struct starfive_pin_config {
 	u32 gpio_doen;
 	u32 gpio_din_num;
 	s32 *gpio_din_reg;
+	s32 syscon;
 };
 
 struct starfive_pin {
@@ -70,6 +55,10 @@ struct starfive_pin_reg {
 	s32 io_conf_reg;
 	s32 gpo_dout_reg; 
 	s32 gpo_doen_reg; 
+	s32 func_sel_reg;
+	s32 func_sel_shift;
+	s32 func_sel_mask;
+	s32 syscon_reg;
 };
 
 struct starfive_iopad_sel_func_inf {
@@ -77,10 +66,9 @@ struct starfive_iopad_sel_func_inf {
 	unsigned int padctl_gpio0;
 };
 
-
 struct starfive_pinctrl {
 	struct device *dev;
-	struct pinctrl_dev *pctl;
+	struct pinctrl_dev *pctl_dev;
 	void __iomem *padctl_base;
 	void __iomem *gpio_base;
 	unsigned int padctl_gpio_base;
@@ -98,10 +86,10 @@ struct starfive_pinctrl {
 	unsigned trigger[MAX_GPIO];
 };
 
-
 struct starfive_pinctrl_soc_info {
 	const struct pinctrl_pin_desc *pins;
 	unsigned int npins;
+	unsigned int flags;
 	
 	/*gpio dout/doen/din register*/
 	unsigned int dout_reg_base;
@@ -112,8 +100,9 @@ struct starfive_pinctrl_soc_info {
 	unsigned int din_reg_offset;
 	
 	/* sel-function */
-	int (*starfive_iopad_sel_func)(struct starfive_pinctrl *ipctl, 
-				unsigned int func_id);
+	int (*starfive_iopad_sel_func)(struct platform_device *pdev,
+					struct starfive_pinctrl *ipctl,
+					unsigned int func_id);
 	/* generic pinconf */
 	int (*starfive_pinconf_get)(struct pinctrl_dev *pctldev, unsigned int pin_id,
 			       unsigned long *config);
@@ -127,8 +116,11 @@ struct starfive_pinctrl_soc_info {
 	/* gpio chip */
 	int (*starfive_gpio_register)(struct platform_device *pdev,
 				struct starfive_pinctrl *ipctl);
+	void (*starfive_pinctrl_parse_pin)(struct starfive_pinctrl *ipctl,
+					unsigned int *pins_id, struct starfive_pin *pin_data,
+					const __be32 *list_p,
+					struct device_node *np);
 };
-
 
 #define	STARFIVE_PINCTRL_PIN(pin) PINCTRL_PIN(pin, #pin)
 
