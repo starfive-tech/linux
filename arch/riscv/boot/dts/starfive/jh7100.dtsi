@@ -672,8 +672,16 @@
 			compatible = "cm,codaj12-jpu-1";
 			reg = <0x0 0x11900000 0x0 0x300>;
 			reg-names = "control";
-			clocks = <&clkgen JH7100_CLK_JPEG_APB>;
-			clock-names = "jpege";
+			clocks = <&clkgen JH7100_CLK_JPEG_AXI>,
+					<&clkgen JH7100_CLK_JPEG_CCLK>,
+					<&clkgen JH7100_CLK_JPEG_APB>,
+					<&clkgen JH7100_CLK_VDECBRG_MAIN>,
+					<&clkgen JH7100_CLK_JPCGC300_MAIN>;
+			clock-names = "jpeg_axi", "jpeg_cclk", "jpeg_apb", "vdecbrg_main", "jpcgc300_main";
+			resets = <&rstgen JH7100_RSTN_JPEG_AXI>,
+					<&rstgen JH7100_RSTN_JPEG_CCLK>,
+					<&rstgen JH7100_RSTN_JPEG_APB>;
+			reset-names = "jpeg_axi", "jpeg_cclk", "jpeg_apb";
 			interrupts = <24>;
 			memory-region = <&jpu_reserved>;
 		};
