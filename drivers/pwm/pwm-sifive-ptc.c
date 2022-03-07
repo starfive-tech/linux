@@ -232,7 +232,7 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 	printk("[sifive_pwm_ptc_probe] npwm:0x%lx....\r\n",chip->npwm);
 #endif
 	/* get apb clock frequency */
-	ret = of_property_read_u32(node, "sifive,approx-period", &pwm->approx_period);
+	ret = of_property_read_u32(node, "starfive,approx-period", &pwm->approx_period);
 
 #if PTC_DEBUG
 	printk("[sifive_pwm_ptc_probe] approx_period:%d....\r\n",pwm->approx_period);
@@ -258,6 +258,8 @@ static int sifive_pwm_ptc_probe(struct platform_device *pdev)
 	if (IS_ERR(pwm->clk)) {
 		dev_err(dev, "Unable to find controller clock\n");
 		return PTR_ERR(pwm->clk);
+	} else {
+		pwm->approx_period = (unsigned int)clk_get_rate(pwm->clk);
 	}
 
 	/* after add,it will display as /sys/class/pwm/pwmchip0,0 is chip->base 

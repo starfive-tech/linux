@@ -587,8 +587,8 @@
 			reg-names = "control";
 			clocks = <&clkgen JH7100_CLK_PWM_APB>;
 			#pwm-cells = <3>;
-			sifive,approx-period = <100000000>;
-			sifive,npwm = <8>;
+			starfive,approx-period = <100000000>;
+			starfive,npwm = <8>;
 			status = "disabled";
 		};
 
