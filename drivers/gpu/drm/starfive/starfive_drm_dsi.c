@@ -1020,24 +1020,6 @@ static int cdns_dsi_detach(struct mipi_dsi_host *host,
 	return 0;
 }
 
-static irqreturn_t cdns_dsi_interrupt(int irq, void *data)
-{
-	struct cdns_dsi *dsi = data;
-	irqreturn_t ret = IRQ_NONE;
-	u32 flag, ctl;
-
-	flag = readl(dsi->regs + DIRECT_CMD_STS_FLAG);
-	if (flag) {
-		ctl = readl(dsi->regs + DIRECT_CMD_STS_CTL);
-		ctl &= ~flag;
-		writel(ctl, dsi->regs + DIRECT_CMD_STS_CTL);
-		complete(&dsi->direct_cmd_comp);
-		ret = IRQ_HANDLED;
-	}
-
-	return ret;
-}
-
 static ssize_t cdns_dsi_transfer(struct mipi_dsi_host *host,
 				 const struct mipi_dsi_msg *msg)
 {
@@ -1168,16 +1150,6 @@ static int __maybe_unused cdns_dsi_suspend(struct device *dev)
 
 static UNIVERSAL_DEV_PM_OPS(cdns_dsi_pm_ops, cdns_dsi_suspend, cdns_dsi_resume,
 			    NULL);
-
-static int cdns_dsi_drm_remove(struct platform_device *pdev)
-{
-	struct cdns_dsi *dsi = platform_get_drvdata(pdev);
-
-	mipi_dsi_host_unregister(&dsi->base);
-	pm_runtime_disable(&pdev->dev);
-
-	return 0;
-}
 
 static const struct of_device_id cdns_dsi_of_match[] = {
 	{ .compatible = "cdns,dsi" },

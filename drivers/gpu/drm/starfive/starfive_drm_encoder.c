@@ -105,7 +105,7 @@ err_encoder:
 
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)
 {
-	struct starfive_encoder *encoderp = dev_get_drvdata(dev);
+	DRM_INFO("starfive_encoder_unbind\n");
 }
 
 static const struct component_ops starfive_encoder_component_ops = {
