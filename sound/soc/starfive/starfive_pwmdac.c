@@ -643,7 +643,6 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 		goto err_clk_pwmdac;
 	}
 
-	/* we want 4096kHz but the clock driver always rounds down so add a little slack */
 	ret = clk_set_rate(dev->clk_dac_mclk, mclk_dac_value);
 	if (ret) {
 		dev_err(dai->dev, "failed to set rate for clk_dac_mclk %lu\n", mclk_dac_value);
