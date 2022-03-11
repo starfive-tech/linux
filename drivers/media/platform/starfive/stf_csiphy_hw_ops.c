@@ -6,6 +6,7 @@
 #include <linux/sort.h>
 #include <linux/clk.h>
 
+#ifndef USE_CLK_TREE
 static int stf_csiphy_clk_set(struct stf_csiphy_dev *csiphy_dev, int on)
 {
 	struct stf_vin_dev *vin = csiphy_dev->stfcamss->vin;
@@ -60,6 +61,7 @@ exit:
 	mutex_unlock(&count_lock);
 	return 0;
 }
+#endif
 
 static int stf_csiphy_clk_enable(struct stf_csiphy_dev *csiphy_dev)
 {

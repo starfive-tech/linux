@@ -171,7 +171,9 @@ static void isp_load_regs(void __iomem *ispbase, const struct reg_table *table)
 static int stf_isp_clk_enable(struct stf_isp_dev *isp_dev)
 {
 	struct stfcamss *stfcamss = isp_dev->stfcamss;
+#ifndef USE_CLK_TREE
 	struct stf_vin_dev *vin = stfcamss->vin;
+#endif
 	int ret = 0;
 
 	if (isp_dev->id == 0) {
@@ -212,7 +214,9 @@ static int stf_isp_clk_enable(struct stf_isp_dev *isp_dev)
 static int stf_isp_clk_disable(struct stf_isp_dev *isp_dev)
 {
 	struct stfcamss *stfcamss = isp_dev->stfcamss;
+#ifndef USE_CLK_TREE
 	struct stf_vin_dev *vin = stfcamss->vin;
+#endif
 
 	if (isp_dev->id == 0) {
 #ifdef USE_CLK_TREE

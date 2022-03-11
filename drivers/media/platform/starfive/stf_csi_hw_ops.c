@@ -36,6 +36,7 @@
 #define CSI2RX_LANES_MAX	4
 #define CSI2RX_STREAMS_MAX	4
 
+#ifndef USE_CLK_TREE
 static int apb_clk_set(struct stf_vin_dev *vin, int on)
 {
 	static int init_flag;
@@ -61,12 +62,15 @@ static int apb_clk_set(struct stf_vin_dev *vin, int on)
 exit:
 	mutex_unlock(&count_lock);
 	return 0;
-
 }
+#endif
+
 static int stf_csi_clk_enable(struct stf_csi_dev *csi_dev)
 {
 	struct stfcamss *stfcamss = csi_dev->stfcamss;
+#ifndef USE_CLK_TREE
 	struct stf_vin_dev *vin = stfcamss->vin;
+#endif
 	int ret = 0;
 
 #ifdef USE_CLK_TREE
@@ -128,7 +132,9 @@ static int stf_csi_clk_enable(struct stf_csi_dev *csi_dev)
 static int stf_csi_clk_disable(struct stf_csi_dev *csi_dev)
 {
 	struct stfcamss *stfcamss = csi_dev->stfcamss;
+#ifndef USE_CLK_TREE
 	struct stf_vin_dev *vin = stfcamss->vin;
+#endif
 
 #ifdef USE_CLK_TREE
 	stfcamss_disable_clocks(1, &stfcamss->sys_clk[STFCLK_CSI_2RX_APB_CLK]);
@@ -177,9 +183,9 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 		break;
 	case SENSOR_ISP0:
 	#ifdef USE_CLK_TREE
-		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP0_MIPI_CTRL].clk, 
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP0_MIPI_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
-		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP0_CTRL].clk, 
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP0_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
 		reg_set_bit(vin->clkgen_base, CLK_ISP0_MIPI_CTRL, BIT(24),
@@ -194,9 +200,9 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 		break;
 	case SENSOR_ISP1:
 	#ifdef USE_CLK_TREE
-		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP1_MIPI_CTRL].clk, 
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP1_MIPI_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
-		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP1_CTRL].clk, 
+		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP1_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
 		reg_set_bit(vin->clkgen_base, CLK_ISP1_MIPI_CTRL,
