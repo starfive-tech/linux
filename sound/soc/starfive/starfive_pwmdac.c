@@ -587,10 +587,37 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 				params_channels(params));
 		return -EINVAL;
 	}
+<<<<<<< HEAD
 	
 	dev->play_dma_data.fifo_size = 1; 
 	dev->play_dma_data.maxburst = 16; 
 	
+=======
+
+	pwmdac_set(dev);
+
+	ret = clk_set_rate(dev->clk_audio_src, clk_audio_src);
+	if (ret) {
+		dev_err(dai->dev, "failed to set %lu  rate for clk_audio_src\n", clk_audio_src);
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_dac_mclk);
+	if (ret) {
+		dev_err(dai->dev, "failed to prepare enable clk_dac_mclk\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_set_rate(dev->clk_dac_mclk, mclk_dac_value);
+	if (ret) {
+		dev_err(dai->dev, "failed to set rate for clk_dac_mclk %lu\n", mclk_dac_value);
+		goto err_clk_pwmdac;
+	}
+
+	dev->play_dma_data.fifo_size = 1;
+	dev->play_dma_data.maxburst = 16;
+
+>>>>>>> a507f1a3fe6c... PWMDAC: Deleted invalid code for pwmdac driver
 	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, NULL);
 	snd_soc_dai_set_drvdata(dai, dev);
 	
@@ -778,7 +805,7 @@ static struct platform_driver sf_pwmdac_driver = {
 
 module_platform_driver(sf_pwmdac_driver);
 
-MODULE_AUTHOR("jenny.zhang <jenny.zhang@starfivetech.com>");
+MODULE_AUTHOR("curry.zhang <curry.zhang@starfivetech.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("starfive pwmdac SoC Interface");
 MODULE_ALIAS("platform:starfive-pwmdac");
