@@ -152,45 +152,6 @@ static int pwmdac_duty_cycle_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-/*
-static int pwmdac_datan_info(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_info *uinfo)
-{
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 1;
-	uinfo->value.integer.min = 1;
-	uinfo->value.integer.max = PWMDAC_SAMPLE_CNT_511;
-	uinfo->value.integer.step = 1;
-	return 0;
-}
-
-static int pwmdac_datan_get(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sf_pwmdac_dev *dev = snd_soc_component_get_drvdata(component);
-
-	ucontrol->value.integer.value[0] = dev->datan;
-
-	return 0;
-}
-
-static int pwmdac_datan_put(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sf_pwmdac_dev *dev = snd_soc_component_get_drvdata(component);
-	int sel = ucontrol->value.integer.value[0];
-
-	if (sel > PWMDAC_SAMPLE_CNT_511)
-		return 0;
-
-	dev->datan = sel;
-
-	return 0;
-}
-*/
-
 static int pwmdac_data_mode_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
 {
@@ -530,8 +491,6 @@ static int pwmdac_config(struct sf_pwmdac_dev *dev)
 static int sf_pwmdac_prepare(struct snd_pcm_substream *substream,
 			struct snd_soc_dai *dai)
 {
-	//struct sf_pwmdac_dev *dev = snd_soc_dai_get_drvdata(dai);
-	//pwmdac_set(dev);
 	return 0;
 }
 
@@ -671,7 +630,6 @@ static int sf_pwmdac_hw_params(struct snd_pcm_substream *substream,
 		goto err_clk_pwmdac;
 	}
 
-	/* we want 4096kHz but the clock driver always rounds down so add a little slack */
 	ret = clk_set_rate(dev->clk_dac_mclk, mclk_dac_value);
 	if (ret) {
 		dev_err(dai->dev, "failed to set rate for clk_dac_mclk %lu\n", mclk_dac_value);
@@ -827,7 +785,6 @@ static const struct snd_kcontrol_new pwmdac_snd_controls[] = {
 };
 static int pwmdac_probe(struct snd_soc_component *component)
 {
-//	struct sf_pwmdac_dev *priv = snd_soc_component_get_drvdata(component);
 	snd_soc_add_component_controls(component, pwmdac_snd_controls,
 				ARRAY_SIZE(pwmdac_snd_controls));
 	return 0;
@@ -942,7 +899,7 @@ static struct platform_driver sf_pwmdac_driver = {
 
 module_platform_driver(sf_pwmdac_driver);
 
-MODULE_AUTHOR("jenny.zhang <jenny.zhang@starfivetech.com>");
+MODULE_AUTHOR("curry.zhang <curry.zhang@starfivetech.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("starfive pwmdac SoC Interface");
 MODULE_ALIAS("platform:starfive-pwmdac");
