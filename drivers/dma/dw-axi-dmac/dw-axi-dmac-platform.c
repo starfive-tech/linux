@@ -327,12 +327,11 @@ dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
 		len = vd_to_axi_desc(vdesc)->hw_desc[0].len;
 		completed_length = completed_blocks * len;
 		bytes = length - completed_length;
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		dma_set_residue(txstate, bytes);
 	} else {
-		bytes = vd_to_axi_desc(vdesc)->length;
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
 	}
-
-	spin_unlock_irqrestore(&chan->vc.lock, flags);
-	dma_set_residue(txstate, bytes);
 
 	return status;
 }
@@ -347,29 +346,6 @@ static void write_chan_llp(struct axi_dma_chan *chan, dma_addr_t adr)
 	axi_chan_iowrite64(chan, CH_LLP, adr);
 }
 
-static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
-{
-	u32 offset = DMAC_APB_BYTE_WR_CH_EN;
-	u32 reg_width, val;
-
-	if (!chan->chip->apb_regs) {
-		dev_dbg(chan->chip->dev, "apb_regs not initialized\n");
-		return;
-	}
-
-	reg_width = __ffs(chan->config.dst_addr_width);
-	if (reg_width == DWAXIDMAC_TRANS_WIDTH_16)
-		offset = DMAC_APB_HALFWORD_WR_CH_EN;
-
-	val = ioread32(chan->chip->apb_regs + offset);
-
-	if (set)
-		val |= BIT(chan->id);
-	else
-		val &= ~BIT(chan->id);
-
-	iowrite32(val, chan->chip->apb_regs + offset);
-}
 /* Called in chan locked context */
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
@@ -379,13 +355,11 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	u32 irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
-	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
 		axi_chan_disable(chan);
-		chan->is_err = true;
 	}
 
 	axi_dma_enable(chan->chip);
@@ -398,7 +372,6 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	config.hs_sel_src = DWAXIDMAC_HS_SEL_HW;
 	switch (chan->direction) {
 	case DMA_MEM_TO_DEV:
-		dw_axi_dma_set_byte_halfword(chan, true);
 		config.tt_fc = chan->config.device_fc ?
 				DWAXIDMAC_TT_FC_MEM_TO_PER_DST :
 				DWAXIDMAC_TT_FC_MEM_TO_PER_DMAC;
@@ -533,39 +506,6 @@ static void dma_chan_free_chan_resources(struct dma_chan *dchan)
 		 axi_chan_name(chan), atomic_read(&chan->descs_allocated));
 
 	pm_runtime_put(chan->chip->dev);
-}
-
-static void dw_axi_dma_set_hw_channel(struct axi_dma_chan *chan, bool set)
-{
-	struct axi_dma_chip *chip = chan->chip;
-	unsigned long reg_value, val;
-
-	if (!chip->apb_regs) {
-		dev_err(chip->dev, "apb_regs not initialized\n");
-		return;
-	}
-
-	/*
-	 * An unused DMA channel has a default value of 0x3F.
-	 * Lock the DMA channel by assign a handshake number to the channel.
-	 * Unlock the DMA channel by assign 0x3F to the channel.
-	 */
-	if (set)
-		val = chan->hw_handshake_num;
-	else
-		val = UNUSED_CHANNEL;
-
-	reg_value = lo_hi_readq(chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-
-	/* Channel is already allocated, set handshake as per channel ID */
-	/* 64 bit write should handle for 8 channels */
-
-	reg_value &= ~(DMA_APB_HS_SEL_MASK <<
-			(chan->id * DMA_APB_HS_SEL_BIT_SIZE));
-	reg_value |= (val << (chan->id * DMA_APB_HS_SEL_BIT_SIZE));
-	lo_hi_writeq(reg_value, chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-
-	return;
 }
 
 /*
@@ -764,6 +704,11 @@ dw_axi_dma_chan_prep_cyclic(struct dma_chan *dchan, dma_addr_t dma_addr,
 
 	num_segments = DIV_ROUND_UP(period_len, axi_block_len);
 	segment_len = DIV_ROUND_UP(period_len, num_segments);
+	if (!IS_ALIGNED(segment_len, 4))
+	{
+		segment_len = ALIGN(segment_len, 4);
+		period_len = segment_len * num_segments;
+	}
 
 	total_segments = num_periods * num_segments;
 
@@ -802,8 +747,6 @@ dw_axi_dma_chan_prep_cyclic(struct dma_chan *dchan, dma_addr_t dma_addr,
 		write_desc_llp(hw_desc, llp | lms);
 		llp = hw_desc->llp;
 	} while (total_segments);
-
-	dw_axi_dma_set_hw_channel(chan, true);
 
 	return vchan_tx_prep(&chan->vc, &desc->vd, flags);
 
@@ -882,8 +825,6 @@ dw_axi_dma_chan_prep_slave_sg(struct dma_chan *dchan, struct scatterlist *sgl,
 		write_desc_llp(hw_desc, llp | lms);
 		llp = hw_desc->llp;
 	} while (num_sgs);
-
-	dw_axi_dma_set_hw_channel(chan, true);
 
 	return vchan_tx_prep(&chan->vc, &desc->vd, flags);
 
@@ -1030,41 +971,67 @@ static void axi_chan_list_dump_lli(struct axi_dma_chan *chan,
 		axi_chan_dump_lli(chan, &desc_head->hw_desc[i]);
 }
 
-static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
+
+static void axi_chan_tasklet(struct tasklet_struct *t)
 {
+	struct axi_dma_chan *chan = from_tasklet(chan, t, dma_tasklet);
 	struct virt_dma_desc *vd;
+	u32 chan_active = BIT(chan->id) << DMAC_CHAN_EN_SHIFT;
 	unsigned long flags;
+	u32 val;
+	int ret;
+
+	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
+					!(val & chan_active), 10, 2000);
+	if (ret == -ETIMEDOUT)
+		dev_warn(chan2dev(chan),
+			 "irq %s failed to stop\n", axi_chan_name(chan));
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
-	axi_chan_disable(chan);
-
 	/* The bad descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
-	if (chan->is_err) {
-		struct axi_dma_desc *desc = vd_to_axi_desc(vd);
-
-		axi_chan_block_xfer_start(chan, desc);
-		chan->is_err = false;
-		goto out;
+	if (!vd) {
+		dev_warn(chan2dev(chan),
+			 "%s vd is null\n", axi_chan_name(chan));
+		spin_unlock_irqrestore(&chan->vc.lock, flags);
+		return;
 	}
 
-	/* Remove the completed descriptor from issued list */
-	list_del(&vd->node);
+	if (chan->cyclic) {
+		vchan_cyclic_callback(vd);
+		axi_chan_enable(chan);
+	} else {
+		/* Remove the completed descriptor from issued list */
+		list_del(&vd->node);
 
-	/* WARN about bad descriptor */
-	dev_err(chan2dev(chan),
-		"Bad descriptor submitted for %s, cookie: %d, irq: 0x%08x\n",
-		axi_chan_name(chan), vd->tx.cookie, status);
-	axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
+		/* WARN about bad descriptor */
+		dev_err(chan2dev(chan),
+			"Bad descriptor submitted for %s, cookie: %d\n",
+			axi_chan_name(chan), vd->tx.cookie);
+		axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
 
-	vchan_cookie_complete(vd);
+		vchan_cookie_complete(vd);
 
-	/* Try to restart the controller */
-	axi_chan_start_first_queued(chan);
+		/* Try to restart the controller */
+		axi_chan_start_first_queued(chan);
+	}
 
-out:
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
+}
+
+
+static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&chan->vc.lock, flags);
+	if (unlikely(axi_chan_is_hw_enable(chan))) {
+		axi_chan_disable(chan);
+	}
+	spin_unlock_irqrestore(&chan->vc.lock, flags);
+
+	tasklet_schedule(&chan->dma_tasklet);
 }
 
 static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
@@ -1166,11 +1133,6 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	if (ret == -ETIMEDOUT)
 		dev_warn(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
-
-	if (chan->direction != DMA_MEM_TO_MEM)
-		dw_axi_dma_set_hw_channel(chan, false);
-	if (chan->direction == DMA_MEM_TO_DEV)
-		dw_axi_dma_set_byte_halfword(chan, false);
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
@@ -1389,7 +1351,6 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 
 static int dw_probe(struct platform_device *pdev)
 {
-	struct device_node *node = pdev->dev.of_node;
 	struct axi_dma_chip *chip;
 	struct resource *mem;
 	struct dw_axi_dma *dw;
@@ -1421,12 +1382,6 @@ static int dw_probe(struct platform_device *pdev)
 	chip->regs = devm_ioremap_resource(chip->dev, mem);
 	if (IS_ERR(chip->regs))
 		return PTR_ERR(chip->regs);
-
-	if (of_device_is_compatible(node, "intel,kmb-axi-dma")) {
-		chip->apb_regs = devm_platform_ioremap_resource(pdev, 1);
-		if (IS_ERR(chip->apb_regs))
-			return PTR_ERR(chip->apb_regs);
-	}
 
 	chip->core_clk = devm_clk_get(chip->dev, "core-clk");
 	if (IS_ERR(chip->core_clk))
@@ -1461,6 +1416,8 @@ static int dw_probe(struct platform_device *pdev)
 
 		chan->vc.desc_free = vchan_desc_put;
 		vchan_init(&chan->vc, &dw->dma);
+
+		tasklet_setup(&chan->dma_tasklet, axi_chan_tasklet);
 	}
 
 	/* Set capabilities */
@@ -1558,6 +1515,7 @@ static int dw_remove(struct platform_device *pdev)
 	for (i = 0; i < dw->hdata->nr_channels; i++) {
 		axi_chan_disable(&chip->dw->chan[i]);
 		axi_chan_irq_disable(&chip->dw->chan[i], DWAXIDMAC_IRQ_ALL);
+		tasklet_kill(&chan->dma_tasklet);
 	}
 	axi_dma_disable(chip);
 
@@ -1583,7 +1541,6 @@ static const struct dev_pm_ops dw_axi_dma_pm_ops = {
 
 static const struct of_device_id dw_dma_of_id_table[] = {
 	{ .compatible = "snps,axi-dma-1.01a" },
-	{ .compatible = "intel,kmb-axi-dma" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, dw_dma_of_id_table);
@@ -1593,7 +1550,7 @@ static struct platform_driver dw_driver = {
 	.remove		= dw_remove,
 	.driver = {
 		.name	= KBUILD_MODNAME,
-		.of_match_table = dw_dma_of_id_table,
+		.of_match_table = of_match_ptr(dw_dma_of_id_table),
 		.pm = &dw_axi_dma_pm_ops,
 	},
 };
