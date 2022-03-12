@@ -123,7 +123,7 @@
 		port@1 {
 			reg = <1>;
 			mipi_out: endpoint {
-				remote-endpoint = <&dsi_out_port>;
+				remote-endpoint = <&dsi_in_port>;
 			};
 		};
 
