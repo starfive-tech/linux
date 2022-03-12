@@ -65,6 +65,9 @@ scm_version()
 
 			# Add -g and exactly 12 hex chars.
 			printf '%s%s' -g "$(echo $head | cut -c1-12)"
+		else
+			atag="`git describe 2>/dev/null`"
+                        printf '%s%s' - ${atag}
 		fi
 
 		# Check for uncommitted changes.
