@@ -144,7 +144,7 @@ static int starfive_drm_bind(struct device *dev)
 
 	ret = component_bind_all(dev, drm_dev);
 	if (ret)
-		goto err_component_bind_all;
+		goto err_free;
 
 	ret = drm_vblank_init(drm_dev, drm_dev->mode_config.num_crtc);
 	if (ret)
@@ -166,7 +166,6 @@ static int starfive_drm_bind(struct device *dev)
 err_drm_dev_register:
 	drm_kms_helper_poll_fini(drm_dev);
 err_drm_vblank_init:
-err_component_bind_all:
 	component_unbind_all(dev, drm_dev);
 err_free:
 	drm_dev_put(drm_dev);
