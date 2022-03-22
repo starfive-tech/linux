@@ -696,6 +696,13 @@ int wm8960_configure_pll(struct snd_soc_component *component, int freq_in,
 	lrclk = wm8960->lrclk;
 	closest = freq_in;
 
+	/* Judge whether the lr clock is 0, if equal to 0, there is
+	 * no need to perform the following steps*/
+	if (!lrclk)
+	{
+		return 0;
+	}
+
 	best_freq_out = -EINVAL;
 	*sysclk_idx = *dac_idx = *bclk_idx = -1;
 
