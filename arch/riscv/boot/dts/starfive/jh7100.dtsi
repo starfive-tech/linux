@@ -474,7 +474,7 @@
 					  "mipi_rx0_pxl_3", "mipi_rx0_sys", "mipi_rx1_pxl_0", "mipi_rx1_pxl_1",
 					  "mipi_rx1_pxl_2", "mipi_rx1_pxl_3", "mipi_rx1_sys", "isp0",
 					  "isp0_2x", "isp0_mipi", "isp1", "isp1_2x",
-					  "isp1_mipi", "dom4_apb", "csi2rx_apb", "vin_axi_wr", 
+					  "isp1_mipi", "dom4_apb", "csi2rx_apb", "vin_axi_wr",
 					  "vin_axi_rd", "c_isp0", "c_isp1";
 
 			resets = <&rstgen JH7100_RSTN_VIN_SRC>,
@@ -506,14 +506,14 @@
 				 <&isprst JH7100_ISPRST_DPHY_RST09_ALWY_ON>,
 				 <&isprst JH7100_ISPRST_C_ISP0>,
 				 <&isprst JH7100_ISPRST_C_ISP1>;
-				 
+
 			reset-names = "vin_src", "ispslv_axi", "vin_axi", "vinnoc_axi",
 						"isp0_axi", "isp0noc_axi", "isp1_axi", "isp1noc_axi",
-						"sys_clk", "pclk", "sys_clk_1", "pixel_clk_if0", 
-						"pixel_clk_if1", "pixel_clk_if2", "pixel_clk_if3", "pixel_clk_if10", 
-						"pixel_clk_if11", "pixel_clk_if12", "pixel_clk_if13", "isp_0", 
-						"isp_1", "p_axird", "p_axiwr", "p_isp0", 
-						"p_isp1", "dphy_hw_rstn", "dphy_rst09_alwy_on", "c_isp0", 
+						"sys_clk", "pclk", "sys_clk_1", "pixel_clk_if0",
+						"pixel_clk_if1", "pixel_clk_if2", "pixel_clk_if3", "pixel_clk_if10",
+						"pixel_clk_if11", "pixel_clk_if12", "pixel_clk_if13", "isp_0",
+						"isp_1", "p_axird", "p_axiwr", "p_isp0",
+						"p_isp1", "dphy_hw_rstn", "dphy_rst09_alwy_on", "c_isp0",
 						"c_isp1";
 
 			ports {
@@ -544,10 +544,13 @@
 
 				/* TODO: Used for EVB board, comment here for starlight board, remove it later*/
 				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
 					reg = <2>; // dvp sensor
 
 					// Parallel bus endpoint
-					parallel_from_ov5640: endpoint {
+					parallel_from_ov5640: endpoint@0 {
+						reg = <0>;
 						remote-endpoint = <&ov5640_to_parallel>;
 						bus-type = <5>;      // Parallel
 						bus-width = <8>;
@@ -557,13 +560,9 @@
 						pclk-sample = <1>;
 						status = "failed";
 					};
-				};
 
-				port@3 {
-					reg = <2>; //dvp sensor
-
-					// Parallel bus endpoint
-					parallel_from_sc2235: endpoint {
+					parallel_from_sc2235: endpoint@1 {
+						reg = <1>;
 						remote-endpoint = <&sc2235_to_parallel>;
 						bus-type = <5>;      // Parallel
 						bus-width = <8>;
@@ -575,7 +574,7 @@
 					};
 				};
 
-				port@4 {
+				port@3 {
 					reg = <3>; //csi2rx0 sensor
 
 					/* CSI2 bus endpoint */
@@ -588,7 +587,7 @@
 					};
 				};
 
-				port@5 {
+				port@4 {
 					reg = <4>; // csi2rx1 sensor
 
 					/* CSI2 bus endpoint */
@@ -1011,7 +1010,7 @@
 			dmas = <&dma2p 28>;
 			dma-names = "rx";
 		};
-		
+
 		i2svad: i2svad@10420000 {
 			compatible = "sf,sf-i2svad";
 			reg = <0x0 0x10420000 0x0 0x1000> ;
@@ -1032,7 +1031,7 @@
 				 <&audclk JH7100_AUDCLK_I2SDAC_APB>,
 				 <&audclk JH7100_AUDCLK_I2SDAC_BCLK_IOPAD>,
 				 <&audclk JH7100_AUDCLK_I2SDAC_LRCLK_IOPAD>;
-			clock-names = "dac_mclk", "i2sdac0_bclk", "i2sdac0_lrclk", 
+			clock-names = "dac_mclk", "i2sdac0_bclk", "i2sdac0_lrclk",
 				      "i2sdac_apb", "i2sdac_bclk_iopad", "i2sdac_lrclk_iopad";
 			resets = <&audrst JH7100_AUDRSTN_I2SDAC_APB>,
 				 <&audrst JH7100_AUDRSTN_I2SDAC_SRST>;
@@ -1041,7 +1040,7 @@
 			dmas = <&dma2p 30>;
 			dma-names = "tx";
 		};
-		
+
 		i2sdac16k: i2sdac16k@10470000 {
 			compatible = "snps,designware-i2sdac16k";
 			reg = <0x0 0x10470000 0x0 0x1000>;
@@ -1074,8 +1073,8 @@
 		spdif_transmitter: spdif_transmitter {
 			compatible = "linux,spdif-dit";
 			#sound-dai-cells = <0>;
-		};	
-		
+		};
+
 		spdif_receiver: spdif_receiver {
 			compatible = "linux,spdif-dir";
 			#sound-dai-cells = <0>;
@@ -1109,11 +1108,11 @@
 			compatible = "linux,pwmdac-dit";
 			#sound-dai-cells = <0>;
 		};
-		
-		dmic_codec: dmic_codec { 
+
+		dmic_codec: dmic_codec {
 			compatible = "dmic-codec";
 			#sound-dai-cells = <0>;
-		}; 
+		};
 
 		sound:snd-card{
 			compatible = "simple-audio-card";
@@ -1127,7 +1126,7 @@
 				format = "left_j";
 				bitclock-master = <&sndcpu0>;
 				frame-master = <&sndcpu0>;
-				
+
 				sndcpu0: cpu {
 					sound-dai = <&pwmdac>;
 				};

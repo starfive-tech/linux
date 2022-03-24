@@ -5,6 +5,7 @@
 #include "stfcamss.h"
 #include <linux/reset.h>
 
+#ifndef USE_CLK_TREE
 static int vin_rstgen_assert_reset(struct stf_vin_dev *vin)
 {
 	u32 val;
@@ -34,6 +35,7 @@ static int vin_rstgen_assert_reset(struct stf_vin_dev *vin)
 
 	return 0;
 }
+#endif
 
 static void vin_intr_clear(void __iomem * sysctrl_base)
 {
@@ -88,11 +90,11 @@ static irqreturn_t stf_vin_isp_irq_handler(int irq, void *priv)
 static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 {
 	struct stfcamss *stfcamss = vin_dev->stfcamss;
-	struct stf_vin_dev *vin = stfcamss->vin;
+
+#ifdef USE_CLK_TREE
 	int ret = 0;
 	int i;
 
-#ifdef USE_CLK_TREE
 	// enable clk
 	ret = stfcamss_enable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC],
 			stfcamss->dev);
@@ -126,6 +128,9 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 	// stfcamss_disable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC]);
 	return ret;
 #else
+	struct stf_vin_dev *vin = stfcamss->vin;
+	u32 val = 0;
+
 	val = ioread32(vin->vin_top_clkgen_base + 0x124) >> 24;
 	val &= 0x1;
 	if (val != 0) {
@@ -176,11 +181,11 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 static int stf_vin_clk_enable(struct stf_vin2_dev *vin_dev)
 {
 	struct stfcamss *stfcamss = vin_dev->stfcamss;
-	struct stf_vin_dev *vin = stfcamss->vin;
+
+#ifdef USE_CLK_TREE
 	int ret = 0;
 	int i;
 
-#ifdef USE_CLK_TREE
 	// enable clk
 	ret = stfcamss_enable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC],
 			stfcamss->dev);
@@ -201,6 +206,9 @@ static int stf_vin_clk_enable(struct stf_vin2_dev *vin_dev)
 
 	return ret;
 #else
+	struct stf_vin_dev *vin = stfcamss->vin;
+	u32 val = 0;
+
 	val = ioread32(vin->vin_top_clkgen_base + 0x124) >> 24;
 	val &= 0x1;
 	if (val != 0) {
@@ -241,6 +249,8 @@ static int stf_vin_clk_disable(struct stf_vin2_dev *vin_dev)
 #ifdef USE_CLK_TREE
 	stfcamss_disable_clocks(8, &stfcamss->sys_clk[STFCLK_VIN_SRC]);
 #else
+	struct stf_vin_dev *vin = stfcamss->vin;
+
 	// disable clk
 	reg_clr_highest_bit(vin->vin_top_clkgen_base, CLK_VIN_SRC_CTRL);
 	reg_clr_highest_bit(vin->vin_top_clkgen_base, CLK_ISPSLV_AXI_CTRL);
