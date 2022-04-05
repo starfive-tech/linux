@@ -25,6 +25,8 @@ select:
           - sifive,ccache0
           - sifive,fu540-c000-ccache
           - sifive,fu740-c000-ccache
+          - starfive,jh7100-ccache
+          - starfive,jh7110-ccache
 
   required:
     - compatible
@@ -37,6 +39,8 @@ properties:
               - sifive,ccache0
               - sifive,fu540-c000-ccache
               - sifive,fu740-c000-ccache
+              - starfive,jh7100-ccache
+              - starfive,jh7110-ccache
           - const: cache
       - items:
           - const: microchip,mpfs-ccache
