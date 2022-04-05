@@ -27,6 +27,7 @@ select:
         enum:
           - sifive,fu540-c000-ccache
           - sifive,fu740-c000-ccache
+          - starfive,jh7100-ccache
 
   required:
     - compatible
@@ -37,6 +38,7 @@ properties:
       - enum:
           - sifive,fu540-c000-ccache
           - sifive,fu740-c000-ccache
+          - starfive,jh7100-ccache
       - const: cache
 
   cache-block-size:
