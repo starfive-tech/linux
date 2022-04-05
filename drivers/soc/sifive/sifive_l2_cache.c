@@ -99,6 +99,7 @@ static void l2_config_read(void)
 static const struct of_device_id sifive_l2_ids[] = {
 	{ .compatible = "sifive,fu540-c000-ccache" },
 	{ .compatible = "sifive,fu740-c000-ccache" },
+	{ .compatible = "starfive,jh7100-ccache", .data = (void *)BIT(DATA_UNCORR) },
 	{ /* end of table */ },
 };
 
@@ -197,10 +198,14 @@ static int __init sifive_l2_init(void)
 	struct device_node *np;
 	struct resource res;
 	int i, rc, intr_num;
+	const struct of_device_id *match;
+	unsigned long broken_irqs;
 
-	np = of_find_matching_node(NULL, sifive_l2_ids);
+	np = of_find_matching_node_and_match(NULL, sifive_l2_ids, &match);
 	if (!np)
 		return -ENODEV;
+
+	broken_irqs = (uintptr_t)match->data;
 
 	if (of_address_to_resource(np, 0, &res))
 		return -ENODEV;
@@ -217,6 +222,10 @@ static int __init sifive_l2_init(void)
 
 	for (i = 0; i < intr_num; i++) {
 		g_irq[i] = irq_of_parse_and_map(np, i);
+
+		if (broken_irqs & BIT(i))
+			continue;
+
 		rc = request_irq(g_irq[i], l2_int_handler, 0, "l2_ecc", NULL);
 		if (rc) {
 			pr_err("L2CACHE: Could not request IRQ %d\n", g_irq[i]);
