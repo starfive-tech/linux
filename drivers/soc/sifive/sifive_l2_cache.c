@@ -10,6 +10,7 @@
 #include <linux/io.h>
 #include <linux/mod_devicetable.h>
 #include <linux/platform_device.h>
+#include <linux/property.h>
 #include <asm/cacheinfo.h>
 #include <soc/sifive/sifive_l2_cache.h>
 
@@ -189,6 +190,7 @@ static irqreturn_t l2_int_handler(int irq, void *device)
 static int __init sifive_l2_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	unsigned long quirks = (uintptr_t)device_get_match_data(dev);
 	int nirqs;
 	int ret;
 	int i;
@@ -205,6 +207,9 @@ static int __init sifive_l2_probe(struct platform_device *pdev)
 		g_irq[i] = platform_get_irq(pdev, i);
 		if (g_irq[i] < 0)
 			return g_irq[i];
+
+		if (quirks & BIT(i))
+			continue;
 
 		ret = devm_request_irq(dev, g_irq[i], l2_int_handler, 0, pdev->name, NULL);
 		if (ret)
@@ -225,6 +230,7 @@ static int __init sifive_l2_probe(struct platform_device *pdev)
 static const struct of_device_id sifive_l2_match[] = {
 	{ .compatible = "sifive,fu540-c000-ccache" },
 	{ .compatible = "sifive,fu740-c000-ccache" },
+	{ .compatible = "starfive,jh7100-ccache", .data = (void *)BIT(DATA_UNCORR) },
 	{ /* sentinel */ }
 };
 
