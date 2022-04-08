@@ -4,5 +4,7 @@ obj-y += kernel/ mm/ net/
 obj-$(CONFIG_BUILTIN_DTB) += boot/dts/
 obj-$(CONFIG_ARCH_HAS_KEXEC_PURGATORY) += purgatory/
 
+obj-$(CONFIG_ARCH_HAS_KEXEC_PURGATORY) += purgatory/
+
 # for cleaning
 subdir- += boot
