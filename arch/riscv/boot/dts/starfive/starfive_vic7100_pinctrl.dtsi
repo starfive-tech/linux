@@ -1,0 +1,421 @@
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/pinctrl-starfive.h>
+
+&gpio {
+	/*sf,iopad_sel_func = <4>;*/
+
+	gmac0_pins: gmac0-pins {
+		gmac0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(115)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1)|GPIO_DS(3))>;
+		};
+		
+		gmac0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(116) PAD_FUNC_SHARE(129)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
+		};
+		
+		gmac0-pins2 {
+			sf,pins = <PAD_FUNC_SHARE(117) PAD_FUNC_SHARE(118) PAD_FUNC_SHARE(119) 
+					   PAD_FUNC_SHARE(120) PAD_FUNC_SHARE(121) PAD_FUNC_SHARE(122) 
+					   PAD_FUNC_SHARE(123) PAD_FUNC_SHARE(124) PAD_FUNC_SHARE(125) 
+					   PAD_FUNC_SHARE(126)>;
+			sf,pin-ioconfig = <IO(GPIO_DS(3))>;
+		};
+		
+		gmac0-pins3 {
+			sf,pins = <PAD_FUNC_SHARE(127)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SLEW(6))>;
+		};
+		
+		gmac0-pins4 {
+			sf,pins = <PAD_FUNC_SHARE(128) PAD_FUNC_SHARE(130) PAD_FUNC_SHARE(131) 
+					   PAD_FUNC_SHARE(132) PAD_FUNC_SHARE(133) PAD_FUNC_SHARE(134) 
+					   PAD_FUNC_SHARE(135) PAD_FUNC_SHARE(136) PAD_FUNC_SHARE(137) 
+					   PAD_FUNC_SHARE(138) PAD_FUNC_SHARE(139) PAD_FUNC_SHARE(140) 
+					   PAD_FUNC_SHARE(141)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+		};
+	};
+	
+	pdm0_pins: pdm0-pins {
+		pdm0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(46)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DMIC_CLK_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+		
+		pdm0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(44)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_DMIC_SDIN_BIT0>;
+		};
+	
+		pdm0-pins2 {
+			sf,pins = <PAD_FUNC_SHARE(22)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_DMIC_SDIN_BIT1>;
+		};
+	};
+
+	spdif0_pins: spdif0-pins {
+		spdif0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(20)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SPDIF_TX_SDOUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	};
+
+	pwmdac0_pins: pwmdac0-pins {
+		pwmdac0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(23)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_PWMDAC_LEFT_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+		
+		pwmdac0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(24)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_PWMDAC_RIGHT_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	};
+
+	i2s_clk_pins: i2s-clk0 {
+		i2s-clk0_pins0 {
+			sf,pins = <PAD_FUNC_SHARE(45)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_I2STX_BCLK_IN GPI_I2SRX_BCLK_IN>;
+		};
+	
+		i2s-clk0_pins1 {
+			sf,pins = <PAD_FUNC_SHARE(3)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_I2STX_LRCK_IN GPI_I2SRX_LRCK_IN>;
+		};
+	};
+	
+	i2sdac0_pins: i2sdac0-pins {
+		i2sdac0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(0)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_I2STX_SDOUT0,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	};
+
+	i2sdac1_pins: i2sdac1-pins {
+		i2sdac1-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(0)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_I2STX_SDOUT1,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	};
+		
+	i2sadc0_pins: i2sadc0-pins {
+		i2sadc0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(2)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_I2SRX_SDIN_BIT0>;
+		};
+	};
+
+	sgdma2p0_pins: sgdma2p0-pins {
+		sgdma2p0-pins0 {
+			sf,pins = <PAD_GPIO(52) PAD_GPIO(53)>;
+			sf,pin-ioconfig = <IO(GPIO_SLEW(15)|GPIO_POS(1)|GPIO_IE(1)|GPIO_SMT(1)|GPIO_PU(1)|GPIO_PD(1)|GPIO_DS(7))>;
+		};
+	};
+
+	sdio0_pins: sdio0-pins {
+		sdio0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(55)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CARD_DETECT_N>;
+		};
+	
+		sdio0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(54)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CCLK_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	
+		sdio0-pins2 {
+			sf,pins = <PAD_FUNC_SHARE(53)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CCMD_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO0_CCMD_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CCMD_IN>;
+		};
+		
+		sdio0-pins3 {
+			sf,pins = <PAD_FUNC_SHARE(49)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CDATA_OUT_BIT0,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO0_CDATA_OE_BIT0,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CDATA_IN_BIT0>;
+		};
+		
+		sdio0-pins4 {
+			sf,pins = <PAD_FUNC_SHARE(50)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CDATA_OUT_BIT1,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO0_CDATA_OE_BIT1,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CDATA_IN_BIT1>;
+		};
+	
+		sdio0-pins5 {
+			sf,pins = <PAD_FUNC_SHARE(51)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CDATA_OUT_BIT2,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO0_CDATA_OE_BIT2,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CDATA_IN_BIT2>;
+		};
+		
+		sdio0-pins6 {
+			sf,pins = <PAD_FUNC_SHARE(52)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO0_CDATA_OUT_BIT3,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO0_CDATA_OE_BIT3,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO0_CDATA_IN_BIT3>;
+		};
+	};
+
+	sdio1_pins: sdio1-pins {
+		sdio1-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(33)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CCLK_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+		
+		sdio1-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(29)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CCMD_OUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO1_CCMD_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO1_CCMD_IN>;
+		};
+		
+		sdio1-pins2 {
+			sf,pins = <PAD_FUNC_SHARE(36)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CDATA_OUT_BIT0,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO1_CDATA_OE_BIT0,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO1_CDATA_IN_BIT0>;
+		};
+	
+		sdio1-pins3 {
+			sf,pins = <PAD_FUNC_SHARE(30)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CDATA_OUT_BIT1,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO1_CDATA_OE_BIT1,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO1_CDATA_IN_BIT1>;
+		};
+		
+		sdio1-pins4 {
+			sf,pins = <PAD_FUNC_SHARE(34)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CDATA_OUT_BIT2,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO1_CDATA_OE_BIT2,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO1_CDATA_IN_BIT2>;
+		};
+		
+		sdio1-pins5 {
+			sf,pins = <PAD_FUNC_SHARE(31)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_SDIO1_CDATA_OUT_BIT3,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_SDIO1_CDATA_OE_BIT3,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_SDIO1_CDATA_IN_BIT3>;
+		};
+	};
+	
+	uart0_pins: uart0-pins {
+		uart0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(40)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_UART0_SIN>;
+		};
+	
+		uart0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(41)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_UART0_SOUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	
+		uart0-pins2 {
+			sf,pins = <PAD_FUNC_SHARE(42)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_UART0_RTSN,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+		
+		uart0_pins3 {
+			sf,pins = <PAD_FUNC_SHARE(39)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-din =  <GPI_UART0_CTSN>;
+		};
+	
+		uart0-pins4 {
+			sf,pins = <PAD_FUNC_SHARE(35)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOEN_INPUT,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_DOEN_OUTPUT,0)>;
+		};
+	};
+
+	i2c0_pins: i2c0-pins {
+		i2c0-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(62)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C0_SCK_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C0_SCK_IN>;
+		};
+		
+		i2c0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(61)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C0_SDA_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C0_SDA_IN>;
+		};
+	};
+
+	i2c1_pins: i2c1-pins {
+		i2c1-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(47)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C1_SCK_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C1_SCK_IN>;
+		};
+		
+		i2c0-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(48)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C1_SDA_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C1_SDA_IN>;
+		};
+	};
+	
+	i2c2_pins: i2c2-pins {
+		i2c2-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(60)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C2_SCK_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C2_SCK_IN>;
+		};
+		
+		i2c2-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(59)>;
+			sf,pin-ioconfig = <IO(GPIO_IE(1)|GPIO_SMT(1))>;
+			sf,pin-gpio-dout = <DOUT(GPO_DOUT_LOW,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_I2C2_SDA_OE,DO_REVERSE)>;
+			sf,pin-gpio-din =  <GPI_I2C2_SDA_IN>;
+		};
+	};
+
+	pwm_pins: pwm-pins {
+		pwm-pins0 {
+			sf,pins = <PAD_FUNC_SHARE(7)>;
+			sf,pin-ioconfig = <IO(GPIO_DS(35))>;
+			sf,pin-gpio-dout = <DOUT(GPO_PWM_OUT_BIT0,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_PWM_OE_N_BIT0,0)>;
+		};
+		pwm-pins1 {
+			sf,pins = <PAD_FUNC_SHARE(5)>;
+			sf,pin-ioconfig = <IO(GPIO_DS(35))>;
+			sf,pin-gpio-dout = <DOUT(GPO_PWM_OUT_BIT1,0)>;
+			sf,pin-gpio-doen = <DOEN(GPO_PWM_OE_N_BIT1,0)>;
+		};
+	};
+};
+&gmac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac0_pins>;
+};
+
+&pdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pdm0_pins>;
+	status = "okay";
+};
+
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac0_pins>;
+	status = "okay";
+};
+
+&i2sdac0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s_clk_pins &i2sdac0_pins>;
+	status = "okay";
+};
+
+&i2sadc0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2sadc0_pins>;
+	status = "okay";
+};
+
+&sdio0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdio0_pins>;
+	status = "okay";
+};
+
+&sdio1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdio1_pins>;
+	status = "okay";
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pins>;
+	status = "okay";
+};
+
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+};
+
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+	status = "okay";
+};

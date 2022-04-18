@@ -1,0 +1,119 @@
+#include <dt-bindings/starfive_fb.h>
+
+&sfivefb {
+	seeed_5_inch {
+		compatible = "starfive,display-dev";
+		panel_name = "seeed_5_inch";
+		panel_lcd_id = <22>;  /*480p*/
+		interface_info = "mipi_interface";
+		refresh_en = <1>;
+		bits-per-pixel = <24>;
+		physical-width = <62>;
+		physical-height = <114>;
+		panel-width = <800>;
+		panel-height = <480>;
+		pixel-clock = <27500000>;
+		/*dyn_fps;*/		/*dynamic frame rate support*/
+		fps = <50>;
+		/*.flags = PREFER_CMD_SEND_MONOLITHIC | CE_CMD_SEND_MONOLITHIC | RESUME_WITH_PREFER | RESUME_WITH_CE*/
+		/*gamma-command-monolithic;*/
+		/*ce-command-monolithic;*/
+		/*resume-with-gamma;*/
+		/*resume-with-ce;*/
+
+		/*mipi info*/
+		mipi-byte-clock = <78000>;
+		mipi-escape-clock = <13000>;
+		lane-no = <1>;
+		display_mode = "video_mode";		/*video_mode, command_mode*/
+
+		/*
+		auto_stop_clklane_en;
+		im_pin_val;
+		*/
+
+		color_bits = <COLOR_CODE_24BIT>;
+		/*is_18bit_loosely;*/
+
+		/*video mode info*/
+		h-pulse-width = <10>;
+		h-back-porch = <20>;
+		h-front-porch = <50>;
+		v-pulse-width = <5>;
+		v-back-porch = <5>;
+		v-front-porch = <135>;
+
+		/*seeed panel mode info*/
+		dphy_bps   = <700000000>;
+		dsi_burst_mode = <0>;
+		dsi_sync_pulse = <1>;
+		// bytes
+		dsi_hsa   = <30>;
+		dsi_hbp   = <211>;
+		dsi_hfp   = <159>;
+		// lines
+		dsi_vsa   = <5>;
+		dsi_vbp   = <5>;
+		dsi_vfp   = <134>;
+
+		status = "okay";
+		sync_pol = "vsync_high_act";		/*vsync_high_act, hsync_high_act*/
+		lp_cmd_en;
+		/*lp_hfp_en;*/
+		/*lp_hbp_en;*/
+		/*lp_vact_en;*/
+		lp_vfp_en;
+		lp_vbp_en;
+		lp_vsa_en;
+		traffic-mode = "burst_with_sync_pulses";	/*non_burst_with_sync_pulses, non_burst_with_sync_events*/
+
+		/*phy info*/
+		data_tprepare = /bits/ 8 <0>;
+		data_hs_zero = /bits/ 8 <0>;
+		data_hs_exit = /bits/ 8 <0>;
+		data_hs_trail = /bits/ 8 <0>;
+
+		/*te info*/
+		te_source = "external_pin";			/*external_pin, dsi_te_trigger*/
+		te_trigger_mode = "rising_edge";		/*rising_edge, high_1000us*/
+		te_enable = <0>;
+		cm_te_effect_sync_enable = <0>;			/*used in command mode*/
+		te_count_per_sec = <64>;				/*used in esd*/
+
+		/*ext info*/
+		/*
+		crc_rx_en;
+		ecc_rx_en;
+		eotp_rx_en;
+		*/
+		eotp_tx_en;
+
+		dev_read_time = <0x7FFF>;
+		/*type cmd return_count return_code*/
+		/*id_read_cmd_info = [];*/
+		/*pre_id_cmd = [];*/
+		/*esd_read_cmd_info = [DCS_CMD 0A 01 9C];*/
+		/*pre_esd_cmd = [];*/
+		/*panel-on-command = [];*/
+		/*panel-off-command = [];*/
+		/*reset-sequence = <1 5>, <0 10>, <1 30>;*/
+		/*
+		panel-gamma-warm-command = [
+
+		];
+		panel-gamma-nature-command = [
+
+		];
+		panel-gamma-cool-command = [
+
+		];
+
+		panel-ce-std-command = [
+
+		];
+		panel-ce-vivid-command = [
+
+		];
+		*/
+	};
+};

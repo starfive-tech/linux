@@ -1,0 +1,93 @@
+/ {
+	hfclk: hfclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <25000000>;
+		clock-output-names = "hfclk";
+	};
+	rtcclk: rtcclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <6250000>;
+		clock-output-names = "rtcclk";
+	};
+	axiclk: axiclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <500000000>;
+		clock-output-names = "axiclk";
+	};
+
+	ahb0clk: ahb0clk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <250000000>;
+	};
+	ahb2clk: ahb2clk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <125000000>;
+	};
+	apb1clk: apb1clk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <125000000>;
+	};
+	apb2clk: apb2clk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <125000000>;
+	};
+	jpuclk: jpuclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <333333333>;
+	};
+	vpuclk: vpuclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <400000000>;
+	};
+	gmacclk: gmacclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <25000000>;
+	};
+	qspi_clk: qspi-clk@0 {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <50000000>;
+	};
+	uartclk: uartclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+	hs_uartclk: hs_uartclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <74250000>;
+	};
+	dwmmc_biuclk: dwmmc_biuclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+/*
+	dwmmc_ciuclk: dwmmc_ciuclk {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <100000000>;
+	};
+*/
+	pwmclk: pwmclk {
+            #clock-cells = <0>;
+            compatible = "fixed-clock";
+            clock-frequency = <125000000>;
+       };
+	audioclk: audioclk {
+            #clock-cells = <0>;
+            compatible = "fixed-clock";
+            clock-frequency = <12288000>;
+        };
+};
