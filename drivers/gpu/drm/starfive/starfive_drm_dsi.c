@@ -553,9 +553,9 @@ static int cdns_dsi_mode2cfg(struct cdns_dsi *dsi,
 					 bpp, DSI_HFP_FRAME_OVERHEAD);
 	//dpi to dsi transfer can not match , reconfig those parms
 	if (mode->hdisplay == 800) {
-		dsi_cfg->hsa = 16;	//30-14
-		dsi_cfg->hbp = 73;	//85-12
-		dsi_cfg->hfp = 146; //152-6
+		dsi_cfg->hsa = 31;	//45-14
+		dsi_cfg->hbp = 103;	//115-12
+		dsi_cfg->hfp = 354; //360-6
 	}
 
 	return 0;
@@ -843,7 +843,7 @@ static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 	       dsi->regs + VID_HSIZE2);
 
 	writel(VBP_LEN(mode->crtc_vtotal - mode->crtc_vsync_end - 1) |
-	       VFP_LEN(mode->crtc_vsync_start - mode->crtc_vdisplay) |
+	       VFP_LEN(mode->crtc_vsync_start - mode->crtc_vdisplay - 1) |
 	       VSA_LEN(mode->crtc_vsync_end - mode->crtc_vsync_start + 1),
 	       dsi->regs + VID_VSIZE1);
 	writel(mode->crtc_vdisplay, dsi->regs + VID_VSIZE2);

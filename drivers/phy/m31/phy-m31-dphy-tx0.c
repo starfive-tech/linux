@@ -413,7 +413,7 @@ static void polling_dphy_lock(struct sf_dphy *priv)
 static int sf_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 {
 	struct sf_dphy *dphy = phy_get_drvdata(phy);
-	uint32_t bit_rate = 800000000/1000000UL;//new mipi panel clock setting
+	uint32_t bit_rate = 700000000/1000000UL;//new mipi panel clock setting
 
 
 	dphy_config(dphy, bit_rate);
