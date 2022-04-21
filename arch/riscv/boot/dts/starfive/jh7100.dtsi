@@ -6,9 +6,9 @@
 
 /dts-v1/;
 #include <dt-bindings/clock/starfive-jh7100.h>
-#include <dt-bindings/clock/starfive-jh7100-audio.h>
+//#include <dt-bindings/clock/starfive-jh7100-audio.h>
 #include <dt-bindings/reset/starfive-jh7100.h>
-#include <dt-bindings/reset/starfive-jh7100-audio.h>
+//#include <dt-bindings/reset/starfive-jh7100-audio.h>
 
 / {
 	compatible = "starfive,jh7100";
@@ -659,7 +659,7 @@
 			#clock-cells = <0>;
 			clock-frequency = <24576000>;
 		};
-
+#if 0
 		i2sadc0: i2sadc0@10400000 {
 			compatible = "snps,designware-i2sadc0";
 			reg = <0x0 0x10400000 0x0 0x1000>;
@@ -818,5 +818,6 @@
 				};
 			};
 		};
+#endif
 	};
 };

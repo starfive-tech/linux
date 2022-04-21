@@ -1308,7 +1308,6 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 						  GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
 		if (!buf->page)
 			return -ENOMEM;
-		buf->page_offset = stmmac_rx_offset(priv);
 	}
 
 	if (priv->sph && !buf->sec_page) {

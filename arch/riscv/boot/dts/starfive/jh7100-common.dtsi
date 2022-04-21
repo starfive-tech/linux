@@ -487,7 +487,7 @@
 		compatible = "seeed_panel";
 		reg = <0x45>;
 	};
-
+	#if 0
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
 		compatible = "ovti,ov5640";
@@ -531,7 +531,8 @@
 				pclk-sample = <1>;
 			};
 		};
-	};	
+	};
+	#endif	
 };
 
 &i2c2 {
@@ -557,13 +558,13 @@
 	pinctrl-0 = <&pwm_pins>;
 	status = "okay";
 };
-
+#if 0
 &pwmdac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwmdac_pins>;
 	status = "okay";
 };
-
+#endif
 &qspi {
 	nor_flash: nor-flash@0 {
 		compatible = "spi-flash";
