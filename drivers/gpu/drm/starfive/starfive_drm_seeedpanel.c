@@ -220,15 +220,15 @@ static struct seeed_panel_dev *panel_to_seeed(struct drm_panel *panel)
 
 static const struct drm_display_mode seeed_panel_modes[] = {
 	{
-		.clock = 33000000 / 1000,
+		.clock = 27000000 / 1000,
 		.hdisplay = 800,
-		.hsync_start = 800 + 50,
-		.hsync_end = 800 + 50 + 20,
-		.htotal = 800 + 50 + 20 + 10,
+		.hsync_start = 800 + 90,
+		.hsync_end = 800 + 90 + 5,
+		.htotal = 800 + 90 + 5 + 5,
 		.vdisplay = 480,
-		.vsync_start = 480 + 135,
-		.vsync_end = 480 + 135 + 5,
-		.vtotal = 480 + 135 + 5 + 5,
+		.vsync_start = 480 + 10,
+		.vsync_end = 480 + 10 + 5,
+		.vtotal = 480 + 10 + 5 + 5,
 	},
 };
 
@@ -476,8 +476,7 @@ static int seeed_dsi_probe(struct mipi_dsi_device *dsi)
 	int ret;
 
 	dsi->mode_flags = (MIPI_DSI_MODE_VIDEO |
-				MIPI_DSI_MODE_VIDEO_SYNC_PULSE |
-				MIPI_DSI_MODE_LPM);
+				MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->lanes = 1;
 
