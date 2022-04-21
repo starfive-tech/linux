@@ -29,7 +29,7 @@
  * 100M:  gtxclk为25M， 分频值为500/25  = 0x14
  * 10M:   gtxclk为2.5M，分频值为500/2.5 = 0xc8
  */
-#ifdef CONFIG_SOC_STARFIVE
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 #define CLKGEN_BASE                    0x11800000
 #define CLKGEN_GMAC_GTXCLK_OFFSET      0x1EC
 #define CLKGEN_GMAC_GTXCLK_ADDR        (CLKGEN_BASE + CLKGEN_GMAC_GTXCLK_OFFSET)
@@ -96,7 +96,7 @@ static int dwmac_generic_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_remove_config_dt;
 	}
-#ifdef CONFIG_SOC_STARFIVE
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
 	plat_dat->fix_mac_speed = dwmac_fixed_speed;
 #endif
 
