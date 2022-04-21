@@ -172,7 +172,7 @@ static int i2c_dw_set_timings_master(struct dw_i2c_dev *dev)
 out:
 	return ret;
 }
-
+#if 0
 static int i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
 {
 	if((dev->scl_gpio > 0) && (dev->sda_gpio > 0))
@@ -226,7 +226,7 @@ static int i2c_dw_configure_gpio(struct dw_i2c_dev *dev)
 		dev_warn(dev->dev, "NOTE: scl/sda gpio number is invalid !\n");
 	return 0;
 }
-
+#endif
 
 static int i2c_dw_cal_scl_lhcnt(struct dw_i2c_dev *dev)
 {
@@ -971,7 +971,7 @@ int i2c_dw_probe_master(struct dw_i2c_dev *dev)
 	if (ret)
 		dev_err(dev->dev, "failure adding adapter: %d\n", ret);
 	pm_runtime_put_noidle(dev->dev);
-	i2c_dw_configure_gpio(dev);
+	//i2c_dw_configure_gpio(dev);
 
 	return ret;
 }
