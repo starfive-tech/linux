@@ -1187,11 +1187,11 @@ static void starfive_gpio_irq_handler(struct irq_desc *desc)
 
 	mis = readl_relaxed(sfp->base + GPIOMIS + 0);
 	for_each_set_bit(pin, &mis, 32)
-		generic_handle_domain_irq(sfp->gc.irq.domain, pin);
+		generic_handle_irq(irq_find_mapping(sfp->gc.irq.domain, pin));
 
 	mis = readl_relaxed(sfp->base + GPIOMIS + 4);
 	for_each_set_bit(pin, &mis, 32)
-		generic_handle_domain_irq(sfp->gc.irq.domain, pin + 32);
+		generic_handle_irq(irq_find_mapping(sfp->gc.irq.domain, pin + 32));
 
 	chained_irq_exit(chip, desc);
 }

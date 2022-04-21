@@ -583,17 +583,17 @@ static int __init clk_starfive_jh7100_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	priv->pll[0] = devm_clk_hw_register_fixed_factor(priv->dev, "pll0_out",
+	priv->pll[0] = clk_hw_register_fixed_factor(priv->dev, "pll0_out",
 							 "osc_sys", 0, 40, 1);
 	if (IS_ERR(priv->pll[0]))
 		return PTR_ERR(priv->pll[0]);
 
-	priv->pll[1] = devm_clk_hw_register_fixed_factor(priv->dev, "pll1_out",
+	priv->pll[1] = clk_hw_register_fixed_factor(priv->dev, "pll1_out",
 							 "osc_sys", 0, 64, 1);
 	if (IS_ERR(priv->pll[1]))
 		return PTR_ERR(priv->pll[1]);
 
-	priv->pll[2] = devm_clk_hw_register_fixed_factor(priv->dev, "pll2_out",
+	priv->pll[2] = clk_hw_register_fixed_factor(priv->dev, "pll2_out",
 							 "pll2_refclk", 0, 55, 1);
 	if (IS_ERR(priv->pll[2]))
 		return PTR_ERR(priv->pll[2]);
