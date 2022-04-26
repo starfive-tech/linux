@@ -174,20 +174,19 @@ static int si5wdt_get_clock_rate(struct stf_si5_wdt *wdt)
 
 static int si5wdt_enable_clock(struct stf_si5_wdt *wdt)
 {
-	struct reset_control_bulk_data resets[] = {
-                { .id = "wdtimer_apb" },
-                { .id = "wdt" },
-        };
 	int ret;
 
-	ret = devm_reset_control_bulk_get_exclusive(wdt->dev, ARRAY_SIZE(resets), resets);
-	if (ret) {
-		printk(KERN_INFO "faied to get watchdog reset controls\n");
-		return ret;
+	wdt->rst_wdtimer_apb = devm_reset_control_get_exclusive(wdt->dev, "wdtimer_apb");
+	if (IS_ERR(wdt->rst_wdtimer_apb)) {
+		dev_err(wdt->dev, "Failed to get wdtimer_apb reset control\n");
+		return PTR_ERR(wdt->rst_wdtimer_apb);
 	}
-
-	wdt->rst_wdtimer_apb = resets[0].rstc;
-	wdt->rst_wdt = resets[1].rstc;
+	
+	wdt->rst_wdt = devm_reset_control_get_exclusive(wdt->dev, "wdt");
+	if (IS_ERR(wdt->rst_wdt)) {
+		dev_err(wdt->dev, "Failed to get wd reset control\n");
+		return PTR_ERR(wdt->rst_wdt);
+	}
 
 	wdt->apb_clk = devm_clk_get(wdt->dev, "wdtimer_apb");
 	if (!IS_ERR(wdt->apb_clk)) {
