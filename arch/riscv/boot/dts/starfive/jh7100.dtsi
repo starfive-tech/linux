@@ -569,6 +569,27 @@
 			status = "disabled";
 		};
 
+		timer: timer@12480000 {
+			compatible = "starfive,timers";
+			reg = <0x0 0x12480000 0x0 0x10000>;
+			interrupt-parent = <&plic>;
+			interrupts = <76>, <77>, <78> ,<79>, <80>, <81>, <82>, <83>;
+			clocks = <&clkgen JH7100_CLK_TIMER0_CORE>,
+				<&clkgen JH7100_CLK_TIMER1_CORE>,
+				<&clkgen JH7100_CLK_TIMER2_CORE>,
+				<&clkgen JH7100_CLK_TIMER3_CORE>,
+				<&clkgen JH7100_CLK_WDT_CORE>,
+				<&clkgen JH7100_CLK_TIMER4_CORE>,
+				<&clkgen JH7100_CLK_TIMER5_CORE>,
+				<&clkgen JH7100_CLK_TIMER6_CORE>,
+				<&clkgen JH7100_CLK_WDTIMER_APB>;
+			clock-names = "timer0", "timer1", "timer2",
+					"timer3", "wdog", "timer4",
+					"timer5", "timer6", "apb_clk";
+			clock-frequency = <50000000>;
+			status = "okay";
+		};
+
 		watchdog@12480000 {
 			compatible = "starfive,si5-wdt";
 			reg = <0x0 0x12480000 0x0 0x10000>;
