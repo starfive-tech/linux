@@ -23,7 +23,10 @@ description:
 properties:
   compatible:
     items:
-      - const: sifive,fu540-c000-clint
+      - enum:
+          - sifive,fu540-c000-clint
+          - starfive,jh7100-clint
+          - canaan,k210-clint
       - const: sifive,clint0
 
     description:

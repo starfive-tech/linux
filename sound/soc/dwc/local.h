@@ -81,6 +81,51 @@
 #define MAX_CHANNEL_NUM		8
 #define MIN_CHANNEL_NUM		2
 
+enum {
+	CLK_AUDIO_ROOT = 0,
+	CLK_AUDIO_SRC,
+	CLK_AUDIO_12288,
+	CLK_DMA1P_AHB,
+	CLK_ADC_MCLK,
+	CLK_APB_I2SADC,
+	CLK_I2SVAD,
+	CLK_ADC_BCLK,
+	CLK_ADC_LRCLK,
+	CLK_ADC_BCLK_IOPAD,
+	CLK_ADC_LRCLK_IOPAD,
+	CLK_DAC_MCLK,
+	CLK_DAC_BCLK,
+	CLK_DAC_LRCLK,
+	CLK_DAC_BCLK_IOPAD,
+	CLK_DAC_LRCLK_IOPAD,
+	CLK_APB_I2SDAC,
+	CLK_AUDIO_NUM,
+};
+
+enum {
+	RST_APB_BUS = 0,
+	RST_DMA1P_AHB,
+	RST_APB_I2SADC,
+	RST_I2SADC_SRST,
+	RST_APB_I2SVAD,
+	RST_I2SVAD_SRST,
+	RST_APB_I2SDAC,
+	RST_I2SDAC_SRST,
+	RST_AUDIO_NUM,
+};
+
+enum audio_mode {
+	AUDIO_IN_NONE = -1,
+	AUDIO_IN_GPIO_SD2 = 0,
+	AUDIO_IN_GPIO_SD1,
+	AUDIO_IN_SPIO_SD0,
+	AUDIO_IN_DAC16K_SD0,
+	AUDIO_IN_ANA_ADC_SD1,
+	AUDIO_IN_ANA_ADC_SD0,
+	AUDIO_IN_PDM_SD1,
+	AUDIO_IN_PDM_SD0,
+};
+
 union dw_i2s_snd_dma_data {
 	struct i2s_dma_data pd;
 	struct snd_dmaengine_dai_dma_data dt;
@@ -88,6 +133,7 @@ union dw_i2s_snd_dma_data {
 
 struct dw_i2s_dev {
 	void __iomem *i2s_base;
+	void __iomem *vad_base;
 	struct clk *clk;
 	struct clk *clk_apb;
 	struct clk* i2svad;
@@ -103,6 +149,9 @@ struct dw_i2s_dev {
 	u32 ccr;
 	u32 xfer_resolution;
 	u32 fifo_th;
+
+	struct clk *clks[CLK_AUDIO_NUM];
+	struct reset_control *rstc[RST_AUDIO_NUM];
 
 	/* data related to DMA transfers b/w i2s and DMAC */
 	union dw_i2s_snd_dma_data play_dma_data;

@@ -42,7 +42,10 @@ maintainers:
 properties:
   compatible:
     items:
-      - const: sifive,fu540-c000-plic
+      - enum:
+          - sifive,fu540-c000-plic
+          - starfive,jh7100-plic
+          - canaan,k210-plic
       - const: sifive,plic-1.0.0
 
   reg:

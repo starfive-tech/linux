@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2021 Emil Renner Berthing <kernel@esmil.dk>
+ */
+
+/dts-v1/;
+#include "jh7100-common.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "BeagleV Starlight Beta";
+	compatible = "beagle,beaglev-starlight-jh7100-r0", "starfive,jh7100";
+};
+
+&gmac {
+	snps,reset-gpios = <&gpio 63 GPIO_ACTIVE_LOW>;
+};
+
+&gpio {
+	/* don't reset gpio mux for serial console on uart3 */
+	starfive,keep-gpiomux = <13 14 63 0 2 3 45>;
+};
+
+#ifdef WM8960_ENABLED
+#include "codecs/sf_wm8960.dtsi"
+#endif

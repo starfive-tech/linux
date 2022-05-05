@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright 2021 StarFive, Inc <samin.guo@starfivetech.com>
+ * Watchdog driver for the StarFive JH7100 SoC
  *
- * THE PRESENT SOFTWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING
- * CUSTOMERS WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER
- * FOR THEM TO SAVE TIME. AS A RESULT, STARFIVE SHALL NOT BE HELD LIABLE
- * FOR ANY DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY
- * CLAIMS ARISING FROM THE CONTENT OF SUCH SOFTWARE AND/OR THE USE MADE
- * BY CUSTOMERS OF THE CODING INFORMATION CONTAINED HEREIN IN CONNECTION
- * WITH THEIR PRODUCTS.
+ * Copyright (C) 2021 Samin Guo <samin.guo@starfivetech.com>
+ * Copyright (C) 2021 Walker Chen <walker.chen@starfivetech.com>
  */
 
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/module.h>
@@ -46,25 +42,6 @@
 #define JH7100_RESEN_SHIFT	0
 #define JH7100_EN_SHIFT		0
 #define JH7100_INTCLR_AVA_SHIFT	1	/* Watchdog can clear interrupt when this bit is 0 */
-
-/* JH7110 WatchDog register define */
-#define JH7110_WDOGLOAD		0x000	/* RW: Watchdog load register */
-#define JH7110_WDOGVALUE	0x004	/* RO: The current value for the watchdog counter */
-#define JH7110_WDOGCONTROL	0x008	/* RW: [0]: reset enable;  [1]: int enable/wdt enable/reload counter; [31:2]: res */
-#define JH7110_WDOGINTCLR	0x00c	/* WO: clear intterupt && reload the counter */
-#define JH7110_WDOGRIS		0x010	/* RO: Raw interrupt status from the counter */
-#define JH7110_WDOGIMS		0x014	/* RO: Enabled interrupt status from the counter */
-#define JH7110_WDOGLOCK		0xc00	/* RO: Enable write access to all other registers by writing 0x1ACCE551 */
-#define JH7110_WDOGITCR		0xf00	/* RW: When set HIGH, places the Watchdog into integraeion test mode */
-#define JH7110_WDOGITOP		0xf04	/* WO:	[0] Integration Test WDOGRES value Integration Test Mode
-						Value output on WDOGRES when in Integration Test Mode
-						[1] Integration Test WDOGINT value
-						Value output on WDOGINT when in Integration Test Mode */
-
-#define JH7110_UNLOCK_KEY	0x1acce551
-#define JH7110_RESEN_SHIFT	1
-#define JH7110_EN_SHIFT		0
-#define JH7110_INT_EN_SHIFT	JH7110_EN_SHIFT
 
 /* WDOGCONTROL */
 #define WDOG_INT_EN	0x0
@@ -125,6 +102,9 @@ struct stf_si5_wdt {
 	struct watchdog_device wdt_device;
 	struct clk *core_clk;
 	struct clk *apb_clk;
+	struct reset_control *rst_wdtimer_apb;
+	struct reset_control *rst_wdt;
+
 	const struct si5_wdt_variant *drv_data;
 	u32 count;	/*count of timeout*/
 	u32 reload;	/*restore the count*/
@@ -141,12 +121,6 @@ static struct si5_wdt_variant_t jh7100_variant = {
 	.intclr_ava_shift = JH7100_INTCLR_AVA_SHIFT,
 };
 
-static struct si5_wdt_variant_t jh7110_variant = {
-        .unlock_key = JH7110_UNLOCK_KEY,
-        .enrst_shift = JH7110_RESEN_SHIFT,
-        .en_shift = JH7110_EN_SHIFT,
-};
-
 static const struct si5_wdt_variant drv_data_jh7100 = {
 	.control = JH7100_WDOGCONTROL,
 	.load = JH7100_WDOGLOAD,
@@ -159,21 +133,9 @@ static const struct si5_wdt_variant drv_data_jh7100 = {
 	.variant =  &jh7100_variant,
 };
 
-static const struct si5_wdt_variant drv_data_jh7110 = {
-	.control = JH7110_WDOGCONTROL,
-	.load = JH7110_WDOGLOAD,
-	.enable = JH7110_WDOGCONTROL,
-	.value = JH7110_WDOGVALUE,
-	.int_clr = JH7110_WDOGINTCLR,
-	.unlock = JH7110_WDOGLOCK,
-	.variant =  &jh7110_variant,
-};
-
 static const struct of_device_id starfive_wdt_match[] = {
 	{ .compatible = "starfive,si5-wdt",
 	  .data = &drv_data_jh7100 },
-	{ .compatible = "starfive,dskit_wdt",
-	  .data = &drv_data_jh7110 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, starfive_wdt_match);
@@ -183,10 +145,6 @@ static const struct platform_device_id si5wdt_ids[] = {
 	{
 		.name = "starfive-si5-wdt",
 		.driver_data = (unsigned long)&drv_data_jh7100,
-	},
-	{
-		.name = "starfive-dskit-wdt",
-		.driver_data = (unsigned long)&drv_data_jh7110,
 	},
 	{}
 };
@@ -216,23 +174,59 @@ static int si5wdt_get_clock_rate(struct stf_si5_wdt *wdt)
 
 static int si5wdt_enable_clock(struct stf_si5_wdt *wdt)
 {
-	int err = 0;
+	int ret;
 
-	wdt->apb_clk =	devm_clk_get(wdt->dev, "apb_clk");
+	wdt->rst_wdtimer_apb = devm_reset_control_get_exclusive(wdt->dev, "wdtimer_apb");
+	if (IS_ERR(wdt->rst_wdtimer_apb)) {
+		dev_err(wdt->dev, "Failed to get wdtimer_apb reset control\n");
+		return PTR_ERR(wdt->rst_wdtimer_apb);
+	}
+	
+	wdt->rst_wdt = devm_reset_control_get_exclusive(wdt->dev, "wdt");
+	if (IS_ERR(wdt->rst_wdt)) {
+		dev_err(wdt->dev, "Failed to get wd reset control\n");
+		return PTR_ERR(wdt->rst_wdt);
+	}
+
+	wdt->apb_clk = devm_clk_get(wdt->dev, "wdtimer_apb");
 	if (!IS_ERR(wdt->apb_clk)) {
-		err = clk_prepare_enable(wdt->apb_clk);
-		if(err)
+		ret = clk_prepare_enable(wdt->apb_clk);
+		if(ret)
 			dev_warn(wdt->dev, "enable core_clk error.\n");
 	}
 
-	wdt->core_clk =  devm_clk_get(wdt->dev, "core_clk");
+	wdt->core_clk = devm_clk_get(wdt->dev, "wdt_coreclk");
 	if (!IS_ERR(wdt->core_clk)) {
-		err = clk_prepare_enable(wdt->core_clk);
-		if(err)
+		ret = clk_prepare_enable(wdt->core_clk);
+		if(ret)
 			dev_warn(wdt->dev, "enable apb_clk error.\n");
 	}
+#if 0
+	ret = reset_control_assert(wdt->rst_wdtimer_apb);
+	if (ret) {
+		printk(KERN_INFO "failed to assert wdtimer_apb\n");
+		return ret;
+	}
+#endif
+	ret = reset_control_assert(wdt->rst_wdt);
+	if (ret) {
+		printk(KERN_INFO "failed to assert wdt\n");
+		return ret;
+	}
+#if 0
+	ret = reset_control_deassert(wdt->rst_wdtimer_apb);
+	if (ret) {
+		printk(KERN_INFO "failed to deassert wdtimer_apb, ret=%d\n", ret);
+		return ret;
+	}
+#endif
+	ret = reset_control_deassert(wdt->rst_wdt);
+	if (ret) {
+		printk(KERN_INFO "failed to deassert wdt\n");
+		return ret;
+	}
 
-	return err;
+	return 0;
 }
 
 static __maybe_unused
@@ -380,8 +374,6 @@ si5wdt_set_relod_count(struct stf_si5_wdt *wdt, u32 count)
 	writel(count, wdt->base + wdt->drv_data->load);
 	if (wdt->drv_data->reload)
 		writel(0x1, wdt->base + wdt->drv_data->reload);
-	else
-		si5wdt_enable(wdt); /* jh7110 need enable controller to reload counter */
 }
 
 static int si5wdt_mask_and_disable_reset(struct stf_si5_wdt *wdt, bool mask)
@@ -777,5 +769,6 @@ static struct platform_driver starfive_si5wdt_driver = {
 module_platform_driver(starfive_si5wdt_driver);
 
 MODULE_AUTHOR("samin.guo <samin.guo@starfivetech.com>");
+MODULE_AUTHOR("Walker Chen <walker.chen@starfivetech.com>");
 MODULE_DESCRIPTION("StarFive SI5 Watchdog Device Driver");
 MODULE_LICENSE("GPL v2");

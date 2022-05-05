@@ -219,14 +219,6 @@ config DWMAC_INTEL_PLAT
 	  This selects the Intel platform specific glue layer support for
 	  the stmmac device driver. This driver is used for the Intel Keem Bay
 	  SoC.
-
-config DWMAC_STARFIVE
-	tristate "STARFIVE DWMAC support"
-	default STMMAC_PLATFORM
-	help
-	  This selects the starfive platform specific glue layer support for
-	  the stmmac device driver. This driver is used for the starfive JH7100
-	  SoC.
 	  
 endif
 

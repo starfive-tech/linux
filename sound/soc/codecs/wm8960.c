@@ -1354,7 +1354,7 @@ static int wm8960_probe(struct snd_soc_component *component)
 	else
 		wm8960->set_bias_level = wm8960_set_bias_level_out3;
 
-	#if 1
+#if 1
 	snd_soc_component_update_bits(component, WM8960_LDAC, 0x100, 0x100);
 	snd_soc_component_update_bits(component, WM8960_RDAC, 0x100, 0x100);
 	snd_soc_component_update_bits(component, WM8960_LOUT1, 0x100, 0x100); 
@@ -1368,7 +1368,7 @@ static int wm8960_probe(struct snd_soc_component *component)
 	snd_soc_component_update_bits(component, WM8960_ROUT1, 0x7f, 0x6f);
 	snd_soc_component_update_bits(component, WM8960_LOUT2, 0x7f, 0x7f);
 	snd_soc_component_update_bits(component, WM8960_ROUT2, 0x7f, 0x7f);
-	#endif
+#endif
 
 	snd_soc_add_component_controls(component, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));
@@ -1473,14 +1473,12 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 	regmap_update_bits(wm8960->regmap, WM8960_ROUT1, 0x100, 0x100);
 	regmap_update_bits(wm8960->regmap, WM8960_LOUT2, 0x100, 0x100);
 	regmap_update_bits(wm8960->regmap, WM8960_ROUT2, 0x100, 0x100);
-	
 	regmap_update_bits(wm8960->regmap, WM8960_LINPATH, 0x138, 0x138);
 	regmap_update_bits(wm8960->regmap, WM8960_RINPATH, 0x138, 0x138);
 	regmap_update_bits(wm8960->regmap, WM8960_POWER1, 0x7E, 0x7E);
 	regmap_update_bits(wm8960->regmap, WM8960_POWER3, 0x30, 0x30);
 	regmap_update_bits(wm8960->regmap, WM8960_LINVOL, 0x19F, 0x197);
 	regmap_update_bits(wm8960->regmap, WM8960_RINVOL, 0x19F, 0x197);
-	
 	/* ADCLRC pin configured as GPIO. */
 	regmap_update_bits(wm8960->regmap, WM8960_IFACE2, 1 << 6,
 			   wm8960->pdata.gpio_cfg[0] << 6);
