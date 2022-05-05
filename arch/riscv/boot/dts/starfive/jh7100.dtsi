@@ -8,6 +8,7 @@
 #include "starfive_vic7100_clk.dtsi"
 #include <dt-bindings/clock/starfive-jh7100.h>
 #include <dt-bindings/clock/starfive-jh7100-audio.h>
+#include <dt-bindings/clock/starfive-jh7100-isp.h>
 #include <dt-bindings/reset/starfive-jh7100.h>
 #include <dt-bindings/reset/starfive-jh7100-audio.h>
 
@@ -424,6 +425,15 @@
 			reg = <0x0 0x118d0000 0x0 0x10000>;
 			clocks = <&clkgen JH7100_CLK_TRNG_APB>;
 			interrupts = <98>;
+		};
+
+		ispclk: clock-controller@19810000 {
+			compatible = "starfive,jh7100-ispclk";
+			reg = <0x0 0x19810000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_VIN_SRC>,
+				 <&clkgen JH7100_CLK_ISPSLV_AXI>;
+			clock-names = "vin_src", "ispslv_axi";
+			#clock-cells = <1>;
 		};
 
 		vpu_enc: vpu_enc@118e0000 {
