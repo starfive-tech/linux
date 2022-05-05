@@ -13,3 +13,9 @@ config RESET_STARFIVE_JH7100_AUDIO
 	default SOC_STARFIVE_VIC7100
 	help
 	  This enables the audio reset driver for the StarFive JH7100 SoC.
+config RESET_STARFIVE_JH7100_ISP
+	tristate "StarFive JH7100 Isp Reset Driver"
+	depends on RESET_STARFIVE_JH7100
+	default SOC_STARFIVE
+	help
+	  This enables the isp reset driver for the StarFive JH7100 SoC.

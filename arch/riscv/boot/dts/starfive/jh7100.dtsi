@@ -11,6 +11,7 @@
 #include <dt-bindings/clock/starfive-jh7100-isp.h>
 #include <dt-bindings/reset/starfive-jh7100.h>
 #include <dt-bindings/reset/starfive-jh7100-audio.h>
+#include <dt-bindings/reset/starfive-jh7100-isp.h>
 
 / {
 	compatible = "starfive,jh7100";
@@ -434,6 +435,12 @@
 				 <&clkgen JH7100_CLK_ISPSLV_AXI>;
 			clock-names = "vin_src", "ispslv_axi";
 			#clock-cells = <1>;
+		};
+
+		isprst: reset-controller@19820000 {
+			compatible = "starfive,jh7100-isprst";
+			reg = <0x0 0x19820000 0x0 0x10000>;
+			#reset-cells = <1>;
 		};
 
 		vpu_enc: vpu_enc@118e0000 {
