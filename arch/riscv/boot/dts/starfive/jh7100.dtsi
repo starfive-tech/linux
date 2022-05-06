@@ -732,6 +732,222 @@
 			status = "disabled";
 		};
 
+		vin_sysctl: vin_sysctl@19800000 {
+			compatible = "starfive,stf-vin";
+			reg = <0x0 0x19800000 0x0 0x10000>,
+				<0x0 0x19810000 0x0 0x10000>,
+				<0x0 0x19820000 0x0 0x10000>,
+				<0x0 0x19830000 0x0 0x10000>,
+				<0x0 0x19840000 0x0 0x10000>,
+				<0x0 0x19870000 0x0 0x30000>,
+				<0x0 0x198a0000 0x0 0x30000>,
+				<0x0 0x11800000 0x0 0x10000>,
+				<0x0 0x11840000 0x0 0x10000>,
+				<0x0 0x11858000 0x0 0x10000>;
+			reg-names = "mipi0", "vclk", "vrst", "mipi1", "sctrl",
+				"isp0", "isp1", "tclk", "trst", "iopad";
+			interrupts = <119 109 112>;
+			memory-region = <&vin_reserved>;
+
+			clocks = <&clkgen JH7100_CLK_VIN_SRC>,
+				<&clkgen JH7100_CLK_ISP0_AXI>,
+				<&clkgen JH7100_CLK_ISP0NOC_AXI>,
+				<&clkgen JH7100_CLK_ISPSLV_AXI>,
+				<&clkgen JH7100_CLK_ISP1_AXI>,
+				<&clkgen JH7100_CLK_ISP1NOC_AXI>,
+				<&clkgen JH7100_CLK_VIN_AXI>,
+				<&clkgen JH7100_CLK_VINNOC_AXI>,
+				<&ispclk JH7100_ISPCLK_DPHY_CFGCLK>,
+				<&ispclk JH7100_ISPCLK_DPHY_REFCLK>,
+				<&ispclk JH7100_ISPCLK_DPHY_TXCLKESC>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_PXL>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_PXL>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_PXL_0>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_PXL_1>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_PXL_2>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_PXL_3>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX0_SYS>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_PXL_0>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_PXL_1>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_PXL_2>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_PXL_3>,
+				<&ispclk JH7100_ISPCLK_MIPI_RX1_SYS>,
+				<&ispclk JH7100_ISPCLK_ISP0>,
+				<&ispclk JH7100_ISPCLK_ISP0_2X>,
+				<&ispclk JH7100_ISPCLK_ISP0_MIPI>,
+				<&ispclk JH7100_ISPCLK_ISP1>,
+				<&ispclk JH7100_ISPCLK_ISP1_2X>,
+				<&ispclk JH7100_ISPCLK_ISP1_MIPI>,
+				<&ispclk JH7100_ISPCLK_DOM4_APB>,
+				<&ispclk JH7100_ISPCLK_CSI2RX_APB>,
+				<&ispclk JH7100_ISPCLK_VIN_AXI_WR>,
+				<&ispclk JH7100_ISPCLK_VIN_AXI_RD>,
+				<&ispclk JH7100_ISPCLK_C_ISP0>,
+				<&ispclk JH7100_ISPCLK_C_ISP1>;
+
+			clock-names = "vin_src", "isp0_axi", "isp0noc_axi", "ispslv_axi",
+				"isp1_axi", "isp1noc_axi", "vin_axi", "vinnoc_axi",
+				"dphy_cfgclk", "dphy_refclk", "dphy_txclkesc", "mipi_rx0_pxl",
+				"mipi_rx1_pxl", "mipi_rx0_pxl_0", "mipi_rx0_pxl_1", "mipi_rx0_pxl_2",
+				"mipi_rx0_pxl_3", "mipi_rx0_sys", "mipi_rx1_pxl_0", "mipi_rx1_pxl_1",
+				"mipi_rx1_pxl_2", "mipi_rx1_pxl_3", "mipi_rx1_sys", "isp0",
+				"isp0_2x", "isp0_mipi", "isp1", "isp1_2x",
+				"isp1_mipi", "dom4_apb", "csi2rx_apb", "vin_axi_wr",
+				"vin_axi_rd", "c_isp0", "c_isp1";
+
+			resets = <&rstgen JH7100_RSTN_VIN_SRC>,
+				<&rstgen JH7100_RSTN_ISPSLV_AXI>,
+				<&rstgen JH7100_RSTN_VIN_AXI>,
+				<&rstgen JH7100_RSTN_VINNOC_AXI>,
+				<&rstgen JH7100_RSTN_ISP0_AXI>,
+				<&rstgen JH7100_RSTN_ISP0NOC_AXI>,
+				<&rstgen JH7100_RSTN_ISP1_AXI>,
+				<&rstgen JH7100_RSTN_ISP1NOC_AXI>,
+				<&isprst JH7100_ISPRSTN_SYS_CLK>,
+				<&isprst JH7100_ISPRSTN_PCLK>,
+				<&isprst JH7100_ISPRSTN_SYS_CLK_1>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF0>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF1>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF2>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF3>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF10>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF11>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF12>,
+				<&isprst JH7100_ISPRSTN_PIXEL_CLK_IF13>,
+				<&isprst JH7100_ISPRST_ISP_0>,
+				<&isprst JH7100_ISPRST_ISP_1>,
+				<&isprst JH7100_ISPRST_P_AXIRD>,
+				<&isprst JH7100_ISPRST_P_AXIWR>,
+				<&isprst JH7100_ISPRST_P_ISP0>,
+				<&isprst JH7100_ISPRST_P_ISP1>,
+				<&isprst JH7100_ISPRST_DPHY_HW_RSTN>,
+				<&isprst JH7100_ISPRST_DPHY_RST09_ALWY_ON>,
+				<&isprst JH7100_ISPRST_C_ISP0>,
+				<&isprst JH7100_ISPRST_C_ISP1>;
+
+			reset-names = "vin_src", "ispslv_axi", "vin_axi", "vinnoc_axi",
+				"isp0_axi", "isp0noc_axi", "isp1_axi", "isp1noc_axi",
+				"sys_clk", "pclk", "sys_clk_1", "pixel_clk_if0",
+				"pixel_clk_if1", "pixel_clk_if2", "pixel_clk_if3", "pixel_clk_if10",
+				"pixel_clk_if11", "pixel_clk_if12", "pixel_clk_if13", "isp_0",
+				"isp_1", "p_axird", "p_axiwr", "p_isp0",
+				"p_isp1", "dphy_hw_rstn", "dphy_rst09_alwy_on", "c_isp0",
+				"c_isp1";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					dphy0_out_csi2rx: endpoint {
+						remote-endpoint = <&csi2rx0_in_dphy>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "failed";
+					};
+				};
+
+				//port@1 {
+				//	reg = <1>;
+
+				//	dphy1_out_csi2rx: endpoint {
+				//		remote-endpoint = <&csi2rx1_in_dphy>;
+				//		clock-lanes = <0>;
+				//		data-lanes = <1 2>;
+				//		status = "failed";
+				//	};
+				//};
+
+				/* TODO: Used for EVB board, comment here for starlight board, remove it later*/
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>; // dvp sensor
+
+					// Parallel bus endpoint
+					parallel_from_ov5640: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&ov5640_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <0>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+
+					parallel_from_sc2235: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&sc2235_to_parallel>;
+						bus-type = <5>;      // Parallel
+						bus-width = <8>;
+						data-shift = <2>; // lines 9:2 are used
+						hsync-active = <1>;
+						vsync-active = <1>;
+						pclk-sample = <1>;
+						status = "failed";
+					};
+				};
+
+				port@3 {
+					reg = <3>; //csi2rx0 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx0_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx0>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						status = "okay";
+					};
+				};
+
+				port@4 {
+					reg = <4>; // csi2rx1 sensor
+
+					/* CSI2 bus endpoint */
+					csi2rx1_from_imx219: endpoint {
+						remote-endpoint = <&imx219_to_csi2rx1>;
+						bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+						clock-lanes = <5>;
+						data-lanes = <3 4>;
+						lane-polarities = <0 1 0>;
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		csi2rx: csi-bridge@19800000 {
+			compatible = "cdns,csi2rx";
+			reg = <0x0 0x19800000 0x0 0x10000>;
+			clocks = <&byteclock>, <&byteclock>,
+				 <&coreclock>, <&coreclock>,
+				 <&coreclock>, <&coreclock>;
+			clock-names = "sys_clk", "p_clk",
+				      "pixel_if0_clk", "pixel_if1_clk",
+				      "pixel_if2_clk", "pixel_if3_clk";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					csi2rx0_in_dphy: endpoint {
+						remote-endpoint = <&dphy0_out_csi2rx>;
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+					};
+				};
+			};
+		};
+
+#if 0
 		i2sadc0: i2sadc0@10400000 {
 			compatible = "snps,designware-i2sadc0";
 			reg = <0x0 0x10400000 0x0 0x1000>;

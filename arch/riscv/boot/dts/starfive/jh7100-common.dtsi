@@ -408,6 +408,29 @@
 	pinctrl-0 = <&i2c0_pins>;
 	status = "okay";
 
+	imx219@10 {
+		compatible = "imx219";
+		reg = <0x10>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		// powerdown-gpio = <&gpio 21 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio 58 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <0>;
+		orientation = <1>; //CAMERA_ORIENTATION_BACK
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
 	pmic@5e {
 		compatible = "ti,tps65086";
 		reg = <0x5e>;
@@ -457,6 +480,7 @@
 	};
 #endif
 	#if 0
+
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
 		compatible = "ovti,ov5640";
@@ -480,6 +504,7 @@
 			};
 		};
 	};
+
 	sc2235@30 {
 		compatible = "sc2235";
 		reg = <0x30>;
@@ -520,6 +545,25 @@
 		port {
 			panel_dsi_port: endpoint {
 				remote-endpoint = <&dsi_out_port>;
+	imx219sub@10 {
+		compatible = "imx219";
+		reg = <0x10>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		// powerdown-gpio = <&gpio 21 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio 57 GPIO_ACTIVE_HIGH>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <0>;
+		orientation = <0>; //CAMERA_ORIENTATION_FRONT
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx1: endpoint {
+				remote-endpoint = <&csi2rx1_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
 			};
 		};
 	};
