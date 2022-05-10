@@ -68,7 +68,7 @@ static int starfive_encoder_of_parse_ports(struct device *dev,
 
 		of_property_read_u32(node, "encoder-type", &encoder_data->encoder_type);
 		of_property_read_u32(node, "reg", &encoder_data->endpoint_reg);
-		encoder_data ++;
+		encoder_data++;
 	}
 
 	return num_port;
@@ -116,16 +116,14 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 
 		ret = drm_of_find_panel_or_bridge(dev->of_node, 0,
 					encoder_data[i].endpoint_reg, &tmp_panel, &tmp_bridge);
-		if (ret) {
-			dev_err(dev,"endpoint returns %d\n", ret);
-		}
+		if (ret)
+			dev_err(dev, "endpoint returns %d\n", ret);
 
-		if (tmp_panel) {
-			DRM_DEBUG("found panel on endpoint \n");
-		}
-		if (tmp_bridge) {
-			DRM_DEBUG("found bridge on endpoint \n");
-		}
+		if (tmp_panel)
+			DRM_DEBUG("found panel on endpoint\n");
+
+		if (tmp_bridge)
+			DRM_DEBUG("found bridge on endpoint\n");
 
 		ret = drm_bridge_attach(&encoderp[i].encoder, tmp_bridge, NULL, 0);
 		if (ret)
@@ -138,7 +136,6 @@ err_bridge:
 	drm_encoder_cleanup(&encoderp[i].encoder);
 err_encoder:
 	return ret;
-
 }
 
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)

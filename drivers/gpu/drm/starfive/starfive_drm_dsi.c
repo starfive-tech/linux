@@ -29,8 +29,8 @@
 #include "starfive_drm_drv.h"
 
 //sysrst registers
-#define SRST_ASSERT0	    0x00
-#define SRST_STATUS0    	0x04
+#define SRST_ASSERT0		0x00
+#define SRST_STATUS0		0x04
 
 
 #define IP_CONF				0x0
@@ -473,16 +473,6 @@ struct cdns_dsi {
 	struct phy *dphy;
 };
 
-static void dump_mipi_reg(struct cdns_dsi *dsi)
-{
-	int i = 0;
-	uint32_t val = 0;
-	for (i = 0; i < 0x244; i+=4) {
-		val = readl(dsi->regs + i);
-		printk("dsi: addr = 0x%x, val = 0x%x\n", i, val);
-	}
-}
-
 static inline struct cdns_dsi *input_to_dsi(struct cdns_dsi_input *input)
 {
 	return container_of(input, struct cdns_dsi, input);
@@ -595,17 +585,10 @@ static int cdns_dsi_mode2cfg(struct cdns_dsi *dsi,
 	dsi_cfg->hfp = dpi_to_dsi_timing(mode_to_dpi_hfp(mode, mode_valid_check),
 					 bpp, DSI_HFP_FRAME_OVERHEAD);
 	//dpi to dsi transfer can not match , reconfig those parms
-	if(800 == mode->hdisplay)
-	{
-		#ifdef USE_OLD_SCREEN   //seeed panel
-		dsi_cfg->hsa = 16;
-		dsi_cfg->hbp = 199;
-		dsi_cfg->hfp = 153;
-		#else
+	if (800 == mode->hdisplay) {
 		dsi_cfg->hsa = 31;	//45-14
 		dsi_cfg->hbp = 103;	//115-12
 		dsi_cfg->hfp = 354; //360-6
-		#endif
 	}
 
 	return 0;
@@ -770,9 +753,6 @@ static void cdns_dsi_bridge_disable(struct drm_bridge *bridge)
 	struct cdns_dsi_input *input = bridge_to_cdns_dsi_input(bridge);
 	struct cdns_dsi *dsi = input_to_dsi(input);
 
-#if 0
-	dump_mipi_reg(dsi);
-#endif
 	u32 val;
 
 	dsi->link_initialized = false;
@@ -803,7 +783,7 @@ static void release_txbyte_rst(void)
 	do {
 		temp = readl(regs + SRST_STATUS0) >> 18;
 		temp &= 0x1;
-	} while (temp != 0x1 );
+	} while (temp != 0x1);
 	//udelay(1);
 }
 
@@ -827,7 +807,7 @@ static void cdns_dsi_hs_init(struct cdns_dsi *dsi)
 
 	phy_configure(dsi->dphy, &output->phy_opts);
 	phy_power_on(dsi->dphy);
-    release_txbyte_rst();
+	release_txbyte_rst();
 
 	writel(PLL_LOCKED, dsi->regs + MCTL_MAIN_STS_CLR);
 	writel(DPHY_CMN_PSO | DPHY_ALL_D_PDN | DPHY_C_PDN | DPHY_CMN_PDN,
@@ -841,9 +821,8 @@ static void cdns_dsi_hs_init(struct cdns_dsi *dsi)
 	       dsi->regs + MCTL_DPHY_CFG0);
 
 	dpi_fifo_int = readl(dsi->regs + DPI_IRQ_CLR);
-    if (dpi_fifo_int) {
+	if (dpi_fifo_int)
 		writel(dsi->regs + DPI_IRQ_CLR, 1);
-    }
 }
 
 static void cdns_dsi_init_link(struct cdns_dsi *dsi)
@@ -892,7 +871,7 @@ static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 	struct phy_configure_opts_mipi_dphy *phy_cfg = &output->phy_opts.mipi_dphy;
 	unsigned long tx_byte_period;
 	struct cdns_dsi_cfg dsi_cfg;
-	u32 tmp, tmp2,reg_wakeup, div;
+	u32 tmp, tmp2, reg_wakeup, div;
 	int nlanes;
 
 	if (WARN_ON(pm_runtime_get_sync(dsi->base.dev) < 0))
@@ -944,44 +923,44 @@ static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 	writel(REG_WAKEUP_TIME(reg_wakeup) | REG_LINE_DURATION(tmp),
 	       dsi->regs + VID_DPHY_TIME);
 
-	writel(0xafffb,dsi->regs + MCTL_DPHY_TIMEOUT1);
+	writel(0xafffb, dsi->regs + MCTL_DPHY_TIMEOUT1);
 	writel(0x3ffff, dsi->regs + MCTL_DPHY_TIMEOUT2);
 	writel(0x3ab05, dsi->regs + MCTL_ULPOUT_TIME);
 
 	if (output->dev->mode_flags & MIPI_DSI_MODE_VIDEO) {
-	   switch (output->dev->format) {
-	   case MIPI_DSI_FMT_RGB888:
-		   tmp = VID_PIXEL_MODE_RGB888 |
-				 VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_24);
-		   break;
+		switch (output->dev->format) {
+		case MIPI_DSI_FMT_RGB888:
+			tmp = VID_PIXEL_MODE_RGB888 |
+				VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_24);
+			break;
 
-	   case MIPI_DSI_FMT_RGB666:
-		   tmp = VID_PIXEL_MODE_RGB666 |
-				 VID_DATATYPE(MIPI_DSI_PIXEL_STREAM_3BYTE_18);
-		   break;
+		case MIPI_DSI_FMT_RGB666:
+			tmp = VID_PIXEL_MODE_RGB666 |
+				VID_DATATYPE(MIPI_DSI_PIXEL_STREAM_3BYTE_18);
+			break;
 
-	   case MIPI_DSI_FMT_RGB666_PACKED:
-		   tmp = VID_PIXEL_MODE_RGB666_PACKED |
-				 VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_18);
-		   break;
+		case MIPI_DSI_FMT_RGB666_PACKED:
+			tmp = VID_PIXEL_MODE_RGB666_PACKED |
+				VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_18);
+			break;
 
-	   case MIPI_DSI_FMT_RGB565:
-		   tmp = VID_PIXEL_MODE_RGB565 |
-				 VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_16);
-		   break;
+		case MIPI_DSI_FMT_RGB565:
+			tmp = VID_PIXEL_MODE_RGB565 |
+				VID_DATATYPE(MIPI_DSI_PACKED_PIXEL_STREAM_16);
+			break;
 
-	   default:
-		   dev_err(dsi->base.dev, "Unsupported DSI format\n");
-		   return;
-	   }
+		default:
+			dev_err(dsi->base.dev, "Unsupported DSI format\n");
+			return;
+		}
 
-	   if (output->dev->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE)
-		   tmp |= SYNC_PULSE_ACTIVE | SYNC_PULSE_HORIZONTAL;
+		if (output->dev->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE)
+			tmp |= SYNC_PULSE_ACTIVE | SYNC_PULSE_HORIZONTAL;
 
 		tmp |= REG_BLKLINE_MODE(REG_BLK_MODE_BLANKING_PKT) |
-		       REG_BLKEOL_MODE(REG_BLK_MODE_BLANKING_PKT) |
-		       RECOVERY_MODE(RECOVERY_MODE_NEXT_HSYNC) |
-		       VID_IGNORE_MISS_VSYNC;
+			REG_BLKEOL_MODE(REG_BLK_MODE_BLANKING_PKT) |
+			RECOVERY_MODE(RECOVERY_MODE_NEXT_HSYNC) |
+			VID_IGNORE_MISS_VSYNC;
 
 		writel(tmp, dsi->regs + VID_MAIN_CTL);
 	}
@@ -1194,21 +1173,19 @@ static ssize_t cdns_dsi_transfer(struct mipi_dsi_host *host,
 
 	do {
 		stat = readl(dsi->regs + DIRECT_CMD_STS);
-		if ((stat & 0x02) == 0x02) {
+		if ((stat & 0x02) == 0x02)
 			break;
-		}
 		mdelay(10);
 	} while (--timeout);
-	if (!timeout) {
+
+	if (!timeout)
 		DRM_DEBUG("timeout!\n");
-	}
 
 	stat_88 = readl(dsi->regs + DIRECT_CMD_STS);
 	stat_188 = readl(dsi->regs + MCTL_DPHY_ERR_FLAG);
 	stat_88_ack_val = stat_88 >> 16;
-	if (stat_188 || stat_88_ack_val) {
-		dev_dbg(host->dev,"stat: [188h] %08x, [88h] %08x\r\n", stat_188, stat_88);
-	}
+	if (stat_188 || stat_88_ack_val)
+		dev_dbg(host->dev, "stat: [188h] %08x, [88h] %08x\n", stat_188, stat_88);
 
 out:
 	pm_runtime_put(host->dev);
@@ -1258,7 +1235,8 @@ static int starfive_dsi_bind(struct device *dev, struct device *master, void *da
 	struct starfive_drm_private *private = drm_dev->dev_private;
 	int ret, irq;
 	u32 val;
-	dev_info(dev, "starfive_dsi_bind enter\n");
+
+	dev_info(dev, "%s enter\n", __func__);
 
 	dsi = devm_kzalloc(&pdev->dev, sizeof(*dsi), GFP_KERNEL);
 	if (!dsi)
@@ -1274,9 +1252,7 @@ static int starfive_dsi_bind(struct device *dev, struct device *master, void *da
 
 	dsi->dphy = devm_phy_get(&pdev->dev, "dphy");
 	if (IS_ERR(dsi->dphy))
-	{
 		return PTR_ERR(dsi->dphy);
-	}
 
 	val = readl(dsi->regs + ID_REG);
 

@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/* SPDX-License-Identifier: GPL-2.0-only
+ *
  * Copyright (c) 2021 StarFive Technology Co., Ltd
  * Author: StarFive <StarFive@starfivetech.com>
  */
@@ -8,21 +8,21 @@
 #define _STARFIVE_DRM_CRTC_H
 #include <drm/drm_crtc.h>
 
-enum COLOR_FORMAT{
-    COLOR_YUV422_UYVY = 0,  //00={Y1,V0,Y0,U0}
-    COLOR_YUV422_VYUY = 1,  //01={Y1,U0,Y0,V0}
-    COLOR_YUV422_YUYV = 2,  //10={V0,Y1,U0,Y0}
-    COLOR_YUV422_YVYU = 3,  //11={U0,Y1,V0,Y0}
+enum COLOR_FORMAT {
+	COLOR_YUV422_UYVY = 0,  //00={Y1,V0,Y0,U0}
+	COLOR_YUV422_VYUY = 1,  //01={Y1,U0,Y0,V0}
+	COLOR_YUV422_YUYV = 2,  //10={V0,Y1,U0,Y0}
+	COLOR_YUV422_YVYU = 3,  //11={U0,Y1,V0,Y0}
 
-    COLOR_YUV420P,
-    COLOR_YUV420_NV12,
-    COLOR_YUV420_NV21,
+	COLOR_YUV420P,
+	COLOR_YUV420_NV12,
+	COLOR_YUV420_NV21,
 
-    COLOR_RGB888_ARGB,
-    COLOR_RGB888_ABGR,
-    COLOR_RGB888_RGBA,
-    COLOR_RGB888_BGRA,
-    COLOR_RGB565,
+	COLOR_RGB888_ARGB,
+	COLOR_RGB888_ABGR,
+	COLOR_RGB888_RGBA,
+	COLOR_RGB888_BGRA,
+	COLOR_RGB565,
 };
 
 
@@ -46,13 +46,13 @@ struct starfive_crtc {
 	void __iomem	*base_vpp2;   //0x120c0000
 	void __iomem	*base_lcdc;   //0x12000000
 
-	void __iomem 	*topclk;      //(0x11800000, 0x10000);
-	void __iomem 	*toprst;      //(0x11840000, 0x10000);
+	void __iomem	*topclk;      //(0x11800000, 0x10000);
+	void __iomem	*toprst;      //(0x11840000, 0x10000);
 
 	int				lcdc_irq;
-	int 			vpp0_irq;
-	int 			vpp1_irq;
-	int 			vpp2_irq;
+	int				vpp0_irq;
+	int				vpp1_irq;
+	int				vpp2_irq;
 
 	struct pp_mode *pp;
 
@@ -73,9 +73,9 @@ struct starfive_crtc {
 	u8 lut_b[256];
 
 	bool		gamma_lut;
-	int         encoder_type;
-	dma_addr_t  dma_addr;
-	bool    	dma_addr_change;
+	int			encoder_type;
+	dma_addr_t	dma_addr;
+	bool		dma_addr_change;
 };
 #define to_starfive_crtc(x) container_of(x, struct starfive_crtc, crtc)
 

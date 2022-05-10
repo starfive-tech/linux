@@ -23,7 +23,6 @@
 #define PP_INTR_ENABLE	1
 #define PP_INTR_DISABLE	0
 //PP coefficients
-///*
 #define R2Y_COEF_R1       77
 #define R2Y_COEF_G1       150
 #define R2Y_COEF_B1       29
@@ -38,46 +37,42 @@
 #define R2Y_COEF_G3       (0x400|107)
 #define R2Y_COEF_B3       (0x400|21)
 #define R2Y_OFFSET3       128
-//*/
-enum PP_LCD_PATH
-{
-    SYS_BUS_OUTPUT = 0,
-    FIFO_OUTPUT = 1,
+
+enum PP_LCD_PATH {
+	SYS_BUS_OUTPUT = 0,
+	FIFO_OUTPUT = 1,
 };
 
-enum PP_COLOR_CONVERT_SCALE
-{
-    NOT_BYPASS = 0,
-    BYPASS,
+enum PP_COLOR_CONVERT_SCALE {
+	NOT_BYPASS = 0,
+	BYPASS,
 };
 
-enum PP_SRC_FORMAT
-{
-    PP_SRC_YUV420P = 0,
-    PP_SRC_YUV422,
-    PP_SRC_YUV420I,
-    PP_RESERVED,
-    PP_SRC_GRB888,
-    PP_SRC_RGB565,
+enum PP_SRC_FORMAT {
+	PP_SRC_YUV420P = 0,
+	PP_SRC_YUV422,
+	PP_SRC_YUV420I,
+	PP_RESERVED,
+	PP_SRC_GRB888,
+	PP_SRC_RGB565,
 };
 
-enum PP_DST_FORMAT
-{
-    PP_DST_YUV420P = 0,
-    PP_DST_YUV422,
-    PP_DST_YUV420I,
-    PP_DST_RGBA888,
-    PP_DST_ARGB888,
-    PP_DST_RGB565,
-    PP_DST_ABGR888,
-    PP_DST_BGRA888,
+enum PP_DST_FORMAT {
+	PP_DST_YUV420P = 0,
+	PP_DST_YUV422,
+	PP_DST_YUV420I,
+	PP_DST_RGBA888,
+	PP_DST_ARGB888,
+	PP_DST_RGB565,
+	PP_DST_ABGR888,
+	PP_DST_BGRA888,
 };
 
 
 struct pp_video_mode {
-    enum COLOR_FORMAT format;
-    unsigned int height;
-    unsigned int width;
+	enum COLOR_FORMAT format;
+	unsigned int height;
+	unsigned int width;
 	unsigned int addr;
 };
 
@@ -168,12 +163,12 @@ struct pp_mode {
 //for vout reg
 #define CLKGEN_BASE_ADDR                0x11800000
 
-#define clk_disp_axi_ctrl_REG   	 0x1C0
-#define clk_vout_src_ctrl_REG   	 0x1B4
-#define rstgen_assert1_REG           0x4
-#define rstgen_status1_REG           0x14
-#define vout_rstgen_assert0_REG    		0x0
-#define vout_rstgen_status0_REG    		0x4
+#define clk_disp_axi_ctrl_REG		0x1C0
+#define clk_vout_src_ctrl_REG		0x1B4
+#define rstgen_assert1_REG			0x4
+#define rstgen_status1_REG			0x14
+#define vout_rstgen_assert0_REG		0x0
+#define vout_rstgen_status0_REG		0x4
 #define clk_vout_apb_ctrl_REG       0x0
 #define clk_mapconv_apb_ctrl_REG    0x4
 #define clk_mapconv_axi_ctrl_REG    0x8
@@ -184,13 +179,13 @@ struct pp_mode {
 #define clk_vpp0_axi_ctrl_REG       0x1C
 #define clk_vpp1_axi_ctrl_REG       0x20
 #define clk_vpp2_axi_ctrl_REG       0x24
-#define clk_pixrawout_apb_ctrl_REG    		0x28
-#define clk_pixrawout_axi_ctrl_REG    		0x2C
-#define clk_csi2tx_strm0_pixclk_ctrl_REG    0x30
-#define clk_csi2tx_strm0_apb_ctrl_REG    	0x34
-#define clk_dsi_sys_clk_ctrl_REG    		0x38
-#define clk_dsi_apb_ctrl_REG    			0x3C
-#define clk_ppi_tx_esc_clk_ctrl_REG   		0x40
+#define clk_pixrawout_apb_ctrl_REG			0x28
+#define clk_pixrawout_axi_ctrl_REG			0x2C
+#define clk_csi2tx_strm0_pixclk_ctrl_REG	0x30
+#define clk_csi2tx_strm0_apb_ctrl_REG		0x34
+#define clk_dsi_sys_clk_ctrl_REG			0x38
+#define clk_dsi_apb_ctrl_REG				0x3C
+#define clk_ppi_tx_esc_clk_ctrl_REG			0x40
 
 extern void mapconv_pp0_sel(struct starfive_crtc *sf_crtc, int sel);
 extern void pp_srcAddr_next(struct starfive_crtc *sf_crtc, int ppNum, int ysa, int usa, int vsa);

@@ -50,6 +50,7 @@ int starfive_drm_gem_mmap_buf(struct drm_gem_object *obj,
 				struct vm_area_struct *vma)
 {
 	int ret;
+
 	ret = drm_gem_mmap_obj(obj, obj->size, vma);
 	if (ret)
 		return ret;
@@ -70,9 +71,9 @@ int starfive_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma)
 	obj = vma->vm_private_data;
 
 	/*
-	* Set vm_pgoff (used as a fake buffer offset by DRM) to 0 and map the
-	* whole buffer from the start.
-	*/
+	 * Set vm_pgoff (used as a fake buffer offset by DRM) to 0 and map the
+	 * whole buffer from the start.
+	 */
 	vma->vm_pgoff = 0;
 
 	return starfive_drm_gem_object_mmap(obj, vma);
@@ -119,6 +120,7 @@ static int starfive_drm_gem_alloc_dma(struct starfive_drm_gem_obj *starfive_obj,
 	struct drm_gem_object *obj = &starfive_obj->base;
 	struct drm_device *drm = obj->dev;
 	struct starfive_drm_private *private = drm->dev_private;
+
 	starfive_obj->dma_attrs = DMA_ATTR_WRITE_COMBINE;
 
 	if (!alloc_kmap)
@@ -128,8 +130,8 @@ static int starfive_drm_gem_alloc_dma(struct starfive_drm_gem_obj *starfive_obj,
 							&starfive_obj->dma_addr, GFP_KERNEL,
 							starfive_obj->dma_attrs);
 
-	DRM_INFO("kvaddr = 0x%px\n", starfive_obj->kvaddr);
-	DRM_INFO("dma_addr = 0x%x, size = %d \n", starfive_obj->dma_addr, obj->size);
+	DRM_INFO("kvaddr = 0x%x\n", starfive_obj->kvaddr);
+	DRM_INFO("dma_addr = 0x%x, size = %d\n", starfive_obj->dma_addr, obj->size);
 	if (!starfive_obj->kvaddr) {
 		DRM_ERROR("failed to allocate %zu byte dma buffer", obj->size);
 		return -ENOMEM;
@@ -183,7 +185,7 @@ starfive_drm_gem_create_with_handle(struct drm_file *file_priv,
 
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	starfive_gem = starfive_drm_gem_create_object(drm, size, true);//config true,for console display
-#else	
+#else
 	starfive_gem = starfive_drm_gem_create_object(drm, size, false);
 #endif
 	if (IS_ERR(starfive_gem))
@@ -260,7 +262,9 @@ starfive_drm_gem_dma_map_sg(struct drm_device *drm,
 			struct sg_table *sg,
 			struct starfive_drm_gem_obj *starfive_obj)
 {
-	int err = dma_map_sgtable(drm->dev, sg, DMA_BIDIRECTIONAL, 0);
+	int err;
+
+	err = dma_map_sgtable(drm->dev, sg, DMA_BIDIRECTIONAL, 0);
 	if (err)
 		return err;
 
@@ -311,9 +315,8 @@ void *starfive_drm_gem_prime_vmap(struct drm_gem_object *obj)
 			    pgprot_writecombine(PAGE_KERNEL));
 
 	if (starfive_obj->dma_attrs & DMA_ATTR_NO_KERNEL_MAPPING)
-	{
 		return NULL;
-	}
+
 	return starfive_obj->kvaddr;
 }
 

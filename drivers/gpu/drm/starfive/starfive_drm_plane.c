@@ -60,13 +60,11 @@ static int starfive_plane_atomic_check(struct drm_plane *plane,
 	struct drm_crtc_state *crtc_state;
 	int ret;
 
-	if (!fb) {
+	if (!fb)
 		return 0;
-	}
 
-	if (WARN_ON(!state->crtc)) {
+	if (WARN_ON(!state->crtc))
 		return 0;
-	}
 
 	/*ret = starfive_drm_plane_check(state->crtc, plane,
 				       to_starfive_plane_state(state));
@@ -113,18 +111,16 @@ static void starfive_plane_atomic_update(struct drm_plane *plane,
 
 	dma_addr += (plane->state->src.x1 >> 16) * fb->format->cpp[0];
 	dma_addr += (plane->state->src.y1 >> 16) * pitch;
-	if(sf_crtc->ddr_format != format){
+	if (sf_crtc->ddr_format != format) {
 		sf_crtc->ddr_format = format;
 		sf_crtc->ddr_format_change = true;
-	}
-	else
+	} else
 		sf_crtc->ddr_format_change = false;
 
-	if(sf_crtc->dma_addr != dma_addr){
+	if (sf_crtc->dma_addr != dma_addr) {
 		sf_crtc->dma_addr = dma_addr;
 		sf_crtc->dma_addr_change = true;
-	}
-	else
+	} else
 		sf_crtc->dma_addr_change = false;
 
 }
@@ -134,28 +130,25 @@ static int starfive_plane_atomic_async_check(struct drm_plane *plane,
 {
 	struct drm_crtc_state *crtc_state;
 
-	if (plane != state->crtc->cursor) {
+	if (plane != state->crtc->cursor)
 		return -EINVAL;
-	}
 
-	if (!plane->state) {
+	if (!plane->state)
 		return -EINVAL;
-	}
 
-	if (!plane->state->fb) {
+	if (!plane->state->fb)
 		return -EINVAL;
-	}
 
 	if (state->state)
-	   crtc_state = drm_atomic_get_existing_crtc_state(state->state,
+		crtc_state = drm_atomic_get_existing_crtc_state(state->state,
 							   state->crtc);
 	else /* Special case for asynchronous cursor updates. */
-	   crtc_state = state->crtc->state;
+		crtc_state = state->crtc->state;
 
 	return drm_atomic_helper_check_plane_state(plane->state, crtc_state,
-						  DRM_PLANE_HELPER_NO_SCALING,
-						  DRM_PLANE_HELPER_NO_SCALING,
-						  true, true);
+						DRM_PLANE_HELPER_NO_SCALING,
+						DRM_PLANE_HELPER_NO_SCALING,
+						true, true);
 
 }
 
@@ -196,12 +189,13 @@ int starfive_plane_init(struct drm_device *dev, struct starfive_crtc *starfive_c
 						enum drm_plane_type type)
 {
 	int ret;
-    int i;
+	int i;
+
 	ret = drm_universal_plane_init(dev, starfive_crtc->planes, 0,
 				       &starfive_plane_funcs, formats,
 				       ARRAY_SIZE(formats), NULL, type, NULL);
 	if (ret) {
-		dev_err(dev->dev,"failed to initialize plane\n");
+		dev_err(dev->dev, "failed to initialize plane\n");
 		return ret;
 	}
 

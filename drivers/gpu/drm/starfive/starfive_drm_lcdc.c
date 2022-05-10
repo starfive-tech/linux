@@ -1,18 +1,18 @@
 /* driver/video/starfive/starfive_lcdc.c
-**
-** This program is free software; you can redistribute it and/or modify
-** it under the terms of the GNU General Public License version 2 as
-** published by the Free Software Foundation.
-**
-** Copyright (C) 2020 StarFive, Inc.
-**
-** PURPOSE:	This files contains the driver of LCD controller.
-**
-** CHANGE HISTORY:
-**	Version		Date		Author		Description
-**	0.1.0		2020-11-03	starfive		created
-**
-*/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Copyright (C) 2020 StarFive, Inc.
+ *
+ * PURPOSE:	This files contains the driver of LCD controller.
+ *
+ * CHANGE HISTORY:
+ *	Version		Date		Author		Description
+ *	0.1.0		2020-11-03	starfive		created
+ *
+ */
 
 #include <linux/module.h>
 #include <video/starfive_fb.h>
@@ -24,13 +24,13 @@
 
 //#define SF_LCDC_DEBUG	1
 #ifdef SF_LCDC_DEBUG
-	#define LCDC_PRT(format, args...)  printk(KERN_DEBUG "[LCDC]: " format, ## args)
-	#define LCDC_INFO(format, args...) printk(KERN_INFO "[LCDC]: " format, ## args)
+	#define LCDC_PRT(format, args...)	printk(KERN_DEBUG "[LCDC]: " format, ## args)
+	#define LCDC_INFO(format, args...)	printk(KERN_INFO "[LCDC]: " format, ## args)
 	#define LCDC_ERR(format, args...)	printk(KERN_ERR "[LCDC]: " format, ## args)
 #else
-	#define LCDC_PRT(x...)  do{} while(0)
-	#define LCDC_INFO(x...)  do{} while(0)
-	#define LCDC_ERR(x...)  do{} while(0)
+	#define LCDC_PRT(x...)	do {} while (0)
+	#define LCDC_INFO(x...)	do {} while (0)
+	#define LCDC_ERR(x...)	do {} while (0)
 #endif
 
 static const struct res_name mem_res_name[] = {
@@ -76,8 +76,8 @@ static void starfive_lcdc_rstwrite32(struct starfive_crtc *sf_crtc, u32 reg, u32
 void lcdc_mode_cfg(struct starfive_crtc *sf_crtc, uint32_t workMode, int dotEdge, int syncEdge, int r2yBypass,
 					int srcSel, int intSrc, int intFreq)
 {
-  u32 lcdcEn = 0x1;
-  u32 cfg = lcdcEn | workMode << LCDC_WORK_MODE
+	u32 lcdcEn = 0x1;
+	u32 cfg = lcdcEn | workMode << LCDC_WORK_MODE
 				| dotEdge << LCDC_DOTCLK_P
 				| syncEdge << LCDC_HSYNC_P
 				| syncEdge << LCDC_VSYNC_P
@@ -87,8 +87,8 @@ void lcdc_mode_cfg(struct starfive_crtc *sf_crtc, uint32_t workMode, int dotEdge
 				| intSrc << LCDC_INT_SEL
 				| intFreq << LCDC_INT_FREQ;
 
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_GCTRL, cfg);
-  LCDC_PRT("LCDC WorkMode: 0x%x, LCDC Path: %d\n", workMode, srcSel);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_GCTRL, cfg);
+	LCDC_PRT("LCDC WorkMode: 0x%x, LCDC Path: %d\n", workMode, srcSel);
 }
 
 void lcdc_timing_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state, int vunit)
@@ -115,7 +115,7 @@ void lcdc_timing_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state
 	vbk = vsync_len + upper_margin;
 	vfp = lower_margin;
 
- 	LCDC_PRT(" %s : h-sync = %d, h-bp = %d, h-fp = %d", __func__, hsync_len, left_margin, right_margin);
+	LCDC_PRT(" %s : h-sync = %d, h-bp = %d, h-fp = %d", __func__, hsync_len, left_margin, right_margin);
 	LCDC_PRT(" %s : v-sync = %d, v-bp = %d, v-fp = %d", __func__, vsync_len, upper_margin, lower_margin);
 
 	int htiming = hbk | hfp << LCDC_RGB_HFP;
@@ -134,21 +134,20 @@ void lcdc_timing_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state
 //lcdc_desize_cfg(sf_dev, sf_dev->display_info.xres-1, sf_dev->display_info.yres-1);
 void lcdc_desize_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
 {
-  int hsize = state->adjusted_mode.crtc_hdisplay - 1;
-  int vsize = state->adjusted_mode.crtc_vdisplay - 1;
+	int hsize = state->adjusted_mode.crtc_hdisplay - 1;
+	int vsize = state->adjusted_mode.crtc_vdisplay - 1;
+	int sizecfg = hsize | vsize << LCDC_BG_VSIZE;
 
-  int sizecfg = hsize | vsize << LCDC_BG_VSIZE;
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_BACKGROUD, sizecfg);
-  LCDC_PRT("LCDC Dest H-Size: %d, V-Size: %d\n", hsize, vsize);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_BACKGROUD, sizecfg);
+	LCDC_PRT("LCDC Dest H-Size: %d, V-Size: %d\n", hsize, vsize);
 }
 
 void lcdc_rgb_dclk_cfg(struct starfive_crtc *sf_crtc, int dot_clk_sel)
 {
-  int cfg = dot_clk_sel << 16;
+	int cfg = dot_clk_sel << 16;
 
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_RGB_DCLK, cfg);
-
-  LCDC_PRT("LCDC Dot_clock_output_sel: 0x%x\n", cfg);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_RGB_DCLK, cfg);
+	LCDC_PRT("LCDC Dot_clock_output_sel: 0x%x\n", cfg);
 }
 
 
@@ -159,21 +158,21 @@ void lcdc_rgb_dclk_cfg(struct starfive_crtc *sf_crtc, int dot_clk_sel)
 void lcdc_win_cfgA(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state, int winNum, int layEn, int clorTab,
 			int colorEn, int addrMode, int lock)
 {
-   int cfg;
-   int hsize = state->adjusted_mode.crtc_hdisplay - 1;
-   int vsize = state->adjusted_mode.crtc_vdisplay - 1;
-   int srcSel_v = 1;
+	int cfg;
+	int hsize = state->adjusted_mode.crtc_hdisplay - 1;
+	int vsize = state->adjusted_mode.crtc_vdisplay - 1;
+	int srcSel_v = 1;
 
-   if(sf_crtc->pp_conn_lcdc < 0)
+	if (sf_crtc->pp_conn_lcdc < 0)
 		srcSel_v = 0;
 
-   cfg = hsize | vsize << LCDC_WIN_VSIZE | layEn << LCDC_WIN_EN |
-	 clorTab << LCDC_CC_EN | colorEn << LCDC_CK_EN |
-	 srcSel_v << LCDC_WIN_ISSEL | addrMode << LCDC_WIN_PM |
-	 lock << LCDC_WIN_CLK;
+	cfg = hsize | vsize << LCDC_WIN_VSIZE | layEn << LCDC_WIN_EN |
+		clorTab << LCDC_CC_EN | colorEn << LCDC_CK_EN |
+		srcSel_v << LCDC_WIN_ISSEL | addrMode << LCDC_WIN_PM |
+		lock << LCDC_WIN_CLK;
 
-   sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_A + winNum * 0xC, cfg);
-   LCDC_PRT("LCDC Win%d H-Size: %d, V-Size: %d, layEn: %d, Src: %d, AddrMode: %d\n",
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_A + winNum * 0xC, cfg);
+	LCDC_PRT("LCDC Win%d H-Size: %d, V-Size: %d, layEn: %d, Src: %d, AddrMode: %d\n",
 		winNum, hsize, vsize, layEn, srcSel_v, addrMode);
 }
 
@@ -181,17 +180,6 @@ void lcdc_win_cfgA(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state, 
 void lcdc_win_cfgB(struct starfive_crtc *sf_crtc, int winNum, int xpos, int ypos, int argbOrd)
 {
 	int win_format = sf_crtc->lcdcfmt;
-/*
-	if(sf_crtc->pp_conn_lcdc < 0) { //ddr -> lcdc
-		win_format = sf_crtc->ddr_format;
-		LCDC_PRT("LCDC win_format: 0x%x\n",win_format);
-	} else { //ddr -> pp -> lcdc
-		win_format = ppfmt_to_lcdcfmt(sf_crtc->pp[sf_crtc->pp_conn_lcdc].dst.format);
-    }
-*/
-	//if(6 == sf_crtc->encoder_type)
-	//	argbOrd=1;
-
 	int cfg = xpos | ypos << LCDC_WIN_VPOS | win_format << LCDC_WIN_FMT
 		       | argbOrd << LCDC_WIN_ARGB_ORDER;
 
@@ -203,8 +191,8 @@ void lcdc_win_cfgB(struct starfive_crtc *sf_crtc, int winNum, int xpos, int ypos
 //? Color key
 void lcdc_win_cfgC(struct starfive_crtc *sf_crtc, int winNum, int colorKey)
 {
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_C + winNum * 0xC, colorKey);
-  LCDC_PRT("LCDC Win%d Color Key: 0x%6x\n", winNum, colorKey);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_C + winNum * 0xC, colorKey);
+	LCDC_PRT("LCDC Win%d Color Key: 0x%6x\n", winNum, colorKey);
 }
 
 //? hsize
@@ -214,16 +202,52 @@ void lcdc_win_srcSize(struct starfive_crtc *sf_crtc, struct drm_crtc_state *stat
 	int addr, off, winsize, preCfg, cfg;
 	int hsize = state->adjusted_mode.crtc_hdisplay - 1;
 
-	switch(winNum) {
-	case 0 : {addr = LCDC_WIN01_HSIZE; off = 0xfffff000; winsize = hsize; break;}
-	case 1 : {addr = LCDC_WIN01_HSIZE; off = 0xff000fff; winsize = hsize << LCDC_IMG_HSIZE; break;}
-	case 2 : {addr = LCDC_WIN23_HSIZE; off = 0xfffff000; winsize = hsize; break;}
-	case 3 : {addr = LCDC_WIN23_HSIZE; off = 0xff000fff; winsize = hsize << LCDC_IMG_HSIZE; break;}
-	case 4 : {addr = LCDC_WIN45_HSIZE; off = 0xfffff000; winsize = hsize; break;}
-	case 5 : {addr = LCDC_WIN45_HSIZE; off = 0xff000fff; winsize = hsize << LCDC_IMG_HSIZE; break;}
-	case 6 : {addr = LCDC_WIN67_HSIZE; off = 0xfffff000; winsize = hsize; break;}
-	case 7 : {addr = LCDC_WIN67_HSIZE; off = 0xff000fff; winsize = hsize << LCDC_IMG_HSIZE; break;}
-	default: {addr = LCDC_WIN01_HSIZE; off = 0xfffff000; winsize = hsize; break;}
+	switch (winNum) {
+	case 0:
+		addr = LCDC_WIN01_HSIZE;
+		off = 0xfffff000;
+		winsize = hsize;
+		break;
+	case 1:
+		addr = LCDC_WIN01_HSIZE;
+		off = 0xff000fff;
+		winsize = hsize << LCDC_IMG_HSIZE;
+		break;
+	case 2:
+		addr = LCDC_WIN23_HSIZE;
+		off = 0xfffff000;
+		winsize = hsize;
+		break;
+	case 3:
+		addr = LCDC_WIN23_HSIZE;
+		off = 0xff000fff;
+		winsize = hsize << LCDC_IMG_HSIZE;
+		break;
+	case 4:
+		addr = LCDC_WIN45_HSIZE;
+		off = 0xfffff000;
+		winsize = hsize;
+		break;
+	case 5:
+		addr = LCDC_WIN45_HSIZE;
+		off = 0xff000fff;
+		winsize = hsize << LCDC_IMG_HSIZE;
+		break;
+	case 6:
+		addr = LCDC_WIN67_HSIZE;
+		off = 0xfffff000;
+		winsize = hsize;
+		break;
+	case 7:
+		addr = LCDC_WIN67_HSIZE;
+		off = 0xff000fff;
+		winsize = hsize << LCDC_IMG_HSIZE;
+		break;
+	default:
+		addr = LCDC_WIN01_HSIZE;
+		off = 0xfffff000;
+		winsize = hsize;
+		break;
 	}
 	preCfg = sf_fb_lcdcread32(sf_crtc, addr)  & off;
 	cfg = winsize | preCfg;
@@ -239,6 +263,7 @@ void lcdc_alphaVal_cfg(struct starfive_crtc *sf_crtc, int val1, int val2, int va
 			| sel << LCDC_01_ALPHA_SEL;
 
 	int preVal = 0xfffb0000 & sf_fb_lcdcread32(sf_crtc, LCDC_ALPHA_VALUE);
+
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_ALPHA_VALUE, preVal | val);
 	LCDC_PRT("LCDC Alpha 1: %x, 2: %x, 3: %x, 4: %x\n", val1, val2, val3, val4);
 }
@@ -247,22 +272,22 @@ void lcdc_panel_cfg(struct starfive_crtc *sf_crtc, int buswid, int depth, int tx
 		int rgb565sel, int rgb888sel)
 {
 	int cfg = buswid | depth << LCDC_COLOR_DEP
-			  | txcycle << LCDC_TCYCLES
-			  | pixpcycle << LCDC_PIXELS
-			  | rgb565sel << LCDC_565RGB_SEL
-			  | rgb888sel << LCDC_888RGB_SEL;
+			| txcycle << LCDC_TCYCLES
+			| pixpcycle << LCDC_PIXELS
+			| rgb565sel << LCDC_565RGB_SEL
+			| rgb888sel << LCDC_888RGB_SEL;
 
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_PANELDATAFMT, cfg);
-  LCDC_PRT("LCDC bus bit: :%d, pixDep: 0x%x, txCyle: %d, %dpix/cycle, RGB565 2cycle_%d, RGB888 3cycle_%d\n",
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_PANELDATAFMT, cfg);
+	LCDC_PRT("LCDC bus bit: :%d, pixDep: 0x%x, txCyle: %d, %dpix/cycle, RGB565 2cycle_%d, RGB888 3cycle_%d\n",
 		buswid, depth, txcycle, pixpcycle, rgb565sel, rgb888sel);
 }
 
 //winNum: 0-2
 void lcdc_win02Addr_cfg(struct starfive_crtc *sf_crtc, int addr0, int addr1)
 {
-   sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR0 + sf_crtc->winNum * 0x8, addr0);
-   sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR1 + sf_crtc->winNum * 0x8, addr1);
-   LCDC_PRT("LCDC Win%d Start Addr0: 0x%8x, Addr1: 0x%8x\n", sf_crtc->winNum, addr0, addr1);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR0 + sf_crtc->winNum * 0x8, addr0);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR1 + sf_crtc->winNum * 0x8, addr1);
+	LCDC_PRT("LCDC Win%d Start Addr0: 0x%8x, Addr1: 0x%8x\n", sf_crtc->winNum, addr0, addr1);
 }
 
 void starfive_set_win_addr(struct starfive_crtc *sf_crtc, int addr)
@@ -274,8 +299,8 @@ EXPORT_SYMBOL(starfive_set_win_addr);
 void lcdc_enable_intr(struct starfive_crtc *sf_crtc)
 {
 	int cfg;
-	cfg = ~(0x1 << LCDC_OUT_FRAME_END);
 
+	cfg = ~(0x1 << LCDC_OUT_FRAME_END);
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_INT_MSK, cfg);
 }
 EXPORT_SYMBOL(lcdc_enable_intr);
@@ -291,8 +316,7 @@ int lcdc_win_sel(struct starfive_crtc *sf_crtc, enum lcdc_in_mode sel)
 {
 	int winNum = 2;
 
-	switch(sel)
-	{
+	switch (sel) {
 	case LCDC_IN_LCD_AXI:
 		winNum = LCDC_WIN_0;
 		break;
@@ -318,30 +342,30 @@ EXPORT_SYMBOL(lcdc_win_sel);
 
 void lcdc_dsi_sel(struct starfive_crtc *sf_crtc)
 {
-  int temp;
-  u32 lcdcEn = 0x1;
-  u32 workMode = 0x1;
-  u32 cfg = lcdcEn | workMode << LCDC_WORK_MODE;
+	int temp;
+	u32 lcdcEn = 0x1;
+	u32 workMode = 0x1;
+	u32 cfg = lcdcEn | workMode << LCDC_WORK_MODE;
 
-  sf_fb_lcdcwrite32(sf_crtc, LCDC_GCTRL, cfg);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_GCTRL, cfg);
 
-  temp = starfive_lcdc_rstread32(sf_crtc, SRST_ASSERT0);
-  temp &= ~(0x1<<BIT_RST_DSI_DPI_PIX);
-  starfive_lcdc_rstwrite32(sf_crtc, SRST_ASSERT0, temp);
+	temp = starfive_lcdc_rstread32(sf_crtc, SRST_ASSERT0);
+	temp &= ~(0x1<<BIT_RST_DSI_DPI_PIX);
+	starfive_lcdc_rstwrite32(sf_crtc, SRST_ASSERT0, temp);
 }
 EXPORT_SYMBOL(lcdc_dsi_sel);
 
 irqreturn_t lcdc_isr_handler(int this_irq, void *dev_id)
 {
 	struct starfive_crtc *sf_crtc = (struct starfive_crtc *)dev_id;
-	static int count = 0;
+	static int count;
 	u32 intr_status = 0;
 
 	intr_status = sf_fb_lcdcread32(sf_crtc, LCDC_INT_STATUS);
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_INT_CLR, 0xffffffff);
 
-	count ++;
-	if(0 == count % 100)
+	count++;
+	if (count % 100 == 0)
 		LCDC_PRT("lcdc count = %d, intr_status = 0x%x\n", count, intr_status);
 	return IRQ_HANDLED;
 }
@@ -351,7 +375,7 @@ void lcdc_int_cfg(struct starfive_crtc *sf_crtc, int mask)
 {
 	int cfg;
 
-	if(mask==0x1)
+	if (mask == 0x1)
 		cfg = 0xffffffff;
 	else
 		cfg = ~(0x1 << LCDC_OUT_FRAME_END); //only frame end interrupt mask
@@ -366,9 +390,8 @@ void lcdc_config(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state, in
 	lcdc_desize_cfg(sf_crtc, state);
 	lcdc_rgb_dclk_cfg(sf_crtc, 0x1);
 
-	if(sf_crtc->pp_conn_lcdc < 0) { //ddr->lcdc
+	if (sf_crtc->pp_conn_lcdc < 0)
 		lcdc_win02Addr_cfg(sf_crtc, sf_crtc->dma_addr, 0x0);
-	}
 
 	lcdc_win_cfgA(sf_crtc, state, winNum, 0x1, 0x0, 0x0, 0x0, 0x0);
 	lcdc_win_cfgB(sf_crtc, winNum, 0x0, 0x0, 0x0);
@@ -383,6 +406,7 @@ EXPORT_SYMBOL(lcdc_config);
 void lcdc_run(struct starfive_crtc *sf_crtc, uint32_t winMode, uint32_t lcdTrig)
 {
 	uint32_t runcfg = winMode << LCDC_EN_CFG_MODE | lcdTrig;
+
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_SWITCH, runcfg);
 	LCDC_PRT("Start run LCDC\n");
 }
@@ -403,7 +427,8 @@ static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_sta
 	return ret;
 }
 
-static int sf_fb_lcdc_init(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state) {
+static int sf_fb_lcdc_init(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
+{
 	int pp_id;
 	int lcd_in_pp;
 	int winNum;
@@ -428,21 +453,22 @@ static int sf_fb_lcdc_init(struct starfive_crtc *sf_crtc, struct drm_crtc_state 
 
 int starfive_lcdc_enable(struct starfive_crtc *sf_crtc)
 {
-	int ret = 0 ;
+	int ret = 0;
 	struct drm_crtc_state *state = sf_crtc->crtc.state;
+
 	lcdc_disable_intr(sf_crtc);
 
 	if (sf_fb_lcdc_clk_cfg(sf_crtc, state)) {
-		dev_err(sf_crtc->dev,"lcdc clock configure fail\n");
+		dev_err(sf_crtc->dev, "lcdc clock configure fail\n");
 		return -EINVAL;
 	}
 
-	// LCDC_PRT("encoder->encoder_type = %d\n",sf_crtc->encoder_type);
-	// if(DRM_MODE_ENCODER_DSI == sf_crtc->encoder_type)//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
-	// 	lcdc_dsi_sel(sf_crtc);
+	//LCDC_PRT("encoder->encoder_type = %d\n",sf_crtc->encoder_type);
+	//if(DRM_MODE_ENCODER_DSI == sf_crtc->encoder_type)//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
+	//	lcdc_dsi_sel(sf_crtc);
 
 	if (sf_fb_lcdc_init(sf_crtc, state)) {
-		dev_err(sf_crtc->dev,"lcdc init fail\n");
+		dev_err(sf_crtc->dev, "lcdc init fail\n");
 		return -EINVAL;
 	}
 
@@ -457,7 +483,6 @@ EXPORT_SYMBOL(starfive_lcdc_enable);
 
 void starfive_lcdc_disable(struct starfive_crtc *sf_crtc)
 {
-	int ret = 0 ;
 	struct drm_crtc_state *state = sf_crtc->crtc.state;
 
 	lcdc_disable_intr(sf_crtc);

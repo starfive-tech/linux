@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+//SPDX-License-Identifier:GPL-2.0-only
 /*
  * Copyright (c) 2021 StarFive Technology Co., Ltd
  */
@@ -51,63 +51,66 @@ starfive_head_atom_get_encoder(struct starfive_crtc *sf_crtc)
 static int ddrfmt_to_ppfmt(struct starfive_crtc *sf_crtc)
 {
 	int ddrfmt = sf_crtc->ddr_format;
-    int ret = 0;
+	int ret = 0;
 
 	sf_crtc->lcdcfmt = WIN_FMT_xRGB8888;//lcdc default used
 	sf_crtc->pp_conn_lcdc = 1;//default config
-	switch(ddrfmt)
-    {
-        case DRM_FORMAT_UYVY:
-            sf_crtc->vpp_format = COLOR_YUV422_UYVY;
-            break;
-        case DRM_FORMAT_VYUY:
-            sf_crtc->vpp_format = COLOR_YUV422_VYUY;
-            break;
-        case DRM_FORMAT_YUYV:
-            sf_crtc->vpp_format = COLOR_YUV422_YUYV;
-            break;
-        case DRM_FORMAT_YVYU:
-            sf_crtc->vpp_format = COLOR_YUV422_YVYU;
-            break;
-        case DRM_FORMAT_YUV420:
-            sf_crtc->vpp_format = COLOR_YUV420P;
-            break;
-        case DRM_FORMAT_NV21:
-            sf_crtc->vpp_format = COLOR_YUV420_NV21;
-            break;
-        case DRM_FORMAT_NV12:
-            sf_crtc->vpp_format = COLOR_YUV420_NV12;
-            break;
-        case DRM_FORMAT_ARGB8888:
-            sf_crtc->vpp_format = COLOR_RGB888_ARGB;
-            break;
-        case DRM_FORMAT_ABGR8888:
-            sf_crtc->vpp_format = COLOR_RGB888_ABGR;
-            break;
-        case DRM_FORMAT_RGBA8888:
-            sf_crtc->vpp_format = COLOR_RGB888_RGBA;
-            break;
-        case DRM_FORMAT_BGRA8888:
-            sf_crtc->vpp_format = COLOR_RGB888_BGRA;
-            break;
-        case DRM_FORMAT_RGB565:
-            sf_crtc->vpp_format = COLOR_RGB565;
-			//sf_crtc->lcdcfmt = WIN_FMT_RGB565;
-			//sf_crtc->pp_conn_lcdc = -1;//this format no need pp ,lcdc can direct read ddr buff;
-            break;
-		case DRM_FORMAT_XRGB1555:
-			sf_crtc->lcdcfmt = WIN_FMT_xRGB1555;
-			sf_crtc->pp_conn_lcdc = -1;//this format no need pp ,lcdc can direct read ddr buff;
-			break;
-		case DRM_FORMAT_XRGB4444:
-			sf_crtc->lcdcfmt = WIN_FMT_xRGB4444;
-			sf_crtc->pp_conn_lcdc = -1;//this format no need pp ,lcdc can direct read ddr buff;
-			break;
 
-		default:
-			ret = -1;
+	switch (ddrfmt) {
+	case DRM_FORMAT_UYVY:
+		sf_crtc->vpp_format = COLOR_YUV422_UYVY;
 		break;
-    }
+	case DRM_FORMAT_VYUY:
+		sf_crtc->vpp_format = COLOR_YUV422_VYUY;
+		break;
+	case DRM_FORMAT_YUYV:
+		sf_crtc->vpp_format = COLOR_YUV422_YUYV;
+		break;
+	case DRM_FORMAT_YVYU:
+		sf_crtc->vpp_format = COLOR_YUV422_YVYU;
+		break;
+	case DRM_FORMAT_YUV420:
+		sf_crtc->vpp_format = COLOR_YUV420P;
+		break;
+	case DRM_FORMAT_NV21:
+		sf_crtc->vpp_format = COLOR_YUV420_NV21;
+		break;
+	case DRM_FORMAT_NV12:
+		sf_crtc->vpp_format = COLOR_YUV420_NV12;
+		break;
+	case DRM_FORMAT_ARGB8888:
+		sf_crtc->vpp_format = COLOR_RGB888_ARGB;
+		break;
+	case DRM_FORMAT_ABGR8888:
+		sf_crtc->vpp_format = COLOR_RGB888_ABGR;
+		break;
+	case DRM_FORMAT_RGBA8888:
+		sf_crtc->vpp_format = COLOR_RGB888_RGBA;
+		break;
+	case DRM_FORMAT_BGRA8888:
+		sf_crtc->vpp_format = COLOR_RGB888_BGRA;
+		break;
+	case DRM_FORMAT_RGB565:
+		sf_crtc->vpp_format = COLOR_RGB565;
+		//sf_crtc->lcdcfmt = WIN_FMT_RGB565;
+		/*this format no need pp,lcdc can direct read ddr buff*/
+		//sf_crtc->pp_conn_lcdc = -1;
+		break;
+	case DRM_FORMAT_XRGB1555:
+		sf_crtc->lcdcfmt = WIN_FMT_xRGB1555;
+		/*this format no need pp,lcdc can direct read ddr buff*/
+		sf_crtc->pp_conn_lcdc = -1;
+		break;
+	case DRM_FORMAT_XRGB4444:
+		sf_crtc->lcdcfmt = WIN_FMT_xRGB4444;
+		/*this format no need pp,lcdc can direct read ddr buff*/
+		sf_crtc->pp_conn_lcdc = -1;
+		break;
+
+	default:
+		ret = -1;
+		break;
+	}
 
 	return ret;
 }
@@ -142,7 +145,8 @@ static void starfive_crtc_reset(struct drm_crtc *crtc)
 	__drm_atomic_helper_crtc_reset(crtc, &crtc_state->base);
 }
 
-static struct drm_crtc_state *starfive_crtc_duplicate_state(struct drm_crtc *crtc)
+static struct drm_crtc_state *
+starfive_crtc_duplicate_state(struct drm_crtc *crtc)
 {
 	struct starfive_crtc_state *starfive_state;
 
@@ -165,15 +169,13 @@ static void starfive_crtc_disable_vblank(struct drm_crtc *crtc)
 	//need set hw
 }
 
-
-
 static const struct drm_crtc_funcs starfive_crtc_funcs = {
 	.set_config = drm_atomic_helper_set_config,
 	.page_flip = drm_atomic_helper_page_flip,
 	.destroy = starfive_crtc_destroy,
 	.set_property = NULL, //vc
-	.cursor_set = NULL, /* handled by drm_mode_cursor_universal */ //vc
-	.cursor_move = NULL, /* handled by drm_mode_cursor_universal */ //vc
+	.cursor_set = NULL, /* handled by drm_mode_cursor_universal */
+	.cursor_move = NULL, /* handled by drm_mode_cursor_universal */
 	.reset = starfive_crtc_reset,
 	.atomic_duplicate_state = starfive_crtc_duplicate_state,
 	.atomic_destroy_state = starfive_crtc_destroy_state,
@@ -181,7 +183,8 @@ static const struct drm_crtc_funcs starfive_crtc_funcs = {
 	.enable_vblank = starfive_crtc_enable_vblank,
 	.disable_vblank = starfive_crtc_disable_vblank,
 	//.set_crc_source = starfive_crtc_set_crc_source, //rk
-	//.get_vblank_timestamp = drm_crtc_vblank_helper_get_vblank_timestamp, //vc
+	//.get_vblank_timestamp =
+	//drm_crtc_vblank_helper_get_vblank_timestamp, //vc
 	//.verify_crc_source = starfive_crtc_verify_crc_source,	//rk
 };
 
@@ -211,18 +214,17 @@ static void starfive_crtc_atomic_flush(struct drm_crtc *crtc,
 				  struct drm_crtc_state *old_crtc_state)
 {
 	struct starfive_crtc *crtcp = to_starfive_crtc(crtc);
-	DRM_DEBUG("ddr_format_change [%d],dma_addr_change [%d]\n",crtcp->ddr_format_change,crtcp->dma_addr_change);
+
+	DRM_DEBUG("ddr_format_change [%d],dma_addr_change [%d]\n",
+		crtcp->ddr_format_change, crtcp->dma_addr_change);
 	int ret;
 
-	if((crtcp->ddr_format_change == true)||(crtcp->dma_addr_change == true))
-	{
+	if (crtcp->ddr_format_change || crtcp->dma_addr_change) {
 		ret = ddrfmt_to_ppfmt(crtcp);
 		starfive_pp_update(crtcp);
 		starfive_lcdc_enable(crtcp);
-	}
-	else
-		DRM_DEBUG("starfive_crtc_atomic_flush with no change\n");
-
+	} else
+		DRM_DEBUG("%s with no change\n", __func__);
 }
 
 static void starfive_crtc_atomic_enable(struct drm_crtc *crtc,
@@ -232,21 +234,19 @@ static void starfive_crtc_atomic_enable(struct drm_crtc *crtc,
 	struct drm_crtc_state *state = crtc->state;
 	struct drm_encoder *encoder = NULL;
 	struct drm_device *drm = crtc->dev;
-	int ret;
+
 	encoder = starfive_head_atom_get_encoder(crtcp);
 
 	// enable crtc HW
 	if (encoder->encoder_type == DRM_MODE_ENCODER_DSI) {
-		printk("-----%s: %d\n", __func__, __LINE__);
 		dsitx_vout_init(crtcp);
 		lcdc_dsi_sel(crtcp);
-	} else if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS) {
-		printk("-----%s: %d\n", __func__, __LINE__);
+	} else if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
 		vout_reset(crtcp);
-	}
 
 	crtcp->encoder_type = encoder->encoder_type;
-    ret = ddrfmt_to_ppfmt(crtcp);
+
+    ddrfmt_to_ppfmt(crtcp);
 	starfive_pp_enable(crtcp);
 	starfive_lcdc_enable(crtcp);
 	crtcp->is_enabled = true;  // should before
@@ -259,8 +259,9 @@ static void starfive_crtc_atomic_disable(struct drm_crtc *crtc,
 
 	int pp_id;
 	int ret = 0;
+
 	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
-		if(1 == crtcp->pp[pp_id].inited) {
+		if (crtcp->pp[pp_id].inited == 1) {
 			pp_disable_intr(crtcp, pp_id);
 			vout_disable(crtcp);// disable crtc HW
 		}
@@ -268,11 +269,13 @@ static void starfive_crtc_atomic_disable(struct drm_crtc *crtc,
 	crtcp->is_enabled = false;
 }
 
-static enum drm_mode_status starfive_crtc_mode_valid(struct drm_crtc *crtc,
-						 const struct drm_display_mode *mode)
+static enum drm_mode_status starfive_crtc_mode_valid(
+	struct drm_crtc *crtc,
+	const struct drm_display_mode *mode)
 {
 	int refresh = drm_mode_vrefresh(mode);
-	if(refresh > 60)//lcdc miss support 60+ fps
+
+	if (refresh > 60)//lcdc miss support 60+ fps
 		return MODE_BAD;
 	else
 		return MODE_OK;
@@ -290,9 +293,10 @@ static const struct drm_crtc_helper_funcs starfive_crtc_helper_funcs = {
 	//.get_scanout_position = starfive_crtc_get_scanout_position, //vc
 };
 
-int starfive_crtc_create(struct drm_device *drm_dev, struct starfive_crtc *starfive_crtc,
-				  const struct drm_crtc_funcs *crtc_funcs,
-				  const struct drm_crtc_helper_funcs *crtc_helper_funcs)
+int starfive_crtc_create(struct drm_device *drm_dev,
+	struct starfive_crtc *starfive_crtc,
+	const struct drm_crtc_funcs *crtc_funcs,
+	const struct drm_crtc_helper_funcs *crtc_helper_funcs)
 {
 	struct drm_crtc *crtc = &starfive_crtc->crtc;
 	struct device *dev = drm_dev->dev;
@@ -300,9 +304,11 @@ int starfive_crtc_create(struct drm_device *drm_dev, struct starfive_crtc *starf
 	//struct drm_plane *primary_plane;
 	int ret;
 
-	starfive_crtc->planes = devm_kzalloc(dev, sizeof(struct drm_plane), GFP_KERNEL);
+	starfive_crtc->planes = devm_kzalloc(dev, sizeof(struct drm_plane),
+										GFP_KERNEL);
 
-	ret = starfive_plane_init(drm_dev, starfive_crtc, DRM_PLANE_TYPE_PRIMARY);
+	ret = starfive_plane_init(drm_dev, starfive_crtc,
+					DRM_PLANE_TYPE_PRIMARY);
 	if (ret) {
 		dev_err(drm_dev->dev, "failed to construct primary plane\n");
 		return ret;
@@ -324,60 +330,60 @@ int starfive_crtc_create(struct drm_device *drm_dev, struct starfive_crtc *starf
 	return 0;
 }
 
-static int starfive_crtc_get_memres(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
+static int starfive_crtc_get_memres(struct platform_device *pdev,
+	struct starfive_crtc *sf_crtc)
 {
-  struct device *dev = &pdev->dev;
-  struct resource *res;
-  void __iomem *regs;
-  char *name;
-  int i;
+	struct device *dev = &pdev->dev;
+	struct resource *res;
+	void __iomem *regs;
+	char *name;
+	int i;
 
-  for (i = 0; i < sizeof(mem_res_name)/sizeof(struct resource_name); i++) {
-	  name = (char *)(& mem_res_name[i]);
-	  res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
-	  regs = devm_ioremap_resource(dev, res);
-	  if (IS_ERR(regs))
-		  return PTR_ERR(regs);
+	for (i = 0; i < ARRAY_SIZE(mem_res_name); i++) {
+		name = (char *)(&mem_res_name[i]);
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
+		regs = devm_ioremap_resource(dev, res);
+		if (IS_ERR(regs))
+			return PTR_ERR(regs);
 
-	  if(!strcmp(name, "lcdc")) {
-		  sf_crtc->base_lcdc = regs;
-	  } else if (!strcmp(name, "vpp0")) {
-		  sf_crtc->base_vpp0 = regs;
-	  } else if (!strcmp(name, "vpp1")) {
-		  sf_crtc->base_vpp1 = regs;
-	  } else if (!strcmp(name, "vpp2")) {
-		  sf_crtc->base_vpp2 = regs;
-	  } else if (!strcmp(name, "clk")) {
-		  sf_crtc->base_clk = regs;
-	  } else if (!strcmp(name, "rst")) {
-		  sf_crtc->base_rst = regs;
-	  } else if (!strcmp(name, "sys")) {
-		  sf_crtc->base_syscfg = regs;
-	  } else {
-		  dev_err(&pdev->dev, "Could not match resource name\n");
-	  }
-  }
+		if (!strcmp(name, "lcdc"))
+			sf_crtc->base_lcdc = regs;
+		else if (!strcmp(name, "vpp0"))
+			sf_crtc->base_vpp0 = regs;
+		else if (!strcmp(name, "vpp1"))
+			sf_crtc->base_vpp1 = regs;
+		else if (!strcmp(name, "vpp2"))
+			sf_crtc->base_vpp2 = regs;
+		else if (!strcmp(name, "clk"))
+			sf_crtc->base_clk = regs;
+		else if (!strcmp(name, "rst"))
+			sf_crtc->base_rst = regs;
+		else if (!strcmp(name, "sys"))
+			sf_crtc->base_syscfg = regs;
+		else
+			dev_err(&pdev->dev, "Could not match resource name\n");
+	}
 
-  sf_crtc->topclk= ioremap(0x11800000, 0x10000);
-  sf_crtc->toprst= ioremap(0x11840000, 0x10000);
+	sf_crtc->topclk = ioremap(0x11800000, 0x10000);
+	sf_crtc->toprst = ioremap(0x11840000, 0x10000);
 
-  return 0;
+	return 0;
 }
 
-static int starfive_parse_dt(struct device *dev, struct starfive_crtc *sf_crtc) {
+static int starfive_parse_dt(struct device *dev,
+	struct starfive_crtc *sf_crtc)
+{
 	int ret;
 	struct device_node *np = dev->of_node;
 	struct device_node *child;
 	int pp_num = 0;
 
-	if(!np)
+	if (!np)
 		return -EINVAL;
 
 	sf_crtc->pp = devm_kzalloc(dev, sizeof(struct pp_mode) * PP_NUM, GFP_KERNEL);
-	if (!sf_crtc->pp) {
-		dev_err(dev,"allocate memory for platform data failed\n");
+	if (!sf_crtc->pp)
 		return -ENOMEM;
-	}
 
 	for_each_child_of_node(np, child) {
 		if (of_property_read_u32(child, "pp-id", &pp_num)) {
@@ -385,33 +391,33 @@ static int starfive_parse_dt(struct device *dev, struct starfive_crtc *sf_crtc) 
 			continue;
 		}
 		if (pp_num >= PP_NUM)
-			dev_err(dev," pp-id number %d is not support!\n", pp_num);
+			dev_err(dev, "pp-id number %d is not support!\n", pp_num);
 
 		sf_crtc->pp[pp_num].pp_id = pp_num;
 		sf_crtc->pp[pp_num].bus_out = of_property_read_bool(child, "sys-bus-out");
 		sf_crtc->pp[pp_num].fifo_out = of_property_read_bool(child, "fifo-out");
 		if (of_property_read_u32(child, "src-format", &sf_crtc->pp[pp_num].src.format)) {
-			dev_err(dev,"Missing src-format property in the DT.\n");
+			dev_err(dev, "Missing src-format property in the DT.\n");
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "src-width", &sf_crtc->pp[pp_num].src.width)) {
-			dev_err(dev,"Missing src-width property in the DT. w %d \n", sf_crtc->pp[pp_num].src.width);
+			dev_err(dev, "Missing src-width property in the DT. w %d\n", sf_crtc->pp[pp_num].src.width);
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "src-height", &sf_crtc->pp[pp_num].src.height)) {
-			dev_err(dev,"Missing src-height property in the DT.\n");
+			dev_err(dev, "Missing src-height property in the DT.\n");
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "dst-format", &sf_crtc->pp[pp_num].dst.format)) {
-			dev_err(dev,"Missing dst-format property in the DT.\n");
+			dev_err(dev, "Missing dst-format property in the DT.\n");
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "dst-width", &sf_crtc->pp[pp_num].dst.width)) {
-			dev_err(dev,"Missing dst-width property in the DT.\n");
+			dev_err(dev, "Missing dst-width property in the DT.\n");
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "dst-height", &sf_crtc->pp[pp_num].dst.height)) {
-			dev_err(dev,"Missing dst-height property in the DT.\n");
+			dev_err(dev, "Missing dst-height property in the DT.\n");
 			ret = -EINVAL;
 		}
 
@@ -499,7 +505,6 @@ static void starfive_crtc_unbind(struct device *dev, struct device *master, void
 	crtcp->is_enabled = false;
 }
 
-
 static const struct component_ops starfive_crtc_component_ops = {
 	.bind   = starfive_crtc_bind,
 	.unbind = starfive_crtc_unbind,
@@ -520,7 +525,6 @@ static int starfive_crtc_probe(struct platform_device *pdev)
 
 static int starfive_crtc_remove(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	component_del(&pdev->dev, &starfive_crtc_component_ops);
 	return 0;
 }

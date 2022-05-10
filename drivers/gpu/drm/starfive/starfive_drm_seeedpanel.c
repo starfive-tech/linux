@@ -39,25 +39,25 @@
 
 /* I2C registers of the Atmel microcontroller. */
 enum REG_ADDR {
-    REG_ID = 0x80,
-    REG_PORTA, /* BIT(2) for horizontal flip, BIT(3) for vertical flip */
-    REG_PORTB,
-    REG_PORTC,
-    REG_PORTD,
-    REG_POWERON,
-    REG_PWM,
-    REG_DDRA,
-    REG_DDRB,
-    REG_DDRC,
-    REG_DDRD,
-    REG_TEST,
-    REG_WR_ADDRL,
-    REG_WR_ADDRH,
-    REG_READH,
-    REG_READL,
-    REG_WRITEH,
-    REG_WRITEL,
-    REG_ID2,
+	REG_ID = 0x80,
+	REG_PORTA, /* BIT(2) for horizontal flip, BIT(3) for vertical flip */
+	REG_PORTB,
+	REG_PORTC,
+	REG_PORTD,
+	REG_POWERON,
+	REG_PWM,
+	REG_DDRA,
+	REG_DDRB,
+	REG_DDRC,
+	REG_DDRD,
+	REG_TEST,
+	REG_WR_ADDRL,
+	REG_WR_ADDRH,
+	REG_READH,
+	REG_READL,
+	REG_WRITEH,
+	REG_WRITEL,
+	REG_ID2,
 };
 
 /* DSI D-PHY Layer Registers */
@@ -174,8 +174,7 @@ struct seeed_panel_dev {
 	struct mipi_dsi_device *dsi;
 
 	struct device   *dev;
-	int 			irq;
-
+	int			irq;
 };
 
 #if 0
@@ -204,9 +203,9 @@ static void seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
 {
 	int ret;
 
-	do{
+	do {
 		ret = i2c_smbus_write_byte_data(client, reg, val);
-	}while(ret);
+	} while (ret);
 
 	if (ret)
 		printk("I2C write failed: %d\n", ret);
@@ -233,9 +232,8 @@ static int seeed_panel_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
 	msg[1].len = 1;
 
 	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret >= 0) {
+	if (ret >= 0)
 		return 0;
-	}
 
 	return ret;
 }
@@ -249,14 +247,14 @@ static int seeed_panel_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
 
 
 enum dsi_rgb_pattern_t {
-    RGB_PAT_WHITE,
-    RGB_PAT_BLACK,
-    RGB_PAT_RED,
-    RGB_PAT_GREEN,
-    RGB_PAT_BLUE,
-    RGB_PAT_HORIZ_COLORBAR,
-    RGB_PAT_VERT_COLORBAR,
-    RGB_PAT_NUM
+	RGB_PAT_WHITE,
+	RGB_PAT_BLACK,
+	RGB_PAT_RED,
+	RGB_PAT_GREEN,
+	RGB_PAT_BLUE,
+	RGB_PAT_HORIZ_COLORBAR,
+	RGB_PAT_VERT_COLORBAR,
+	RGB_PAT_NUM
 };
 
 static struct seeed_panel_dev *panel_to_seeed(struct drm_panel *panel)
@@ -295,31 +293,17 @@ t_delta_vfp_last(DSI - DPI):	0.00ns (0.00% dsi line)
 */
 
 static const struct drm_display_mode seeed_panel_modes[] = {
-	#ifdef USE_OLD_SCREEN  //seeed panel
-	{
-		.clock = 27500000/1000,
-		.hdisplay = 800,
-		.hsync_start = 800 + 50,
-		.hsync_end = 800 + 50 + 20,
-		.htotal = 800 + 50 + 20+ 10,
-		.vdisplay = 480,
-		.vsync_start = 480 + 135,
-		.vsync_end = 480 + 135 + 5,
-		.vtotal = 480 + 135 + 5 + 5,
-	},
-	#else
 	{
 		.clock = 27000000 / 1000,
 		.hdisplay = 800,
 		.hsync_start = 800 + 90,
 		.hsync_end = 800 + 90 + 5,
-		.htotal = 800 + 90 + 5+ 5,
+		.htotal = 800 + 90 + 5 + 5,
 		.vdisplay = 480,
 		.vsync_start = 480 + 10,
 		.vsync_end = 480 + 10 + 5,
 		.vtotal = 480 + 10 + 5 + 5,
 	},
-	#endif
 };
 
 static int seeed_dsi_write(struct drm_panel *panel, u16 reg, u32 val)
@@ -345,6 +329,7 @@ static void dump_seeed_panel(struct drm_panel *panel)
 	struct seeed_panel_dev *sp = panel_to_seeed(panel);
 	int addr = 0;
 	u8 reg_value = 0;
+
 	for (addr = REG_ID; addr <= REG_ID2; addr++) {
 		seeed_panel_i2c_read(sp->client, addr, &reg_value);
 		printk("addr = 0x%x, val = 0x%x\n", addr, reg_value);
@@ -382,10 +367,10 @@ static int seeed_panel_enable(struct drm_panel *panel)
 	seeed_panel_i2c_write(sp->client, REG_POWERON, 1);
 	udelay(5000);
 	/* Wait for nPWRDWN to go low to indicate poweron is done. */
-    for (i = 0; i < 100; i++) {
+	for (i = 0; i < 100; i++) {
 		seeed_panel_i2c_read(sp->client, REG_PORTB, &reg_value);
-        if (reg_value & 1)
-            break;
+		if (reg_value & 1)
+			break;
     }
 
 	seeed_dsi_write(panel, DSI_LANEENABLE,
@@ -497,27 +482,18 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 
 	seeed_panel_i2c_read(client, REG_ID, &reg_value);
 	switch (reg_value) {
-		case 0xde: /* ver 1 */
-		case 0xc3: /* ver 2 */
+	case 0xde: /* ver 1 */
+	case 0xc3: /* ver 2 */
 		break;
 
-		default:
-			dev_err(&client->dev, "Unknown Atmel firmware revision: 0x%02x\n", reg_value);
-			//return -ENODEV;
+	default:
+		dev_err(&client->dev, "Unknown Atmel firmware revision: 0x%02x\n", reg_value);
+		//return -ENODEV;
 	}
 
 	seeed_panel_i2c_write(client, REG_PWM, 0);
     seeed_panel_i2c_write(client, REG_POWERON, 0);
 	udelay(1);
-#if 0
-    mdelay(5);
-    /* Wait for nPWRDWN to go low to indicate poweron is done. */
-    for (i = 0; i < 100; i++) {
-		seeed_panel_i2c_read(client, REG_PORTB, &reg_value);
-        if (reg_value & 1)
-            break;
-    }
-#endif
 
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!endpoint)
@@ -590,7 +566,7 @@ static struct i2c_driver seeed_panel_driver = {
 	.driver = {
 		.owner	= THIS_MODULE,
 		.name	= "seeed_panel",
-        .of_match_table = seeed_panel_dt_ids,
+		.of_match_table = seeed_panel_dt_ids,
 	},
 	.probe		= seeed_panel_probe,
 	.remove		= seeed_panel_remove,
@@ -622,13 +598,9 @@ static struct mipi_dsi_driver seeed_dsi_driver = {
 int init_seeed_panel(void)
 {
 	printk("-----%s: %d\n", __func__, __LINE__);
-    int err;
 	mipi_dsi_driver_register(&seeed_dsi_driver);
 
-	err = i2c_add_driver(&seeed_panel_driver);
-    if (err != 0)
-		printk("i2c driver registration failed, error=%d\n", err);
-	return err;
+	return i2c_add_driver(&seeed_panel_driver);
 }
 EXPORT_SYMBOL(init_seeed_panel);
 

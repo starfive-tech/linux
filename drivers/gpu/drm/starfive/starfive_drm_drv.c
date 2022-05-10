@@ -130,9 +130,9 @@ static int starfive_drm_bind(struct device *dev)
 
 	drm_dev->dev_private = private;
 
-	/*ret = starfive_drm_init_iommu(drm_dev);
-	if (ret)
-		goto err_free;*/
+	//ret = starfive_drm_init_iommu(drm_dev);
+	//if (ret)
+	//	goto err_free;
 
 	ret = drmm_mode_config_init(drm_dev);
 	if (ret)
