@@ -5,6 +5,7 @@
  */
 
 /dts-v1/;
+#include "starfive_vic7100_clk.dtsi"
 #include <dt-bindings/clock/starfive-jh7100.h>
 #include <dt-bindings/clock/starfive-jh7100-audio.h>
 #include <dt-bindings/reset/starfive-jh7100.h>
@@ -309,6 +310,46 @@
 			#reset-cells = <1>;
 		};
 
+		gpio: pinctrl@11910000 {
+			compatible = "starfive,jh7100-pinctrl";
+			reg = <0x0 0x11910000 0x0 0x10000>,
+			      <0x0 0x11858000 0x0 0x1000>;
+			reg-names = "gpio", "padctl";
+			clocks = <&clkgen JH7100_CLK_GPIO_APB>;
+			resets = <&rstgen JH7100_RSTN_GPIO_APB>;
+			interrupts = <32>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		i2c0: i2c@118b0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x118b0000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_I2C0_CORE>,
+				 <&clkgen JH7100_CLK_I2C0_APB>;
+			clock-names = "ref", "pclk";
+			resets = <&rstgen JH7100_RSTN_I2C0_APB>;
+			interrupts = <96>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c1: i2c@118c0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x118c0000 0x0 0x10000>;
+			clocks = <&clkgen JH7100_CLK_I2C1_CORE>,
+				 <&clkgen JH7100_CLK_I2C1_APB>;
+			clock-names = "ref", "pclk";
+			resets = <&rstgen JH7100_RSTN_I2C1_APB>;
+			interrupts = <97>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		qspi: spi@11860000 {
 			compatible = "cdns,qspi-nor";
 			reg = <0x0 0x11860000 0x0 0x10000>,
@@ -378,32 +419,6 @@
 			status = "disabled";
 		};
 
-		i2c0: i2c@118b0000 {
-			compatible = "snps,designware-i2c";
-			reg = <0x0 0x118b0000 0x0 0x10000>;
-			clocks = <&clkgen JH7100_CLK_I2C0_CORE>,
-				 <&clkgen JH7100_CLK_I2C0_APB>;
-			clock-names = "ref", "pclk";
-			resets = <&rstgen JH7100_RSTN_I2C0_APB>;
-			interrupts = <96>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		i2c1: i2c@118c0000 {
-			compatible = "snps,designware-i2c";
-			reg = <0x0 0x118c0000 0x0 0x10000>;
-			clocks = <&clkgen JH7100_CLK_I2C1_CORE>,
-				 <&clkgen JH7100_CLK_I2C1_APB>;
-			clock-names = "ref", "pclk";
-			resets = <&rstgen JH7100_RSTN_I2C1_APB>;
-			interrupts = <97>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
 		trng: trng@118d0000 {
 			compatible = "starfive,vic-rng";
 			reg = <0x0 0x118d0000 0x0 0x10000>;
@@ -439,70 +454,12 @@
 			memory-region = <&jpu_reserved>;
 		};
 
-		gpio: pinctrl@11910000 {
-			compatible = "starfive,jh7100-pinctrl";
-			reg = <0x0 0x11910000 0x0 0x10000>,
-			      <0x0 0x11858000 0x0 0x1000>;
-			reg-names = "gpio", "padctl";
-			clocks = <&clkgen JH7100_CLK_GPIO_APB>;
-			resets = <&rstgen JH7100_RSTN_GPIO_APB>;
-			interrupts = <32>;
-			gpio-controller;
-			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
-		};
-
 		nvdla@11940000 {
 			compatible = "nvidia,nvdla_os_initial";
 			interrupts = <22>;
 			memory-region = <&nvdla_reserved>;
 			reg = <0x0 0x11940000 0x0 0x40000>;
 			status = "okay";
-		};
-
-		display: display-subsystem {
-			compatible = "starfive,display-subsystem";
-			dma-coherent;
-			status = "disabled";
-		};
-
-		encoder: display-encoder {
-			compatible = "starfive,display-encoder";
-			status = "disabled";
-		};
-
-		crtc: crtc@12000000 {
-			compatible = "starfive,jh7100-crtc";
-			reg = <0x0 0x12000000 0x0 0x10000>,
-			      <0x0 0x12040000 0x0 0x10000>,
-			      <0x0 0x12080000 0x0 0x10000>,
-			      <0x0 0x120c0000 0x0 0x10000>,
-			      <0x0 0x12240000 0x0 0x10000>,
-			      <0x0 0x12250000 0x0 0x10000>,
-			      <0x0 0x12260000 0x0 0x10000>;
-			reg-names = "lcdc", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
-			clocks = <&clkgen JH7100_CLK_DISP_AXI>, <&clkgen JH7100_CLK_VOUT_SRC>;
-			clock-names = "disp_axi", "vout_src";
-			resets = <&rstgen JH7100_RSTN_DISP_AXI>, <&rstgen JH7100_RSTN_VOUT_SRC>;
-			reset-names = "disp_axi", "vout_src";
-			interrupts = <101>, <103>;
-			interrupt-names = "lcdc_irq", "vpp1_irq";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-
-			pp1 {
-				pp-id = <1>;
-				fifo-out;
-				//sys-bus-out;
-				src-format = <11>; //<COLOR_RGB565>;
-				src-width = <1920>;
-				src-height = <1080>;
-				dst-format = <7>; //<COLOR_RGB888_ARGB>;
-				dst-width = <1920>;
-				dst-height = <1080>;
-			};
 		};
 
 		spi2: spi@12410000 {
@@ -691,6 +648,89 @@
 			};
 		};
 
+		display: display-subsystem {
+			compatible = "starfive,display-subsystem";
+			dma-coherent;
+			status = "disabled";
+		};
+
+		connector0: display-connector {
+			compatible = "starfive,connector-tda998x";
+		};
+
+		encoder: display-encoder {
+			compatible = "starfive,display-encoder";
+			status = "disabled";
+		};
+
+		crtc: crtc@12000000 {
+			compatible = "starfive,jh7100-crtc";
+			reg = <0x0 0x12000000 0x0 0x10000>,
+			      <0x0 0x12040000 0x0 0x10000>,
+			      <0x0 0x12080000 0x0 0x10000>,
+			      <0x0 0x120c0000 0x0 0x10000>,
+			      <0x0 0x12240000 0x0 0x10000>,
+			      <0x0 0x12250000 0x0 0x10000>,
+			      <0x0 0x12260000 0x0 0x10000>;
+			reg-names = "lcdc", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
+			clocks = <&clkgen JH7100_CLK_DISP_AXI>, <&clkgen JH7100_CLK_VOUT_SRC>;
+			clock-names = "disp_axi", "vout_src";
+			resets = <&rstgen JH7100_RSTN_DISP_AXI>, <&rstgen JH7100_RSTN_VOUT_SRC>;
+			reset-names = "disp_axi", "vout_src";
+			interrupts = <101>, <103>;
+			interrupt-names = "lcdc_irq", "vpp1_irq";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+
+			pp1 {
+				pp-id = <1>;
+				fifo-out;
+				//sys-bus-out;
+				src-format = <11>; //<COLOR_RGB565>;
+				src-width = <1920>;
+				src-height = <1080>;
+				dst-format = <7>; //<COLOR_RGB888_ARGB>;
+				dst-width = <1920>;
+				dst-height = <1080>;
+			};
+		};
+
+		mipi_dphy: mipi-dphy@12260000{
+				compatible = "starfive,jh7100-mipi-dphy-tx";
+				//reg = <0x0 0x12260000 0x0 0x10000>;
+				clocks = <&uartclk>, <&apb2clk>;
+				clock-names = "baudclk", "apb_pclk";
+				#phy-cells = <0>;
+		};
+
+		mipi_dsi: mipi@12100000 {
+			compatible = "cdns,dsi";
+			clocks = <&apb1clk>, <&apb2clk>;
+			clock-names = "dsi_p_clk", "dsi_sys_clk";
+			phys = <&mipi_dphy>;
+			phy-names = "dphy";
+			status = "okay";
+			reg = <0x0 0x12100000 0x0 0x10000>;
+			reg-names = "dsi";
+
+			port {
+				dsi_out_port: endpoint {
+					remote-endpoint = <&panel_dsi_port>;
+				};
+			};
+			mipi_panel: panel@0 {
+				//compatible = "";
+				status = "okay";
+			};
+		};
+
+		wm8960_mclk: wm8960_mclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+#if 0
 		i2sadc0: i2sadc0@10400000 {
 			compatible = "snps,designware-i2sadc0";
 			reg = <0x0 0x10400000 0x0 0x1000>;
@@ -723,7 +763,7 @@
 			dmas = <&dma2p 28>;
 			dma-names = "rx";
 		};
-		
+
 		i2svad: i2svad@10420000 {
 			compatible = "sf,sf-i2svad";
 			reg = <0x0 0x10420000 0x0 0x1000> ;
@@ -744,7 +784,7 @@
 				 <&audclk JH7100_AUDCLK_I2SDAC_APB>,
 				 <&audclk JH7100_AUDCLK_I2SDAC_BCLK_IOPAD>,
 				 <&audclk JH7100_AUDCLK_I2SDAC_LRCLK_IOPAD>;
-			clock-names = "dac_mclk", "i2sdac0_bclk", "i2sdac0_lrclk", 
+			clock-names = "dac_mclk", "i2sdac0_bclk", "i2sdac0_lrclk",
 				      "i2sdac_apb", "i2sdac_bclk_iopad", "i2sdac_lrclk_iopad";
 			resets = <&audrst JH7100_AUDRSTN_I2SDAC_APB>,
 				 <&audrst JH7100_AUDRSTN_I2SDAC_SRST>;
@@ -753,7 +793,7 @@
 			dmas = <&dma2p 30>;
 			dma-names = "tx";
 		};
-		
+
 		i2sdac16k: i2sdac16k@10470000 {
 			compatible = "snps,designware-i2sdac16k";
 			reg = <0x0 0x10470000 0x0 0x1000>;
@@ -770,8 +810,8 @@
 		spdif_transmitter: spdif_transmitter {
 			compatible = "linux,spdif-dit";
 			#sound-dai-cells = <0>;
-		};	
-		
+		};
+
 		spdif_receiver: spdif_receiver {
 			compatible = "linux,spdif-dir";
 			#sound-dai-cells = <0>;
@@ -805,11 +845,11 @@
 			compatible = "linux,pwmdac-dit";
 			#sound-dai-cells = <0>;
 		};
-		
-		dmic_codec: dmic_codec { 
+
+		dmic_codec: dmic_codec {
 			compatible = "dmic-codec";
 			#sound-dai-cells = <0>;
-		}; 
+		};
 
 		sound:snd-card{
 			compatible = "simple-audio-card";
@@ -823,7 +863,7 @@
 				format = "left_j";
 				bitclock-master = <&sndcpu0>;
 				frame-master = <&sndcpu0>;
-				
+
 				sndcpu0: cpu {
 					sound-dai = <&pwmdac>;
 				};

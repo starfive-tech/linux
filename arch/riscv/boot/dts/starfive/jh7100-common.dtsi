@@ -90,44 +90,6 @@
 	};
 };
 
-&display {
-	memory-region = <&sffb_reserved>;
-	status = "okay";
-};
-
-&crtc {
-	ddr-format = <4>; //<WIN_FMT_RGB565>;
-	status = "okay";
-
-	port: port@0 {
-		reg = <0>;
-
-		crtc_0_out: endpoint {
-			remote-endpoint = <&hdmi_input0>;
-		};
-	};
-};
-
-&encoder {
-	encoder-type = <2>; // 2-TMDS, 3-LVDS, 6-DSI, 8-DPI
-	status = "okay";
-
-	ports {
-		port@0 {
-			hdmi_out: endpoint {
-				remote-endpoint = <&tda998x_0_input>;
-			};
-		};
-
-		port@1 {
-			hdmi_input0: endpoint {
-				remote-endpoint = <&crtc_0_out>;
-			};
-		};
-
-	};
-};
-
 &gmac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac_pins>;
@@ -486,19 +448,6 @@
 	};
 #endif
 
-#ifdef AC108_ENABLED
-	ac108_a: ac108@3b {
-		compatible = "x-power,ac108_0";
-		reg = <0x3b>;
-		#sound-dai-cells = <0>;
-		data-protocol = <0>;
-	};
-#endif
-
-	seeed_plane_i2c@45 {
-		compatible = "seeed_panel";
-		reg = <0x45>;
-	};
 	#if 0
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
@@ -544,7 +493,7 @@
 			};
 		};
 	};
-	#endif	
+	#endif
 };
 
 &i2c2 {
@@ -555,6 +504,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
 	status = "okay";
+
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+
+		port {
+			panel_dsi_port: endpoint {
+				remote-endpoint = <&dsi_out_port>;
+			};
+		};
+	};
 };
 
 &osc_sys {
@@ -664,4 +624,55 @@
 &usb3 {
 	dr_mode = "host";
 	status = "okay";
+};
+
+&display {
+	memory-region = <&sffb_reserved>;
+	status = "okay";
+};
+
+&crtc {
+	ddr-format = <4>; //<WIN_FMT_RGB565>;
+	status = "okay";
+
+	port: port@0 {
+		reg = <0>;
+
+		crtc_0_out: endpoint {
+			remote-endpoint = <&hdmi_input0>;
+		};
+	};
+};
+
+&encoder {
+	status = "okay";
+
+	ports {
+		port@0 {
+			reg = <0>;
+
+			hdmi_out: endpoint@0 {
+				remote-endpoint = <&tda998x_0_input>;
+				encoder-type = <2>;	//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
+				reg = <0>;
+				status = "okay";
+			};
+
+			mipi_out: endpoint@1 {
+				remote-endpoint = <&dsi_out_port>;
+				encoder-type = <6>;	//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
+				reg = <1>;
+				status = "failed";
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			hdmi_input0: endpoint@0 {
+				remote-endpoint = <&crtc_0_out>;
+				reg = <0>;
+				status = "failed";
+			};
+		};
+	};
 };
