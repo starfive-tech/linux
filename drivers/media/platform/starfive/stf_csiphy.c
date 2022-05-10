@@ -40,6 +40,7 @@ static int csiphy_set_power(struct v4l2_subdev *sd, int on)
 
 #ifdef CONFIG_VIDEO_CADENCE_CSI2RX
 	struct stf_csiphy_dev *csiphy_dev = v4l2_get_subdevdata(sd);
+
 	if (on)
 		csiphy_dev->hw_ops->cdns_csi_power(csiphy_dev, on);
 #endif
@@ -84,7 +85,7 @@ __csiphy_get_format(struct stf_csiphy_dev *csiphy_dev,
 		enum v4l2_subdev_format_whence which)
 {
 	if (which == V4L2_SUBDEV_FORMAT_TRY)
-		return v4l2_subdev_get_try_format( &csiphy_dev->subdev, cfg, pad);
+		return v4l2_subdev_get_try_format(&csiphy_dev->subdev, cfg, pad);
 
 	return &csiphy_dev->fmt[pad];
 }

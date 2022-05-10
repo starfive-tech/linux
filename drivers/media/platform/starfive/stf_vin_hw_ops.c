@@ -37,7 +37,7 @@ static int vin_rstgen_assert_reset(struct stf_vin_dev *vin)
 }
 #endif
 
-static void vin_intr_clear(void __iomem * sysctrl_base)
+static void vin_intr_clear(void __iomem *sysctrl_base)
 {
 	reg_set_bit(sysctrl_base, SYSCTRL_VIN_INTP_CTRL, BIT(0), 0x1);
 	reg_set_bit(sysctrl_base, SYSCTRL_VIN_INTP_CTRL, BIT(0), 0x0);
@@ -105,23 +105,21 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 
 	for (i = STFRST_VIN_SRC; i <= STFRST_ISP1NOC_AXI; i++) {
 		ret = reset_control_reset(stfcamss->sys_rst[i].rst);
-		if(ret){
+		if (ret) {
 			st_err(ST_VIN, "%s reset rst %d failed\n", __func__, i);
 			return ret;
 		}
 	}
 
 	// hold vin resets for sub modules before csi2rx controller get configed
-	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+	for (i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++)
 		reset_control_assert(stfcamss->sys_rst[i].rst);
-	}
 
 	// clear reset for all vin submodules
 	// except dphy-rx (follow lunhai's advice)
-	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
-		if(i != STFRST_DPHY_HW_RSTN) {
+	for (i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+		if (i != STFRST_DPHY_HW_RSTN)
 			reset_control_deassert(stfcamss->sys_rst[i].rst);
-		}
 	}
 
 	// disable clk
@@ -195,14 +193,12 @@ static int stf_vin_clk_enable(struct stf_vin2_dev *vin_dev)
 	}
 
 	/* rst disable */
-	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+	for (i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++)
 		reset_control_assert(stfcamss->sys_rst[i].rst);
-	}
 
 	/* rst enable */
-	for(i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++) {
+	for (i = STFRST_SYS_CLK; i <= STFRST_C_ISP1; i++)
 		reset_control_deassert(stfcamss->sys_rst[i].rst);
-	}
 
 	return ret;
 #else

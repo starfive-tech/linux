@@ -69,6 +69,7 @@ static int stf_csiphy_clk_enable(struct stf_csiphy_dev *csiphy_dev)
 	// enable clk
 	struct stfcamss *stfcamss = csiphy_dev->stfcamss;
 	int ret = 0;
+
 	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_CFGCLK].clk, 100000000);
 	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_REFCLK].clk, 50000000);
 	clk_set_rate(stfcamss->sys_clk[STFCLK_CSIDPHY_TXCLKESC].clk, 20000000);
@@ -88,6 +89,7 @@ static int stf_csiphy_clk_disable(struct stf_csiphy_dev *csiphy_dev)
 {
 #ifdef USE_CLK_TREE
 	struct stfcamss *stfcamss = csiphy_dev->stfcamss;
+
 	stfcamss_disable_clocks(3, &stfcamss->sys_clk[STFCLK_CSIDPHY_CFGCLK]);
 	return 0;
 #else
@@ -233,7 +235,7 @@ static int stf_csiphy_config_set(struct stf_csiphy_dev *csiphy_dev)
 {
 	struct stf_vin_dev *vin = csiphy_dev->stfcamss->vin;
 
-	st_debug(ST_CSIPHY, "%s, csiphy id = %d\n",__func__, csiphy_dev->id);
+	st_debug(ST_CSIPHY, "%s, csiphy id = %d\n", __func__, csiphy_dev->id);
 	csi2rx_dphy_config(vin, csiphy_dev);
 	return 0;
 }
@@ -251,14 +253,14 @@ static int stf_csi_clk_enable(struct stf_csiphy_dev *csiphy_dev)
 	reg_set_highest_bit(vin->clkgen_base, CLK_CSI2RX0_APB_CTRL);
 
 	if (csiphy_dev->id == 0) {
-		reg_set_bit(vin->clkgen_base,CLK_MIPI_RX0_PXL_CTRL,0x1F, 0x3);
+		reg_set_bit(vin->clkgen_base, CLK_MIPI_RX0_PXL_CTRL, 0x1F, 0x3);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_PXL_0_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_PXL_1_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_PXL_2_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_PXL_3_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX0_SYS0_CTRL);
 	} else {
-		reg_set_bit(vin->clkgen_base,CLK_MIPI_RX1_PXL_CTRL,0x1F, 0x3);
+		reg_set_bit(vin->clkgen_base, CLK_MIPI_RX1_PXL_CTRL, 0x1F, 0x3);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX1_PXL_0_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX1_PXL_1_CTRL);
 		reg_set_highest_bit(vin->clkgen_base, CLK_MIPI_RX1_PXL_2_CTRL);

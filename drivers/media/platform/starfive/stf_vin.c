@@ -11,11 +11,11 @@
 
 #define STF_VIN_NAME "stf_vin"
 
-#define vin_line_array(ptr_line)        \
-        ((const struct vin_line (*)[]) &(ptr_line[-(ptr_line->id)]))
+#define vin_line_array(ptr_line)		\
+		((const struct vin_line (*)[]) &(ptr_line[-(ptr_line->id)]))
 
-#define line_to_vin2_dev(ptr_line)        \
-        container_of(vin_line_array(ptr_line), struct stf_vin2_dev, line)
+#define line_to_vin2_dev(ptr_line)		\
+		container_of(vin_line_array(ptr_line), struct stf_vin2_dev, line)
 
 #define VIN_FRAME_DROP_MAX_VAL 30
 #define VIN_FRAME_DROP_MIN_VAL 4
@@ -347,6 +347,7 @@ static int vin_enum_mbus_code(struct v4l2_subdev *sd,
 		code->code = line->formats[code->index].code;
 	} else {
 		struct v4l2_mbus_framefmt *sink_fmt;
+
 		sink_fmt = __vin_get_format(line, cfg, STF_VIN_PAD_SINK, code->which);
 		code->code = sink_fmt->code;
 		if (!code->code)
@@ -522,7 +523,7 @@ static struct stfcamss_buffer *vin_buf_get_pending(struct vin_output *output)
 	return buffer;
 }
 
-#if 0
+#ifdef UNUSED_CODE
 static void vin_output_checkpending(struct vin_line *line)
 {
 	struct vin_output *output = &line->output;
@@ -610,6 +611,7 @@ static void vin_buf_update_on_new(struct vin_line *line,
 #ifdef VIN_TWO_BUFFER
 		struct stf_vin2_dev *vin_dev = line_to_vin2_dev(line);
 		int inactive_idx;
+
 		inactive_idx = !output->active_buf;
 
 		if (!output->buf[inactive_idx] && line->id == VIN_LINE_WR) {
@@ -919,7 +921,7 @@ int stf_vin_register(struct stf_vin2_dev *vin_dev, struct v4l2_device *v4l2_dev)
 			goto err_vid_reg;
 		}
 
-		ret = media_create_pad_link( &sd->entity, STF_VIN_PAD_SRC,
+		ret = media_create_pad_link(&sd->entity, STF_VIN_PAD_SRC,
 			&video_out->vdev.entity, 0,
 			MEDIA_LNK_FL_IMMUTABLE | MEDIA_LNK_FL_ENABLED);
 		if (ret < 0) {

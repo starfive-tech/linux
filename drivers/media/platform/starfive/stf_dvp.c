@@ -151,6 +151,7 @@ static int dvp_enum_mbus_code(struct v4l2_subdev *sd,
 		code->code = dvp_dev->formats[code->index].code;
 	} else {
 		struct v4l2_mbus_framefmt *sink_fmt;
+
 		sink_fmt = __dvp_get_format(dvp_dev, cfg, STF_DVP_PAD_SINK,
 					code->which);
 		code->code = sink_fmt->code;

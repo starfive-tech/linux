@@ -7,14 +7,14 @@
  * PURPOSE:	This files contains the driver of VPP.
  */
 #include "stfcamss.h"
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/fb.h>
 #include <linux/module.h>
 #include <video/stf-vin.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
 
-static const regval_t isp_sc2235_reg_config_list[] = {
+static const struct regval_t isp_sc2235_reg_config_list[] = {
 	{0x00000014, 0x00000008, 0, 0},
 	// {0x00000018, 0x000011BB, 0, 0},
 	{0x00000A1C, 0x00000030, 0, 0},
@@ -47,7 +47,7 @@ static const regval_t isp_sc2235_reg_config_list[] = {
 	{0x00000000, 0x00000001, 0, 0},
 };
 
-static const regval_t isp_1080p_reg_config_list[] = {
+static const struct regval_t isp_1080p_reg_config_list[] = {
 	{0x00000014, 0x0000000D, 0, 0},
 	// {0x00000018, 0x000011BB, 0, 0},
 	{0x00000A1C, 0x00000032, 0, 0},
@@ -128,7 +128,7 @@ const struct reg_table isp_sc2235_settings[] = {
 	ARRAY_SIZE(isp_sc2235_reg_config_list)},
 };
 
-static regval_t isp_format_reg_list[] = {
+static struct regval_t isp_format_reg_list[] = {
 	{0x0000001C, 0x00000000, 0, 0},
 	{0x00000020, 0x0437077F, 0, 0},
 	{0x00000A0C, 0x04380780, 0, 0},

@@ -84,10 +84,11 @@ static int isp_set_ctrl_white_balance(struct stf_isp_dev *isp_dev, int awb)
 	if (!awb && (ctrls->red_balance->is_new || ctrls->blue_balance->is_new)) {
 		u16 red = (u16)ctrls->red_balance->val;
 		u16 blue = (u16)ctrls->blue_balance->val;
+
 		st_debug(ST_ISP, "red = 0x%x, blue = 0x%x\n", red, blue);
 		// isp_dev->hw_ops->isp_set_awb_r_gain(isp_dev, red);
 		// if (ret)
-		// 	return ret;
+		//	return ret;
 		// isp_dev->hw_ops->isp_set_awb_b_gain(isp_dev, blue);
 	}
 
@@ -95,7 +96,7 @@ static int isp_set_ctrl_white_balance(struct stf_isp_dev *isp_dev, int awb)
 }
 
 static int isp_set_ctrl_exposure(struct stf_isp_dev *isp_dev,
-				    enum v4l2_exposure_auto_type auto_exposure)
+				enum v4l2_exposure_auto_type auto_exposure)
 {
 	int ret = 0;
 
@@ -321,7 +322,7 @@ static int isp_set_power(struct v4l2_subdev *sd, int on)
 	return 0;
 }
 
-static struct v4l2_mbus_framefmt * __isp_get_format(struct stf_isp_dev *isp_dev,
+static struct v4l2_mbus_framefmt *__isp_get_format(struct stf_isp_dev *isp_dev,
 		struct v4l2_subdev_pad_config *cfg,
 		unsigned int pad,
 		enum v4l2_subdev_format_whence which)
@@ -392,7 +393,7 @@ static void isp_try_format(struct stf_isp_dev *isp_dev,
 			fmt->code = MEDIA_BUS_FMT_RGB565_2X8_LE;
 
 		fmt->width = clamp_t(u32, fmt->width, 8, STFCAMSS_FRAME_MAX_WIDTH);
-		fmt->width &= ~0x7 ;
+		fmt->width &= ~0x7;
 		fmt->height = clamp_t(u32, fmt->height, 1,
 					STFCAMSS_FRAME_MAX_HEIGHT_PIX);
 
@@ -422,6 +423,7 @@ static int isp_enum_mbus_code(struct v4l2_subdev *sd,
 		code->code = isp_dev->formats[code->index].code;
 	} else {
 		struct v4l2_mbus_framefmt *sink_fmt;
+
 		sink_fmt = __isp_get_format(isp_dev, cfg, STF_ISP_PAD_SINK,
 					code->which);
 
@@ -522,7 +524,7 @@ static int isp_set_format(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static struct v4l2_rect * __isp_get_compose(struct stf_isp_dev *isp_dev,
+static struct v4l2_rect *__isp_get_compose(struct stf_isp_dev *isp_dev,
 			struct v4l2_subdev_pad_config *cfg,
 			enum v4l2_subdev_format_whence which)
 {
@@ -781,7 +783,7 @@ static int stf_isp_load_setfile(struct stf_isp_dev *isp_dev, char *file_name)
 	isp_dev->setfile.state = 1;
 	regval_num = (int *)&buf[fw->size - sizeof(unsigned int)];
 	isp_dev->setfile.settings.regval_num = *regval_num;
-	isp_dev->setfile.settings.regval = (regval_t *)buf;
+	isp_dev->setfile.settings.regval = (struct regval_t *)buf;
 	mutex_unlock(&isp_dev->setfile_lock);
 
 	st_debug(ST_ISP, "stf_isp setfile loaded size: %zu B, reg_nul: %d\n",

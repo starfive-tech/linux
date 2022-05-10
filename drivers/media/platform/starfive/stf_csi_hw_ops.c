@@ -184,14 +184,14 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 	case SENSOR_ISP0:
 	#ifdef USE_CLK_TREE
 		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP0_MIPI_CTRL].clk,
-			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP0_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
 		reg_set_bit(vin->clkgen_base, CLK_ISP0_MIPI_CTRL, BIT(24),
 				csi_dev->id << 24);
 
-		reg_set_bit(vin->clkgen_base, CLK_C_ISP0_CTRL,BIT(25) | BIT(24),
+		reg_set_bit(vin->clkgen_base, CLK_C_ISP0_CTRL, BIT(25) | BIT(24),
 				csi_dev->id << 24);
 	#endif
 		mipi_channel_sel = csi_dev->id * 4 + mipi_vc;
@@ -201,7 +201,7 @@ static int stf_csi_config_set(struct stf_csi_dev *csi_dev)
 	case SENSOR_ISP1:
 	#ifdef USE_CLK_TREE
 		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_ISP1_MIPI_CTRL].clk,
-			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk );
+			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 		clk_set_parent(csi_dev->stfcamss->sys_clk[STFCLK_C_ISP1_CTRL].clk,
 			csi_dev->stfcamss->sys_clk[STFCLK_MIPIRX0_PIXEL + csi_dev->id].clk);
 	#else
@@ -262,7 +262,7 @@ static void csi2rx_reset(void *reg_base)
 	writel(0, reg_base + CSI2RX_SOFT_RESET_REG);
 }
 
-#if 0
+#ifdef UNUSED_CODE
 static void csi2rx_debug_config(void *reg_base, u32 frame_lines)
 {
 	// data_id, ecc, crc error to irq
@@ -340,6 +340,7 @@ static int csi2rx_start(struct stf_csi_dev *csi_dev)
 	 */
 	for (i = csiphy->num_data_lanes; i < CSI2RX_LANES_MAX; i++) {
 		unsigned int idx = find_first_zero_bit(&lanes_used, CSI2RX_LANES_MAX);
+
 		set_bit(idx, &lanes_used);
 		reg |= CSI2RX_STATIC_CFG_DLANE_MAP(i, idx + 1);
 	}

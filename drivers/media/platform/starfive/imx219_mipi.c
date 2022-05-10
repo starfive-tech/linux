@@ -681,7 +681,7 @@ static void imx219_set_default_format(struct imx219 *imx219)
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
-		fmt->colorspace,fmt->ycbcr_enc);
+		fmt->colorspace, fmt->ycbcr_enc);
 	fmt->xfer_func = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
 	fmt->width = supported_modes[0].width;
 	fmt->height = supported_modes[0].height;
@@ -755,7 +755,7 @@ static int imx219_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_TEST_PATTERN:
 		ret = imx219_write_reg(imx219, IMX219_REG_TEST_PATTERN,
-				IMX219_REG_VALUE_16BIT,imx219_test_pattern_val[ctrl->val]);
+				IMX219_REG_VALUE_16BIT, imx219_test_pattern_val[ctrl->val]);
 		break;
 	case V4L2_CID_HFLIP:
 	case V4L2_CID_VFLIP:
@@ -854,9 +854,8 @@ static int imx219_enum_frame_interval(struct v4l2_subdev *sd,
 	if (fie->code != code)
 		return -EINVAL;
 
-	pr_debug("fie->width = %d, fie->height = %d \n", fie->width, fie->height);
-	for (i = 0; i < MODE_COUNT_MAX; i++)
-	{
+	pr_debug("fie->width = %d, fie->height = %d\n", fie->width, fie->height);
+	for (i = 0; i < MODE_COUNT_MAX; i++) {
 		if (fie->width == supported_modes[i].width && fie->height == supported_modes[i].height)
 			break;
 	}
@@ -903,7 +902,7 @@ static int __imx219_get_pad_format(struct imx219 *imx219,
 		fmt->format = *try_fmt;
 	} else {
 		imx219_update_pad_format(imx219, imx219->mode, fmt);
-		fmt->format.code = imx219_get_format_code(imx219,imx219->fmt.code);
+		fmt->format.code = imx219_get_format_code(imx219, imx219->fmt.code);
 	}
 
 	return 0;
@@ -958,7 +957,7 @@ static int imx219_set_pad_format(struct v4l2_subdev *sd,
 		__v4l2_ctrl_modify_range(imx219->vblank, IMX219_VBLANK_MIN,
 				IMX219_VTS_MAX - mode->height, 1,
 				mode->vts_def - mode->height);
-		__v4l2_ctrl_s_ctrl(imx219->vblank,mode->vts_def - mode->height);
+		__v4l2_ctrl_s_ctrl(imx219->vblank, mode->vts_def - mode->height);
 		/* Update max exposure while meeting expected vblanking */
 		exposure_max = mode->vts_def - 4;
 		exposure_def = (exposure_max < IMX219_EXPOSURE_DEFAULT) ?
@@ -1319,12 +1318,12 @@ static int imx219_init_controls(struct imx219 *imx219)
 
 	/* Initial vblank/hblank/exposure parameters based on current mode */
 	imx219->vblank = v4l2_ctrl_new_std(ctrl_hdlr, &imx219_ctrl_ops,
-					V4L2_CID_VBLANK,IMX219_VBLANK_MIN,
+					V4L2_CID_VBLANK, IMX219_VBLANK_MIN,
 					IMX219_VTS_MAX - height, 1,
 					imx219->mode->vts_def - height);
 	hblank = IMX219_PPL_DEFAULT - imx219->mode->width;
 	imx219->hblank = v4l2_ctrl_new_std(ctrl_hdlr, &imx219_ctrl_ops,
-					V4L2_CID_HBLANK,hblank, hblank, 1, hblank);
+					V4L2_CID_HBLANK, hblank, hblank, 1, hblank);
 	if (imx219->hblank)
 		imx219->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 	exposure_max = imx219->mode->vts_def - 4;

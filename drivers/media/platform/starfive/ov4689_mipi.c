@@ -622,7 +622,7 @@ static const struct reg_value ov4689_setting_720P_1280_720[] = {
 	{0x3809, 0x00, 0, 0},
 	{0x380a, 0x02, 0, 0},
 	{0x380b, 0xD0, 0, 0},
-#if 1
+#ifndef UNUSED_CODE
 	{0x380c, 0x04, 0, 0}, // 0a ; 03
 	{0x380d, 0x08, 0, 0}, // 1c ; 5C
 #else
@@ -1347,7 +1347,7 @@ static int ov4689_read_reg(struct ov4689_dev *sensor, u16 reg, u8 *val)
 
 	ret = i2c_transfer(client->adapter, msg, 2);
 	if (ret < 0) {
-		dev_err(&client->dev, "%s: error: reg=%x\n",__func__, reg);
+		dev_err(&client->dev, "%s: error: reg=%x\n", __func__, reg);
 		return ret;
 	}
 
@@ -1715,10 +1715,10 @@ static int ov4689_set_mipi_pclk(struct ov4689_dev *sensor,
 	val16 = val << 8;
 	ret = ov4689_read_reg(sensor, OV4689_TIMING_HTS + 1, &val);
 	val16 |= val;
-	st_info(ST_SENSOR, "fps = %d, max_fps = %d, mode->htot = 0x%x, "
-			"htot = 0x%x, 0x%x = 0x%x\n",
-			fps, mode->max_fps, mode->htot,
-			htot, OV4689_TIMING_HTS, val16);
+	st_info(ST_SENSOR, "fps = %d, max_fps = %d, mode->htot = 0x%x,"
+		fps, mode->max_fps, mode->htot);
+	st_info(ST_SENSOR, "htot = 0x%x, 0x%x = 0x%x\n",
+		htot, OV4689_TIMING_HTS, val16);
 	return 0;
 }
 
@@ -1943,6 +1943,7 @@ static int ov4689_try_frame_interval(struct ov4689_dev *sensor,
 	best_fps = minfps;
 	for (i = 0; i < ARRAY_SIZE(ov4689_framerates); i++) {
 		int curr_fps = ov4689_framerates[i];
+
 		if (abs(curr_fps - fps) < abs(best_fps - fps)) {
 			best_fps = curr_fps;
 			rate = i;

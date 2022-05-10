@@ -59,7 +59,7 @@ static const struct reg_name mem_reg_name[] = {
 #endif
 };
 
-char * clocks[] = {
+char *clocks[] = {
 	"vin_src",
 	"isp0_axi",
 	"isp0noc_axi",
@@ -91,15 +91,15 @@ char * clocks[] = {
 	"isp1_mipi",
 	"dom4_apb",
 	"csi2rx_apb",
-	"vin_axi_wr", 
-	"vin_axi_rd", 
-	"c_isp0", 
+	"vin_axi_wr",
+	"vin_axi_rd",
+	"c_isp0",
 	"c_isp1",
 
 	NULL,
 };
 
-char * resets[]={
+char *resets[] = {
 	"vin_src",
 	"ispslv_axi",
 	"vin_axi",
@@ -108,28 +108,28 @@ char * resets[]={
 	"isp0noc_axi",
 	"isp1_axi",
 	"isp1noc_axi",
-	"sys_clk", 
-	"pclk", 
-	"sys_clk_1", 
-	"pixel_clk_if0", 
-	"pixel_clk_if1", 
-	"pixel_clk_if2", 
-	"pixel_clk_if3", 
-	"pixel_clk_if10", 
-	"pixel_clk_if11", 
-	"pixel_clk_if12", 
-	"pixel_clk_if13", 
-	"isp_0", 
-	"isp_1", 
-	"p_axird", 
-	"p_axiwr", 
-	"p_isp0", 
-	"p_isp1", 
-	"dphy_hw_rstn", 
-	"dphy_rst09_alwy_on", 
-	"c_isp0", 
+	"sys_clk",
+	"pclk",
+	"sys_clk_1",
+	"pixel_clk_if0",
+	"pixel_clk_if1",
+	"pixel_clk_if2",
+	"pixel_clk_if3",
+	"pixel_clk_if10",
+	"pixel_clk_if11",
+	"pixel_clk_if12",
+	"pixel_clk_if13",
+	"isp_0",
+	"isp_1",
+	"p_axird",
+	"p_axiwr",
+	"p_isp0",
+	"p_isp1",
+	"dphy_hw_rstn",
+	"dphy_rst09_alwy_on",
+	"c_isp0",
 	"c_isp1",
-	
+
 	NULL,
 };
 
@@ -697,7 +697,7 @@ static int stfcamss_subdev_notifier_bound(struct v4l2_async_notifier *async,
 	return 0;
 }
 
-#if 0
+#ifdef UNUSED_CODE
 static int stfcamss_subdev_notifier_complete(
 		struct v4l2_async_notifier *async)
 {
@@ -1017,7 +1017,7 @@ static int stfcamss_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret = 0, i, num_subdevs;
 
-	st_info(ST_CAMSS, "stfcamss probe enter!\n");
+	dev_info(dev, "stfcamss probe enter!\n");
 
 	stfcamss = devm_kzalloc(dev, sizeof(struct stfcamss), GFP_KERNEL);
 	if (!stfcamss)
@@ -1120,7 +1120,7 @@ static int stfcamss_probe(struct platform_device *pdev)
 			st_err(ST_CAMSS, "get %s clocks name failed\n", clocks[i]);
 			goto err_cam_clk;
 		}
-		st_debug(ST_CAMSS, "get %s clocks name: \n", clocks[i]);
+		st_debug(ST_CAMSS, "get %s clocks name:\n", clocks[i]);
 
 		clock->name = clocks[i];
 	}
@@ -1140,13 +1140,14 @@ static int stfcamss_probe(struct platform_device *pdev)
 
 	for (i = 0; i < stfcamss->nrsts; i++) {
 		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
+
 		reset->rst = devm_reset_control_get_exclusive(dev, resets[i]);
 		if (IS_ERR(reset->rst)) {
 			ret = -ENOMEM;
 			st_err(ST_CAMSS, "get %s resets name failed\n", resets[i]);
 			goto err_cam_rst;
 		}
-		st_debug(ST_CAMSS, "get %s resets name: \n", resets[i]);
+		st_debug(ST_CAMSS, "get %s resets name:\n", resets[i]);
 
 		reset->name = resets[i];
 	}
@@ -1226,13 +1227,13 @@ static int stfcamss_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	stfcamss->debugfs_entry = debugfs_create_dir("stfcamss", NULL);
 	stfcamss->vin_debugfs = debugfs_create_file("stf_vin",
-			S_IRUGO | S_IWUSR, stfcamss->debugfs_entry,
+			0644, stfcamss->debugfs_entry,
 			(void *)dev, &vin_debug_fops);
 	debugfs_create_u32("dbg_level",
-			S_IRUGO | S_IWUSR, stfcamss->debugfs_entry,
+			0644, stfcamss->debugfs_entry,
 			&stdbg_level);
 	debugfs_create_u32("dbg_mask",
-			S_IRUGO | S_IWUSR, stfcamss->debugfs_entry,
+			0644, stfcamss->debugfs_entry,
 			&stdbg_mask);
 #endif
 
@@ -1259,7 +1260,7 @@ err_cam_rst:
 
 		reset_control_put(reset->rst);
 		st_debug(ST_CAMSS, "put %s reset\n", reset->name);
-	}	
+	}
 err_cam_clk:
 	for (i = stfcamss->nclks; i > 0; i--) {
 		struct stfcamss_clk *clock = &stfcamss->sys_clk[i];
@@ -1295,7 +1296,7 @@ static int stfcamss_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id stfcamss_of_match[] = {
-	{.compatible = "starfive,stf-vin"},
+	{ .compatible = "starfive,stf-vin" },
 	{ /* end node */ },
 };
 

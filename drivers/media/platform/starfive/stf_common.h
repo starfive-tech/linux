@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
+/* SPDX-License-Identifier: GPL-2.0
+ *
  * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 #ifndef STF_COMMON_H
@@ -21,7 +21,7 @@ enum {
 	ST_VIN = 0x0010,
 	ST_VIDEO = 0x0020,
 	ST_CAMSS = 0x0040,
-	ST_SENSOR= 0x0080,
+	ST_SENSOR = 0x0080,
 };
 
 enum {
@@ -126,17 +126,17 @@ extern unsigned int stdbg_mask;
 
 #define set_bits(p, v, b, m)	(((p) & ~(m)) | ((v) << (b)))
 
-static inline u32 reg_read(void __iomem * base, u32 reg)
+static inline u32 reg_read(void __iomem *base, u32 reg)
 {
 	return ioread32(base + reg);
 }
 
-static inline void reg_write(void __iomem * base, u32 reg, u32 val)
+static inline void reg_write(void __iomem *base, u32 reg, u32 val)
 {
 	iowrite32(val, base + reg);
 }
 
-static inline void reg_set_bit(void __iomem * base, u32 reg, u32 mask, u32 val)
+static inline void reg_set_bit(void __iomem *base, u32 reg, u32 mask, u32 val)
 {
 	u32 value;
 
@@ -146,17 +146,17 @@ static inline void reg_set_bit(void __iomem * base, u32 reg, u32 mask, u32 val)
 	iowrite32(val, base + reg);
 }
 
-static inline void reg_set(void __iomem * base, u32 reg, u32 mask)
+static inline void reg_set(void __iomem *base, u32 reg, u32 mask)
 {
 	iowrite32(ioread32(base + reg) | mask, base + reg);
 }
 
-static inline void reg_clear(void __iomem * base, u32 reg, u32 mask)
+static inline void reg_clear(void __iomem *base, u32 reg, u32 mask)
 {
 	iowrite32(ioread32(base + reg) & ~mask, base + reg);
 }
 
-static inline void reg_set_highest_bit(void __iomem * base, u32 reg)
+static inline void reg_set_highest_bit(void __iomem *base, u32 reg)
 {
 	u32 val;
 
@@ -166,7 +166,7 @@ static inline void reg_set_highest_bit(void __iomem * base, u32 reg)
 	iowrite32(val, base + reg);
 }
 
-static inline void reg_clr_highest_bit(void __iomem * base, u32 reg)
+static inline void reg_clr_highest_bit(void __iomem *base, u32 reg)
 {
 	u32 val;
 
@@ -176,7 +176,7 @@ static inline void reg_clr_highest_bit(void __iomem * base, u32 reg)
 	iowrite32(val, base + reg);
 }
 
-static inline void print_reg(unsigned int module, void __iomem * base, u32 reg)
+static inline void print_reg(unsigned int module, void __iomem *base, u32 reg)
 {
 	st_debug(module, "0x%08x = 0x%08x\n", reg, ioread32(base + reg));
 }
