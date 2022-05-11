@@ -547,7 +547,6 @@ static int cdns_dsi_mode2cfg(struct cdns_dsi *dsi,
 			     struct cdns_dsi_cfg *dsi_cfg,
 			     bool mode_valid_check)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_output *output = &dsi->output;
 	unsigned int tmp;
 	bool sync_pulse = false;
@@ -652,7 +651,6 @@ static int cdns_dsi_check_conf(struct cdns_dsi *dsi,
 			       struct cdns_dsi_cfg *dsi_cfg,
 			       bool mode_valid_check)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_output *output = &dsi->output;
 	struct phy_configure_opts_mipi_dphy *phy_cfg = &output->phy_opts.mipi_dphy;
 	unsigned long dsi_hss_hsa_hse_hbp;
@@ -697,7 +695,6 @@ static int cdns_dsi_check_conf(struct cdns_dsi *dsi,
 static int cdns_dsi_bridge_attach(struct drm_bridge *bridge,
 				  enum drm_bridge_attach_flags flags)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_input *input = bridge_to_cdns_dsi_input(bridge);
 	struct cdns_dsi *dsi = input_to_dsi(input);
 	struct cdns_dsi_output *output = &dsi->output;
@@ -717,7 +714,6 @@ cdns_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 			   const struct drm_display_info *info,
 			   const struct drm_display_mode *mode)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_input *input = bridge_to_cdns_dsi_input(bridge);
 	struct cdns_dsi *dsi = input_to_dsi(input);
 	struct cdns_dsi_output *output = &dsi->output;
@@ -749,7 +745,6 @@ cdns_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 
 static void cdns_dsi_bridge_disable(struct drm_bridge *bridge)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_input *input = bridge_to_cdns_dsi_input(bridge);
 	struct cdns_dsi *dsi = input_to_dsi(input);
 
@@ -770,7 +765,6 @@ static void cdns_dsi_bridge_disable(struct drm_bridge *bridge)
 
 static void release_txbyte_rst(void)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	void __iomem *regs = ioremap(0x12250000, 0x10000);
 
 	u32 temp = readl(regs + SRST_ASSERT0);
@@ -789,7 +783,6 @@ static void release_txbyte_rst(void)
 
 static void cdns_dsi_hs_init(struct cdns_dsi *dsi)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_output *output = &dsi->output;
 	u32 status;
 	uint32_t dpi_fifo_int = 0;
@@ -863,7 +856,6 @@ static void cdns_dsi_init_link(struct cdns_dsi *dsi)
 
 static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi_input *input = bridge_to_cdns_dsi_input(bridge);
 	struct cdns_dsi *dsi = input_to_dsi(input);
 	struct cdns_dsi_output *output = &dsi->output;
@@ -991,7 +983,6 @@ static const struct drm_bridge_funcs cdns_dsi_bridge_funcs = {
 static int cdns_dsi_attach(struct mipi_dsi_host *host,
 			   struct mipi_dsi_device *dev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi *dsi = to_cdns_dsi(host);
 	struct cdns_dsi_output *output = &dsi->output;
 	struct cdns_dsi_input *input = &dsi->input;
@@ -1059,7 +1050,6 @@ static int cdns_dsi_attach(struct mipi_dsi_host *host,
 static int cdns_dsi_detach(struct mipi_dsi_host *host,
 			   struct mipi_dsi_device *dev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi *dsi = to_cdns_dsi(host);
 	struct cdns_dsi_output *output = &dsi->output;
 	struct cdns_dsi_input *input = &dsi->input;
@@ -1226,7 +1216,6 @@ static UNIVERSAL_DEV_PM_OPS(cdns_dsi_pm_ops, cdns_dsi_suspend, cdns_dsi_resume,
 
 static int starfive_dsi_bind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct cdns_dsi *dsi;
 	struct cdns_dsi_input *input;
 	struct resource *res;
@@ -1316,7 +1305,6 @@ err_disable_pclk:
 
 static void starfive_dsi_unbind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct platform_device *pdev = to_platform_device(dev);
 	struct cdns_dsi *dsi = platform_get_drvdata(pdev);
 
@@ -1332,13 +1320,11 @@ static const struct component_ops starfive_dsi_component_ops = {
 
 static int starfive_dsi_probe(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	return component_add(&pdev->dev, &starfive_dsi_component_ops);
 }
 
 static int starfive_dsi_remove(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	component_del(&pdev->dev, &starfive_dsi_component_ops);
 	return 0;
 }
@@ -1357,7 +1343,6 @@ struct platform_driver starfive_dsi_platform_driver = {
 		.pm = &cdns_dsi_pm_ops,
 	},
 };
-
 
 MODULE_AUTHOR("Boris Brezillon <boris.brezillon@bootlin.com>");
 MODULE_DESCRIPTION("Cadence DSI driver");

@@ -82,7 +82,6 @@ err_cleanup:
 
 static int starfive_encoder_bind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct drm_device *drm_dev = data;
 	struct device_node *np = dev->of_node;
 	struct starfive_encoder *encoderp;
@@ -140,7 +139,6 @@ err_encoder:
 
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct starfive_encoder *encoderp = dev_get_drvdata(dev);
 }
 
@@ -158,13 +156,11 @@ MODULE_DEVICE_TABLE(of, starfive_encoder_driver_dt_match);
 
 static int starfive_encoder_probe(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	return component_add(&pdev->dev, &starfive_encoder_component_ops);
 }
 
 static int starfive_encoder_remove(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	component_del(&pdev->dev, &starfive_encoder_component_ops);
 	return 0;
 }

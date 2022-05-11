@@ -429,7 +429,6 @@ static int starfive_parse_dt(struct device *dev,
 
 static int starfive_crtc_bind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct platform_device *pdev = to_platform_device(dev);
 	struct drm_device *drm_dev = data;
 	struct starfive_crtc *crtcp;
@@ -496,7 +495,6 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 
 static void starfive_crtc_unbind(struct device *dev, struct device *master, void *data)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct platform_device *pdev = to_platform_device(dev);
 	struct starfive_crtc *crtcp = dev_get_drvdata(dev);
 
@@ -519,7 +517,6 @@ MODULE_DEVICE_TABLE(of, starfive_crtc_driver_dt_match);
 
 static int starfive_crtc_probe(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	return component_add(&pdev->dev, &starfive_crtc_component_ops);
 }
 

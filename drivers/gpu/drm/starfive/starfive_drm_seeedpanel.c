@@ -324,22 +324,8 @@ static int seeed_dsi_write(struct drm_panel *panel, u16 reg, u32 val)
 	return 0;
 }
 
-static void dump_seeed_panel(struct drm_panel *panel)
-{
-	struct seeed_panel_dev *sp = panel_to_seeed(panel);
-	int addr = 0;
-	u8 reg_value = 0;
-
-	for (addr = REG_ID; addr <= REG_ID2; addr++) {
-		seeed_panel_i2c_read(sp->client, addr, &reg_value);
-		printk("addr = 0x%x, val = 0x%x\n", addr, reg_value);
-		reg_value = 0;
-	}
-}
-
 static int seeed_panel_disable(struct drm_panel *panel)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct seeed_panel_dev *sp = panel_to_seeed(panel);
 
 	//seeed_panel_i2c_write(sp->client, REG_POWERON, 1);
@@ -359,7 +345,6 @@ static int seeed_panel_noop(struct drm_panel *panel)
 
 static int seeed_panel_enable(struct drm_panel *panel)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct seeed_panel_dev *sp = panel_to_seeed(panel);
 	int i;
 	u8 reg_value = 0;
@@ -407,7 +392,6 @@ static int seeed_panel_enable(struct drm_panel *panel)
 static int seeed_panel_get_modes(struct drm_panel *panel,
 				     struct drm_connector *connector)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	unsigned int i, num = 0;
 	static const u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 
@@ -452,7 +436,6 @@ static const struct drm_panel_funcs seeed_panel_funcs = {
 
 static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	u8 reg_value = 0;
 	int i;
 	struct seeed_panel_dev *seeed_panel;
@@ -540,7 +523,6 @@ error:
 
 static int seeed_panel_remove(struct i2c_client *client)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct seeed_panel_dev *seeed_panel = i2c_get_clientdata(client);
 
 	mipi_dsi_detach(seeed_panel->dsi);
@@ -575,7 +557,6 @@ static struct i2c_driver seeed_panel_driver = {
 
 static int seeed_dsi_probe(struct mipi_dsi_device *dsi)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	int ret;
 
 	dsi->mode_flags = (MIPI_DSI_MODE_VIDEO |
@@ -597,7 +578,6 @@ static struct mipi_dsi_driver seeed_dsi_driver = {
 
 int init_seeed_panel(void)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	mipi_dsi_driver_register(&seeed_dsi_driver);
 
 	return i2c_add_driver(&seeed_panel_driver);
@@ -606,7 +586,6 @@ EXPORT_SYMBOL(init_seeed_panel);
 
 void exit_seeed_panel(void)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	i2c_del_driver(&seeed_panel_driver);
 	mipi_dsi_driver_unregister(&seeed_dsi_driver);
 }

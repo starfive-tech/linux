@@ -1,18 +1,9 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Rockchip MIPI Synopsys DPHY RX0 driver
+ * MIPI DPHY TX0 driver
  *
  * Copyright (C) 2019 Collabora, Ltd.
  *
- * Based on:
- *
- * drivers/media/platform/rockchip/isp1/mipi_dphy_sy.c
- * in https://chromium.googlesource.com/chromiumos/third_party/kernel,
- * chromeos-4.4 branch.
- *
- * Copyright (C) 2017 Fuzhou Rockchip Electronics Co., Ltd.
- *   Jacob Chen <jacob2.chen@rock-chips.com>
- *   Shunqian Zheng <zhengsq@rock-chips.com>
  */
 
 #include <linux/clk.h>
@@ -418,16 +409,13 @@ static void polling_dphy_lock(struct sf_dphy *priv)
 	do {
 		pll_unlock = top_sys_read32(priv, SCFG_GRS_CDTX_PLL) >> 3;
 		pll_unlock &= 0x1;
-	} while(pll_unlock == 0x1);
+	} while (pll_unlock == 0x1);
 }
 
 static int sf_dphy_configure(struct phy *phy, union phy_configure_opts *opts)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct sf_dphy *dphy = phy_get_drvdata(phy);
-
 	uint32_t bit_rate = 700000000/1000000UL;//(1920 * 1080 * bpp / dlanes * fps / 1000000 + 99) / 100 * 100;
-	//uint32_t bit_rate = 800000000/1000000UL;//(1920 * 1080 * bpp / dlanes * fps / 1000000 + 99) / 100 * 100;
 
 	dphy_config(dphy, bit_rate);
 	reset_dphy(dphy, 1);
@@ -449,7 +437,6 @@ static int sf_dphy_power_off(struct phy *phy)
 
 static int sf_dphy_init(struct phy *phy)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct sf_dphy *dphy = phy_get_drvdata(phy);
 
 	dsi_csi2tx_sel(dphy, 0);
@@ -469,25 +456,8 @@ static int sf_dphy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	return 0;
 }
 
-void dump_dphy_reg(struct sf_dphy *priv)
-{
-	int i = 0;
-	uint32_t val = 0;
-	for (i = 0; i < 0xe8; i+=4) {
-		val = top_sys_read32(priv, i);
-		printk("dphy: addr = 0x%x, val = 0x%x\n", i, val);
-	}
-}
-
-
 static int sf_dphy_exit(struct phy *phy)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
-	struct sf_dphy *dphy = phy_get_drvdata(phy);
-#if 0
-	dump_dphy_reg(dphy);
-#endif
-
 	return 0;
 }
 
@@ -503,9 +473,7 @@ static const struct phy_ops sf_dphy_ops = {
 };
 
 static const struct of_device_id sf_dphy_dt_ids[] = {
-	{
-		.compatible = "starfive,jh7100-mipi-dphy-tx",
-	},
+	{ .compatible = "starfive,jh7100-mipi-dphy-tx", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, sf_dphy_dt_ids);
@@ -546,6 +514,5 @@ static struct platform_driver sf_dphy_driver = {
 };
 module_platform_driver(sf_dphy_driver);
 
-MODULE_AUTHOR("Ezequiel Garcia <ezequiel@collabora.com>");
 MODULE_DESCRIPTION("sf MIPI  DPHY TX0 driver");
 MODULE_LICENSE("Dual MIT/GPL");

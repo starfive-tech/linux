@@ -111,7 +111,6 @@ static void starfive_drm_match_add(struct device *dev,
 
 static int starfive_drm_bind(struct device *dev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct drm_device *drm_dev;
 	struct starfive_drm_private *private;
 	int ret;
@@ -190,7 +189,6 @@ err_free:
 
 static void starfive_drm_unbind(struct device *dev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct drm_device *drm_dev = dev_get_drvdata(dev);
 
 	drm_dev_unregister(drm_dev);
@@ -215,7 +213,6 @@ static struct platform_driver * const starfive_component_drivers[] = {
 
 static int starfive_drm_probe(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	struct device *dev = &pdev->dev;
 	struct component_match *match = NULL;
 	int ret;
@@ -230,7 +227,6 @@ static int starfive_drm_probe(struct platform_device *pdev)
 
 static int starfive_drm_remove(struct platform_device *pdev)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	component_master_del(&pdev->dev, &starfive_drm_ops);
 	return 0;
 }
@@ -253,7 +249,6 @@ static struct platform_driver starfive_drm_platform_driver = {
 
 static int __init starfive_drm_init(void)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	int ret;
 
 	ret = platform_register_drivers(starfive_component_drivers,
@@ -266,7 +261,6 @@ static int __init starfive_drm_init(void)
 
 static void __exit starfive_drm_exit(void)
 {
-	printk("-----%s: %d\n", __func__, __LINE__);
 	platform_driver_unregister(&starfive_drm_platform_driver);
 	platform_unregister_drivers(starfive_component_drivers,
 				    ARRAY_SIZE(starfive_component_drivers));

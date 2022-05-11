@@ -3,7 +3,7 @@
 # Phy drivers for Starfive platforms
 #
 
-config PHY_M31_DPHY_RX0
+config PHY_M31_DPHY_TX0
 	tristate "Starfive M31 MIPI DPHY TX Driver"
 	select GENERIC_PHY_MIPI_DPHY
 	select GENERIC_PHY
