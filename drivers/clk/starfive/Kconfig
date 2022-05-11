@@ -11,6 +11,6 @@ config CLK_STARFIVE_JH7100
 config CLK_STARFIVE_JH7100_AUDIO
 	tristate "StarFive JH7100 audio clock support"
 	depends on CLK_STARFIVE_JH7100
-	default SOC_STARFIVE
+	default SOC_STARFIVE_VIC7100
 	help
 	  Say yes here to support the audio clocks on the StarFive JH7100 SoC.
