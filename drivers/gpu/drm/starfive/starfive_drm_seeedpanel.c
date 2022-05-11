@@ -488,7 +488,7 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 
 	default:
 		dev_err(&client->dev, "Unknown Atmel firmware revision: 0x%02x\n", reg_value);
-		//return -ENODEV;
+		return -ENODEV;
 	}
 
 	seeed_panel_i2c_write(client, REG_PWM, 0);

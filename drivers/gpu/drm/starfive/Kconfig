@@ -2,6 +2,7 @@
 
 config DRM_STARFIVE
 	tristate "DRM Support for StarFive SoCs"
+	default m
 	depends on DRM
 	select DRM_GEM_CMA_HELPER
 	select DRM_KMS_HELPER
