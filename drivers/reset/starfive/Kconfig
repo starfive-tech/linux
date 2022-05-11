@@ -10,6 +10,6 @@ config RESET_STARFIVE_JH7100
 config RESET_STARFIVE_JH7100_AUDIO
 	tristate "StarFive JH7100 Audio Reset Driver"
 	depends on RESET_STARFIVE_JH7100
-	default SOC_STARFIVE
+	default SOC_STARFIVE_VIC7100
 	help
 	  This enables the audio reset driver for the StarFive JH7100 SoC.
