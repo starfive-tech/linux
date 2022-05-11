@@ -930,6 +930,17 @@ static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 
 	tmp = readl(dsi->regs + MCTL_MAIN_EN) | IF_EN(input->id);
 	writel(tmp, dsi->regs + MCTL_MAIN_EN);
+
+/*here is a special setting for mipi dsi,dsi enable should ahead lcdc enable*/
+/////////////////////////////////////////////////////////////////////////////
+	void __iomem *base_lcdc = ioremap(0x12000000, 0x10000);
+	u32 runcfg = (2 << 2) | 1;
+	u32 cfg = ~(1 << 5);
+
+	writel(runcfg, base_lcdc + 0x0000);
+	writel(cfg, base_lcdc + 0x000C);
+
+/////////////////////////////////////////////////////////////////////////////
 }
 
 static const struct drm_bridge_funcs cdns_dsi_bridge_funcs = {

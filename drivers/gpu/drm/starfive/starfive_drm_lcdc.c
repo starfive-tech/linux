@@ -450,9 +450,10 @@ int starfive_lcdc_enable(struct starfive_crtc *sf_crtc)
 		return -EINVAL;
 	}
 
+#ifndef CONFIG_DRM_STARFIVE_MIPI_DSI
 	lcdc_run(sf_crtc, sf_crtc->winNum, LCDC_RUN);
 	lcdc_enable_intr(sf_crtc);
-
+#endif
 	return 0;
 }
 
