@@ -434,16 +434,16 @@ void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mod
 	if ((src->height != dst->height) || (src->width != dst->width))
 		scale_byp = 0;
 
-	if ((src->format >= COLOR_RGB888_ARGB) && (dst->format <= COLOR_YUV420_NV12)) {
+	if ((src->format >= COLOR_RGB888_ARGB) && (dst->format <= COLOR_YUV420_NV21)) {
 		/* rgb -> yuv-420 */
 		pp_r2yscal_bypass(sf_crtc, ppNum, NOT_BYPASS, scale_byp, BYPASS);
 		pp_r2y_coeff(sf_crtc, ppNum, 1, R2Y_COEF_R1, R2Y_COEF_G1, R2Y_COEF_B1, R2Y_OFFSET1);
 		pp_r2y_coeff(sf_crtc, ppNum, 2, R2Y_COEF_R2, R2Y_COEF_G2, R2Y_COEF_B2, R2Y_OFFSET2);
 		pp_r2y_coeff(sf_crtc, ppNum, 3, R2Y_COEF_R3, R2Y_COEF_G3, R2Y_COEF_B3, R2Y_OFFSET3);
-	} else if ((src->format <= COLOR_YUV420_NV12) && (dst->format >= COLOR_RGB888_ARGB)) {
+	} else if ((src->format <= COLOR_YUV420_NV21) && (dst->format >= COLOR_RGB888_ARGB)) {
 		/* yuv-420 -> rgb */
 		pp_r2yscal_bypass(sf_crtc, ppNum, BYPASS, scale_byp, NOT_BYPASS);
-	} else if ((src->format <= COLOR_YUV422_YVYU) && (dst->format <= COLOR_YUV420_NV12)) {
+	} else if ((src->format <= COLOR_YUV422_YVYU) && (dst->format <= COLOR_YUV420_NV21)) {
 		/* yuv422 -> yuv420 */
 		pp_r2yscal_bypass(sf_crtc, ppNum, BYPASS, scale_byp, BYPASS);
 	} else {
