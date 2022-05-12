@@ -666,16 +666,19 @@
 		crtc: crtc@12000000 {
 			compatible = "starfive,jh7100-crtc";
 			reg = <0x0 0x12000000 0x0 0x10000>,
-			      <0x0 0x12040000 0x0 0x10000>,
-			      <0x0 0x12080000 0x0 0x10000>,
-			      <0x0 0x120c0000 0x0 0x10000>,
-			      <0x0 0x12240000 0x0 0x10000>,
-			      <0x0 0x12250000 0x0 0x10000>,
-			      <0x0 0x12260000 0x0 0x10000>;
-			reg-names = "lcdc", "vpp0", "vpp1", "vpp2", "clk", "rst", "sys";
-			clocks = <&clkgen JH7100_CLK_DISP_AXI>, <&clkgen JH7100_CLK_VOUT_SRC>;
+				<0x0 0x12040000 0x0 0x10000>,
+				<0x0 0x12080000 0x0 0x10000>,
+				<0x0 0x120c0000 0x0 0x10000>,
+				<0x0 0x12240000 0x0 0x10000>,
+				<0x0 0x12250000 0x0 0x10000>,
+				<0x0 0x12260000 0x0 0x10000>;
+			reg-names = "lcdc", "vpp0", "vpp1", "vpp2",
+				"clk", "rst", "sys";
+			clocks = <&clkgen JH7100_CLK_DISP_AXI>,
+				<&clkgen JH7100_CLK_VOUT_SRC>;
 			clock-names = "disp_axi", "vout_src";
-			resets = <&rstgen JH7100_RSTN_DISP_AXI>, <&rstgen JH7100_RSTN_VOUT_SRC>;
+			resets = <&rstgen JH7100_RSTN_DISP_AXI>,
+				<&rstgen JH7100_RSTN_VOUT_SRC>;
 			reset-names = "disp_axi", "vout_src";
 			interrupts = <101>, <103>;
 			interrupt-names = "lcdc_irq", "vpp1_irq";
@@ -696,32 +699,29 @@
 			};
 		};
 
-		mipi_dphy: mipi-dphy@12260000{
-				compatible = "starfive,jh7100-mipi-dphy-tx";
-				//reg = <0x0 0x12260000 0x0 0x10000>;
-				clocks = <&uartclk>, <&apb2clk>;
-				clock-names = "baudclk", "apb_pclk";
-				#phy-cells = <0>;
+		mipi_dphy: mipi-dphy@12260000 {
+			compatible = "starfive,jh7100-mipi-dphy-tx";
+			reg = <0x0 0x12260000 0x0 0x10000>;
+			clocks = <&uartclk>, <&apb2clk>;
+			clock-names = "baudclk", "apb_pclk";
+			#phy-cells = <0>;
+			status = "okay";
 		};
 
 		mipi_dsi: mipi@12100000 {
 			compatible = "cdns,dsi";
+			reg = <0x0 0x12100000 0x0 0x10000>;
+			reg-names = "dsi";
 			clocks = <&apb1clk>, <&apb2clk>;
 			clock-names = "dsi_p_clk", "dsi_sys_clk";
 			phys = <&mipi_dphy>;
 			phy-names = "dphy";
 			status = "okay";
-			reg = <0x0 0x12100000 0x0 0x10000>;
-			reg-names = "dsi";
 
 			port {
 				dsi_out_port: endpoint {
 					remote-endpoint = <&panel_dsi_port>;
 				};
-			};
-			mipi_panel: panel@0 {
-				//compatible = "";
-				status = "okay";
 			};
 		};
 

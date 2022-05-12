@@ -23,13 +23,13 @@
 #define SCFG_PHY_RESETB	            0x30
 #define SCFG_REFCLK_SEL	            0x34
 #define SCFG_DBUS_PW_PLL_SSC_LD0	0x38
-#define SCFG_GRS_CDTX_PLL       	0x3c
+#define SCFG_GRS_CDTX_PLL			0x3c
 
 #define SCFG_RG_CDTX_PLL_FBK_PRE	0x44
-#define SCFG_RG_CLANE_DLANE_TIME   	0x58
-#define SCFG_RG_CLANE_HS_TIME   	0x58
+#define SCFG_RG_CLANE_DLANE_TIME	0x58
+#define SCFG_RG_CLANE_HS_TIME		0x58
 
-#define SCFG_RG_EXTD_CYCLE_SEL   	0x5c
+#define SCFG_RG_EXTD_CYCLE_SEL		0x5c
 
 #define SCFG_L0N_L0P_HSTX	        0x60
 #define SCFG_L1N_L1P_HSTX	        0x64
@@ -44,11 +44,11 @@
 #define SCFG_TXREADY_SRC_SEL_C	    0xd8
 
 //reg SCFG_LX_SWAP_SEL
-#define	OFFSET_CFG_L0_SWAP_SEL 	0
-#define	OFFSET_CFG_L1_SWAP_SEL 	3
-#define	OFFSET_CFG_L2_SWAP_SEL 	6
-#define	OFFSET_CFG_L3_SWAP_SEL 	9
-#define OFFSET_CFG_L4_SWAP_SEL 	12
+#define	OFFSET_CFG_L0_SWAP_SEL	0
+#define	OFFSET_CFG_L1_SWAP_SEL	3
+#define	OFFSET_CFG_L2_SWAP_SEL	6
+#define	OFFSET_CFG_L3_SWAP_SEL	9
+#define OFFSET_CFG_L4_SWAP_SEL	12
 
 //reg SCFG_DBUS_PW_PLL_SSC_LD0
 #define OFFSET_SCFG_CFG_DATABUD16_SEL    0
@@ -88,7 +88,6 @@
 #define  VID_VCA_SET1_ADDR     0xf4
 #define  VID_VCA_SET2_ADDR     0xf8
 
-
 #define  VID_MODE_STAT_CLR_ADDR    0x160
 #define  VID_MODE_STAT_FLAG_ADDR   0x180
 
@@ -108,10 +107,9 @@
 #define  DPI_IRQ_STAT_ADDR 0x1a4
 #define  DPI_CFG_ADDR      0x1ac
 
-
 //sysrst registers
-#define SRST_ASSERT0	    0x00
-#define SRST_STATUS0    	0x04
+#define SRST_ASSERT0		0x00
+#define SRST_STATUS0		0x04
 /* Definition controller bit for syd rst registers */
 #define BIT_RST_DSI_DPI_PIX		17
 
@@ -141,11 +139,12 @@ static inline void top_sys_write32(struct sf_dphy *priv, u32 reg, u32 val)
 
 static void dsi_csi2tx_sel(struct sf_dphy *priv, int sel)
 {
-  u32 temp = 0;
-  temp = top_sys_read32(priv, SCFG_DSI_CSI_SEL);
-  temp &= ~(0x1);
-  temp |= (sel & 0x1);
-  top_sys_write32(priv, SCFG_DSI_CSI_SEL, temp);
+	u32 temp = 0;
+
+	temp = top_sys_read32(priv, SCFG_DSI_CSI_SEL);
+	temp &= ~(0x1);
+	temp |= (sel & 0x1);
+	top_sys_write32(priv, SCFG_DSI_CSI_SEL, temp);
 }
 
 static void dphy_clane_hs_txready_sel(struct sf_dphy *priv, u32 ready_sel)
@@ -179,170 +178,170 @@ static void dphy_config(struct sf_dphy *priv, int bit_rate)
 	mipi_tx_lxn_set(priv, SCFG_L3N_L3P_HSTX, 0x10, 0x10);
 	mipi_tx_lxn_set(priv, SCFG_L4N_L4P_HSTX, 0x10, 0x10);
 
-	if(bit_rate == 80) {
-		pre_div=0x1,		fbk_int=2*0x33,		extd_cycle_sel=0x4,
-		dhs_pre_time=0xe,	dhs_zero_time=0x1d,	dhs_trial_time=0x15,
-		chs_pre_time=0x5,	chs_zero_time=0x2b,	chs_trial_time=0xd,
-		chs_clk_pre_time=0xf,
-		chs_clk_post_time=0x71;
+	if (bit_rate == 80) {
+		pre_div = 0x1,      fbk_int = 2 * 0x33,   extd_cycle_sel = 0x4,
+		dhs_pre_time = 0xe, dhs_zero_time = 0x1d, dhs_trial_time = 0x15,
+		chs_pre_time = 0x5, chs_zero_time = 0x2b, chs_trial_time = 0xd,
+		chs_clk_pre_time = 0xf,
+		chs_clk_post_time = 0x71;
 	} else if (bit_rate == 100) {
-		pre_div=0x1,		fbk_int=2*0x40,		extd_cycle_sel=0x4,
-		dhs_pre_time=0x10,	dhs_zero_time=0x21,	dhs_trial_time=0x17,
-		chs_pre_time=0x7,	chs_zero_time=0x35,	chs_trial_time=0xf,
-		chs_clk_pre_time=0xf,
-		chs_clk_post_time=0x73;
+		pre_div = 0x1,       fbk_int = 2 * 0x40,   extd_cycle_sel = 0x4,
+		dhs_pre_time = 0x10, dhs_zero_time = 0x21, dhs_trial_time = 0x17,
+		chs_pre_time = 0x7,  chs_zero_time = 0x35, chs_trial_time = 0xf,
+		chs_clk_pre_time = 0xf,
+		chs_clk_post_time = 0x73;
 	} else if (bit_rate == 200) {
-		pre_div=0x1,		fbk_int=2*0x40,		extd_cycle_sel=0x3;
-		dhs_pre_time=0xc,	dhs_zero_time=0x1b,	dhs_trial_time=0x13;
-		chs_pre_time=0x7,	chs_zero_time=0x35,	chs_trial_time=0xf,
-		chs_clk_pre_time=0x7,
-		chs_clk_post_time=0x3f;
-	} else if(bit_rate == 300) {
-		pre_div=0x1,		fbk_int=2*0x60, 	extd_cycle_sel=0x3,
-		dhs_pre_time=0x11,	dhs_zero_time=0x25, dhs_trial_time=0x19,
-		chs_pre_time=0xa, 	chs_zero_time=0x50, chs_trial_time=0x15,
-		chs_clk_pre_time=0x7,
-		chs_clk_post_time=0x45;
-    } else if(bit_rate == 400) {
-		pre_div=0x1,      	fbk_int=2*0x40,		extd_cycle_sel=0x2,
-		dhs_pre_time=0xa, 	dhs_zero_time=0x18,	dhs_trial_time=0x11,
-		chs_pre_time=0x7, 	chs_zero_time=0x35, chs_trial_time=0xf,
-		chs_clk_pre_time=0x3,
-		chs_clk_post_time=0x25;
-    } else if(bit_rate == 500 ) {
-		pre_div=0x1,      fbk_int=2*0x50,       extd_cycle_sel=0x2,
-		dhs_pre_time=0xc, dhs_zero_time=0x1d,	dhs_trial_time=0x14,
-		chs_pre_time=0x9, chs_zero_time=0x42,	chs_trial_time=0x12,
-		chs_clk_pre_time=0x3,
-		chs_clk_post_time=0x28;
-    } else if(bit_rate == 600 ) {
-		pre_div=0x1,      fbk_int=2*0x60,       extd_cycle_sel=0x2,
-		dhs_pre_time=0xe, dhs_zero_time=0x23,	dhs_trial_time=0x17,
-		chs_pre_time=0xa, chs_zero_time=0x50,	chs_trial_time=0x15,
-		chs_clk_pre_time=0x3,
-		chs_clk_post_time=0x2b;
-    } else if(bit_rate == 700) {
-		pre_div=0x1,      fbk_int=2*0x38,       extd_cycle_sel=0x1,
-		dhs_pre_time=0x8, dhs_zero_time=0x14,	dhs_trial_time=0xf,
-		chs_pre_time=0x6, chs_zero_time=0x2f,	chs_trial_time=0xe,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x16;
-    } else if(bit_rate == 800 ) {
-		pre_div=0x1,      fbk_int=2*0x40,       extd_cycle_sel=0x1,
-		dhs_pre_time=0x9, dhs_zero_time=0x17,	dhs_trial_time=0x10,
-		chs_pre_time=0x7, chs_zero_time=0x35,	chs_trial_time=0xf,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x18;
-    } else if(bit_rate == 900 ) {
-		pre_div=0x1,      fbk_int=2*0x48,       extd_cycle_sel=0x1,
-		dhs_pre_time=0xa, dhs_zero_time=0x19, 	dhs_trial_time=0x12,
-		chs_pre_time=0x8, chs_zero_time=0x3c, 	chs_trial_time=0x10,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x19;
-    } else if(bit_rate == 1000) {
-		pre_div=0x1,      fbk_int=2*0x50,       extd_cycle_sel=0x1,
-		dhs_pre_time=0xb, dhs_zero_time=0x1c,	dhs_trial_time=0x13,
-		chs_pre_time=0x9, chs_zero_time=0x42,	chs_trial_time=0x12,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x1b;
-    } else if(bit_rate == 1100) {
-		pre_div=0x1,      fbk_int=2*0x58,       extd_cycle_sel=0x1,
-		dhs_pre_time=0xc, dhs_zero_time=0x1e,	dhs_trial_time=0x15,
-		chs_pre_time=0x9, chs_zero_time=0x4a,	chs_trial_time=0x14,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x1d;
-    } else if(bit_rate == 1200) {
-		pre_div=0x1,      fbk_int=2*0x60,       extd_cycle_sel=0x1,
-		dhs_pre_time=0xe, dhs_zero_time=0x20,	dhs_trial_time=0x16,
-		chs_pre_time=0xa, chs_zero_time=0x50,	chs_trial_time=0x15,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x1e;
-    } else if(bit_rate == 1300) {
-		pre_div=0x1,      fbk_int=2*0x34,       extd_cycle_sel=0x0,
-		dhs_pre_time=0x7, dhs_zero_time=0x12,	dhs_trial_time=0xd,
-		chs_pre_time=0x5, chs_zero_time=0x2c,	chs_trial_time=0xd,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0xf;
-    } else if(bit_rate == 1400) {
-		pre_div=0x1,      fbk_int=2*0x38,       extd_cycle_sel=0x0,
-		dhs_pre_time=0x7, dhs_zero_time=0x14,	dhs_trial_time=0xe,
-		chs_pre_time=0x6, chs_zero_time=0x2f,	chs_trial_time=0xe,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x10;
-    } else if(bit_rate == 1500) {
-		pre_div=0x1,      fbk_int=2*0x3c,       extd_cycle_sel=0x0,
-		dhs_pre_time=0x8, dhs_zero_time=0x14,	dhs_trial_time=0xf,
-		chs_pre_time=0x6, chs_zero_time=0x32,	chs_trial_time=0xe,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x11;
-    } else if(bit_rate == 1600) {
-		pre_div=0x1,      fbk_int=2*0x40,       extd_cycle_sel=0x0,
-		dhs_pre_time=0x9, dhs_zero_time=0x15,	dhs_trial_time=0x10,
-		chs_pre_time=0x7, chs_zero_time=0x35,	chs_trial_time=0xf,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x12;
-    } else if(bit_rate == 1700) {
-		pre_div=0x1,      fbk_int=2*0x44,       extd_cycle_sel=0x0,
-		dhs_pre_time=0x9, dhs_zero_time=0x17,	dhs_trial_time=0x10,
-		chs_pre_time=0x7, chs_zero_time=0x39,	chs_trial_time=0x10,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x12;
-    } else if(bit_rate == 1800) {
-		pre_div=0x1,      fbk_int=2*0x48,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xa, dhs_zero_time=0x18,	dhs_trial_time=0x11,
-		chs_pre_time=0x8, chs_zero_time=0x3c,	chs_trial_time=0x10,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x13;
-    } else if(bit_rate == 1900) {
-		pre_div=0x1,      fbk_int=2*0x4c,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xa, dhs_zero_time=0x1a,	dhs_trial_time=0x12,
-		chs_pre_time=0x8, chs_zero_time=0x3f,	chs_trial_time=0x11,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x14;
-    } else if(bit_rate == 2000) {
-		pre_div=0x1,      fbk_int=2*0x50,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xb, dhs_zero_time=0x1b,	dhs_trial_time=0x13,
-		chs_pre_time=0x9, chs_zero_time=0x42,	chs_trial_time=0x12,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x15;
-    } else if(bit_rate == 2100) {
-		pre_div=0x1,      fbk_int=2*0x54,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xb, dhs_zero_time=0x1c,	dhs_trial_time=0x13,
-		chs_pre_time=0x9, chs_zero_time=0x46,	chs_trial_time=0x13,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x15;
-    } else if(bit_rate == 2200) {
-		pre_div=0x1,      fbk_int=2*0x5b,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xc, dhs_zero_time=0x1d,	dhs_trial_time=0x14,
-		chs_pre_time=0x9, chs_zero_time=0x4a,	chs_trial_time=0x14,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x16;
-    } else if(bit_rate == 2300) {
-		pre_div=0x1,      fbk_int=2*0x5c,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xc, dhs_zero_time=0x1f,	dhs_trial_time=0x15,
-		chs_pre_time=0xa, chs_zero_time=0x4c,	chs_trial_time=0x14,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x17;
-    } else if(bit_rate == 2400) {
-		pre_div=0x1,      fbk_int=2*0x60,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xd, dhs_zero_time=0x20,	dhs_trial_time=0x16,
-		chs_pre_time=0xa, chs_zero_time=0x50,	chs_trial_time=0x15,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x18;
-    } else if(bit_rate == 2500) {
-		pre_div=0x1,      fbk_int=2*0x64,       extd_cycle_sel=0x0,
-		dhs_pre_time=0xe, dhs_zero_time=0x21,	dhs_trial_time=0x16,
-		chs_pre_time=0xb, chs_zero_time=0x53,	chs_trial_time=0x16,
-		chs_clk_pre_time=0x0,
-		chs_clk_post_time=0x18;
-    } else {
+		pre_div = 0x1,      fbk_int = 2 * 0x40,	  extd_cycle_sel = 0x3;
+		dhs_pre_time = 0xc,	dhs_zero_time = 0x1b, dhs_trial_time = 0x13;
+		chs_pre_time = 0x7,	chs_zero_time = 0x35, chs_trial_time = 0xf,
+		chs_clk_pre_time = 0x7,
+		chs_clk_post_time = 0x3f;
+	} else if (bit_rate == 300) {
+		pre_div = 0x1,       fbk_int = 2 * 0x60,   extd_cycle_sel = 0x3,
+		dhs_pre_time = 0x11, dhs_zero_time = 0x25, dhs_trial_time = 0x19,
+		chs_pre_time = 0xa,  chs_zero_time = 0x50, chs_trial_time = 0x15,
+		chs_clk_pre_time = 0x7,
+		chs_clk_post_time = 0x45;
+	} else if (bit_rate == 400) {
+		pre_div = 0x1,      fbk_int = 2 * 0x40,	  extd_cycle_sel = 0x2,
+		dhs_pre_time = 0xa, dhs_zero_time = 0x18, dhs_trial_time = 0x11,
+		chs_pre_time = 0x7, chs_zero_time = 0x35, chs_trial_time = 0xf,
+		chs_clk_pre_time = 0x3,
+		chs_clk_post_time = 0x25;
+	} else if (bit_rate == 500) {
+		pre_div = 0x1,      fbk_int = 2 * 0x50,   extd_cycle_sel = 0x2,
+		dhs_pre_time = 0xc, dhs_zero_time = 0x1d, dhs_trial_time = 0x14,
+		chs_pre_time = 0x9, chs_zero_time = 0x42, chs_trial_time = 0x12,
+		chs_clk_pre_time = 0x3,
+		chs_clk_post_time = 0x28;
+	} else if (bit_rate == 600) {
+		pre_div = 0x1,      fbk_int = 2 * 0x60,     extd_cycle_sel = 0x2,
+		dhs_pre_time = 0xe, dhs_zero_time = 0x23,	dhs_trial_time = 0x17,
+		chs_pre_time = 0xa, chs_zero_time = 0x50,	chs_trial_time = 0x15,
+		chs_clk_pre_time = 0x3,
+		chs_clk_post_time = 0x2b;
+	} else if (bit_rate == 700) {
+		pre_div = 0x1,      fbk_int = 2 * 0x38,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0x8, dhs_zero_time = 0x14,	dhs_trial_time = 0xf,
+		chs_pre_time = 0x6, chs_zero_time = 0x2f,	chs_trial_time = 0xe,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x16;
+	} else if (bit_rate == 800) {
+		pre_div = 0x1,      fbk_int = 2 * 0x40,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0x9, dhs_zero_time = 0x17,	dhs_trial_time = 0x10,
+		chs_pre_time = 0x7, chs_zero_time = 0x35,	chs_trial_time = 0xf,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x18;
+	} else if (bit_rate == 900) {
+		pre_div = 0x1,      fbk_int = 2 * 0x48,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0xa, dhs_zero_time = 0x19,	dhs_trial_time = 0x12,
+		chs_pre_time = 0x8, chs_zero_time = 0x3c,	chs_trial_time = 0x10,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x19;
+	} else if (bit_rate == 1000) {
+		pre_div = 0x1,      fbk_int = 2 * 0x50,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0xb, dhs_zero_time = 0x1c,	dhs_trial_time = 0x13,
+		chs_pre_time = 0x9, chs_zero_time = 0x42,	chs_trial_time = 0x12,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x1b;
+	} else if (bit_rate == 1100) {
+		pre_div = 0x1,      fbk_int = 2 * 0x58,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0xc, dhs_zero_time = 0x1e,	dhs_trial_time = 0x15,
+		chs_pre_time = 0x9, chs_zero_time = 0x4a,	chs_trial_time = 0x14,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x1d;
+	} else if (bit_rate == 1200) {
+		pre_div = 0x1,      fbk_int = 2 * 0x60,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0xe, dhs_zero_time = 0x20,	dhs_trial_time = 0x16,
+		chs_pre_time = 0xa, chs_zero_time = 0x50,	chs_trial_time = 0x15,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x1e;
+	} else if (bit_rate == 1300) {
+		pre_div = 0x1,      fbk_int = 2 * 0x34,     extd_cycle_sel =  0x0,
+		dhs_pre_time = 0x7, dhs_zero_time = 0x12,	dhs_trial_time =  0xd,
+		chs_pre_time = 0x5, chs_zero_time = 0x2c,	chs_trial_time =  0xd,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0xf;
+	} else if (bit_rate == 1400) {
+		pre_div = 0x1,      fbk_int = 2 * 0x38,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0x7, dhs_zero_time = 0x14,	dhs_trial_time = 0xe,
+		chs_pre_time = 0x6, chs_zero_time = 0x2f,	chs_trial_time = 0xe,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x10;
+	} else if (bit_rate == 1500) {
+		pre_div = 0x1,      fbk_int = 2 * 0x3c,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0x8, dhs_zero_time = 0x14,	dhs_trial_time = 0xf,
+		chs_pre_time = 0x6, chs_zero_time = 0x32,	chs_trial_time = 0xe,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x11;
+	} else if (bit_rate == 1600) {
+		pre_div = 0x1,      fbk_int = 2 * 0x40,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0x9, dhs_zero_time = 0x15,	dhs_trial_time = 0x10,
+		chs_pre_time = 0x7, chs_zero_time = 0x35,	chs_trial_time = 0xf,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x12;
+	} else if (bit_rate == 1700) {
+		pre_div = 0x1,      fbk_int = 2 * 0x44,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0x9, dhs_zero_time = 0x17,	dhs_trial_time = 0x10,
+		chs_pre_time = 0x7, chs_zero_time = 0x39,	chs_trial_time = 0x10,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x12;
+	} else if (bit_rate == 1800) {
+		pre_div = 0x1,      fbk_int = 2 * 0x48,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xa, dhs_zero_time = 0x18,	dhs_trial_time = 0x11,
+		chs_pre_time = 0x8, chs_zero_time = 0x3c,	chs_trial_time = 0x10,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x13;
+	} else if (bit_rate == 1900) {
+		pre_div = 0x1,      fbk_int = 2 * 0x4c,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xa, dhs_zero_time = 0x1a,	dhs_trial_time = 0x12,
+		chs_pre_time = 0x8, chs_zero_time = 0x3f,	chs_trial_time = 0x11,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x14;
+	} else if (bit_rate == 2000) {
+		pre_div = 0x1,      fbk_int = 2 * 0x50,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xb, dhs_zero_time = 0x1b,	dhs_trial_time = 0x13,
+		chs_pre_time = 0x9, chs_zero_time = 0x42,	chs_trial_time = 0x12,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x15;
+	} else if (bit_rate == 2100) {
+		pre_div = 0x1,      fbk_int = 2 * 0x54,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xb, dhs_zero_time = 0x1c,	dhs_trial_time = 0x13,
+		chs_pre_time = 0x9, chs_zero_time = 0x46,	chs_trial_time = 0x13,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x15;
+	} else if (bit_rate == 2200) {
+		pre_div = 0x1,      fbk_int = 2 * 0x5b,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xc, dhs_zero_time = 0x1d,	dhs_trial_time = 0x14,
+		chs_pre_time = 0x9, chs_zero_time = 0x4a,	chs_trial_time = 0x14,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x16;
+	} else if (bit_rate == 2300) {
+		pre_div = 0x1,      fbk_int = 2 * 0x5c,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xc, dhs_zero_time = 0x1f,	dhs_trial_time = 0x15,
+		chs_pre_time = 0xa, chs_zero_time = 0x4c,	chs_trial_time = 0x14,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x17;
+	} else if (bit_rate == 2400) {
+		pre_div = 0x1,      fbk_int = 2 * 0x60,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xd, dhs_zero_time = 0x20,	dhs_trial_time = 0x16,
+		chs_pre_time = 0xa, chs_zero_time = 0x50,	chs_trial_time = 0x15,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x18;
+	} else if (bit_rate == 2500) {
+		pre_div = 0x1,      fbk_int = 2 * 0x64,     extd_cycle_sel = 0x0,
+		dhs_pre_time = 0xe, dhs_zero_time = 0x21,	dhs_trial_time = 0x16,
+		chs_pre_time = 0xb, chs_zero_time = 0x53,	chs_trial_time = 0x16,
+		chs_clk_pre_time = 0x0,
+		chs_clk_post_time = 0x18;
+	} else {
 		//default bit_rate == 700
-		pre_div=0x1,      fbk_int=2*0x38,       extd_cycle_sel=0x1,
-		dhs_pre_time=0x8, dhs_zero_time=0x14,	dhs_trial_time=0xf,
-		chs_pre_time=0x6, chs_zero_time=0x2f,	chs_trial_time=0xe,
-		chs_clk_pre_time=0x1,
-		chs_clk_post_time=0x16;
-    }
+		pre_div = 0x1,      fbk_int = 2 * 0x38,     extd_cycle_sel = 0x1,
+		dhs_pre_time = 0x8, dhs_zero_time = 0x14,	dhs_trial_time = 0xf,
+		chs_pre_time = 0x6, chs_zero_time = 0x2f,	chs_trial_time = 0xe,
+		chs_clk_pre_time = 0x1,
+		chs_clk_post_time = 0x16;
+	}
 	top_sys_write32(priv, SCFG_REFCLK_SEL, 0x3);
 
 	set_val = 0
@@ -382,10 +381,11 @@ static void dphy_config(struct sf_dphy *priv, int bit_rate)
 static void reset_dphy(struct sf_dphy *priv, int resetb)
 {
 	u32 cfg_link_enable = 0x01;//bit0
-    u32 cfg_ck2_ck3_ck_enable = 0x07;//bit0-3
-    u32 cfg_ck1_dat_enable = 0x1f<<3;//bit3-7
+	u32 cfg_ck2_ck3_ck_enable = 0x07;//bit0-3
+	u32 cfg_ck1_dat_enable = 0x1f<<3;//bit3-7
 	u32 cfg_dsc_enable = 0x01;//bit0
 	u32 precfg = top_sys_read32(priv, VID_MCTL_MAIN_EN) & ~cfg_ck1_dat_enable;
+
 	top_sys_write32(priv, VID_MCTL_MAIN_EN, precfg|cfg_ck1_dat_enable);
 
 	precfg = top_sys_read32(priv, VID_MCTL_MAIN_PHY_CTL) & ~cfg_ck2_ck3_ck_enable;
@@ -482,14 +482,13 @@ static int sf_dphy_probe(struct platform_device *pdev)
 {
 	struct phy_provider *phy_provider;
 	struct sf_dphy *dphy;
-	struct resource *res;
-	int ret;
+
 	dphy = devm_kzalloc(&pdev->dev, sizeof(*dphy), GFP_KERNEL);
 	if (!dphy)
 		return -ENOMEM;
 	dev_set_drvdata(&pdev->dev, dphy);
 
-	dev_info(&pdev->dev,"===> %s enter, %d \n", __func__, __LINE__);
+	dev_info(&pdev->dev, "function %s enter, %d\n", __func__, __LINE__);
 
 	dphy->topsys = ioremap(0x12260000, 0x10000);
 

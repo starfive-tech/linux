@@ -1061,24 +1061,6 @@ static int cdns_dsi_detach(struct mipi_dsi_host *host,
 	return 0;
 }
 
-static irqreturn_t cdns_dsi_interrupt(int irq, void *data)
-{
-	struct cdns_dsi *dsi = data;
-	irqreturn_t ret = IRQ_NONE;
-	u32 flag, ctl;
-
-	flag = readl(dsi->regs + DIRECT_CMD_STS_FLAG);
-	if (flag) {
-		ctl = readl(dsi->regs + DIRECT_CMD_STS_CTL);
-		ctl &= ~flag;
-		writel(ctl, dsi->regs + DIRECT_CMD_STS_CTL);
-		complete(&dsi->direct_cmd_comp);
-		ret = IRQ_HANDLED;
-	}
-
-	return ret;
-}
-
 static ssize_t cdns_dsi_transfer(struct mipi_dsi_host *host,
 				 const struct mipi_dsi_msg *msg)
 {
@@ -1276,22 +1258,15 @@ static int starfive_dsi_bind(struct device *dev, struct device *master, void *da
 	writel(0, dsi->regs + TVG_STS_CTL);
 	writel(0, dsi->regs + DPI_IRQ_EN);
 
-#if 0
-	ret = devm_request_irq(&pdev->dev, irq, cdns_dsi_interrupt, 0,
-			       dev_name(&pdev->dev), dsi);
-	if (ret)
-		goto err_disable_pclk;
-#endif
-
 	pm_runtime_enable(&pdev->dev);
 	dsi->base.dev = &pdev->dev;
 	dsi->base.ops = &cdns_dsi_ops;
-
 	ret = mipi_dsi_host_register(&dsi->base);
 	if (ret)
 		goto err_disable_runtime_pm;
 
     init_seeed_panel();
+
 	return 0;
 
 err_disable_runtime_pm:

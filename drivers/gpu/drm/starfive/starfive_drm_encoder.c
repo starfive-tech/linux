@@ -20,12 +20,6 @@
 #include "starfive_drm_drv.h"
 #include "starfive_drm_encoder.h"
 
-static struct starfive_encoder_data {
-	int endpoint_reg;
-	int encoder_type;
-};
-
-
 static void starfive_encoder_destroy(struct drm_encoder *encoder)
 {
 	drm_encoder_cleanup(encoder);
@@ -73,7 +67,6 @@ static int starfive_encoder_of_parse_ports(struct device *dev,
 
 	return num_port;
 
-error_alloc:
 err_cleanup:
 	of_node_put(node);
 	return ret;
@@ -83,15 +76,12 @@ err_cleanup:
 static int starfive_encoder_bind(struct device *dev, struct device *master, void *data)
 {
 	struct drm_device *drm_dev = data;
-	struct device_node *np = dev->of_node;
 	struct starfive_encoder *encoderp;
 	int ret;
 	int i = 0;
-
 	struct drm_panel *tmp_panel;
 	struct drm_bridge *tmp_bridge;
 	struct starfive_encoder_data *encoder_data = NULL;
-
 	u32 num_ports = 0;
 
 	num_ports = starfive_encoder_of_parse_ports(dev, &encoder_data);
@@ -119,14 +109,18 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 			dev_err(dev, "endpoint returns %d\n", ret);
 
 		if (tmp_panel)
-			DRM_DEBUG("found panel on endpoint\n");
+			dev_info(dev, "found panel on endpoint@%d\n",
+				encoder_data[i].endpoint_reg);
 
-		if (tmp_bridge)
-			DRM_DEBUG("found bridge on endpoint\n");
-
-		ret = drm_bridge_attach(&encoderp[i].encoder, tmp_bridge, NULL, 0);
-		if (ret)
-			goto err_bridge;
+		if (!tmp_bridge)
+			dev_err(dev, "can not found bridge on endpoint@%d\n",
+				encoder_data[i].endpoint_reg);
+		else {
+			ret = drm_bridge_attach(&encoderp[i].encoder,
+				tmp_bridge, NULL, 0);
+			if (ret)
+				goto err_bridge;
+		}
 	}
 
 	return 0;
@@ -139,7 +133,7 @@ err_encoder:
 
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)
 {
-	struct starfive_encoder *encoderp = dev_get_drvdata(dev);
+
 }
 
 static const struct component_ops starfive_encoder_component_ops = {

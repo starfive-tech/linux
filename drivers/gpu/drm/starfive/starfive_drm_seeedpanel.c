@@ -177,28 +177,6 @@ struct seeed_panel_dev {
 	int			irq;
 };
 
-#if 0
-static int seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
-{
-	struct i2c_msg msg;
-	u8 buf[2];
-	int ret;
-
-	buf[0] = reg;
-	buf[1] = val;
-
-	msg.addr = client->addr;
-	msg.flags = 0;
-	msg.buf = buf;
-	msg.len = 2;
-
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret >= 0)
-		return 0;
-
-	return ret;
-}
-#else
 static void seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
 {
 	int ret;
@@ -208,43 +186,14 @@ static void seeed_panel_i2c_write(struct i2c_client *client, u8 reg, u8 val)
 	} while (ret);
 
 	if (ret)
-		printk("I2C write failed: %d\n", ret);
+		dev_err(&client->dev, "I2C write failed: %d\n", ret);
 }
-#endif
 
-#if 0
-static int seeed_panel_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
-{
-	struct i2c_msg msg[2];
-	u8 buf[2];
-	int ret;
-
-	buf[0] = reg;
-
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].buf = buf;
-	msg[0].len = 1;
-
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].buf = val;
-	msg[1].len = 1;
-
-	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret >= 0)
-		return 0;
-
-	return ret;
-}
-#else
 static int seeed_panel_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
 {
 	*val =  i2c_smbus_read_byte_data(client, reg);
 	return 0;
 }
-#endif
-
 
 enum dsi_rgb_pattern_t {
 	RGB_PAT_WHITE,
@@ -328,10 +277,7 @@ static int seeed_panel_disable(struct drm_panel *panel)
 {
 	struct seeed_panel_dev *sp = panel_to_seeed(panel);
 
-	//seeed_panel_i2c_write(sp->client, REG_POWERON, 1);
-
 	seeed_panel_i2c_write(sp->client, REG_PWM, 0);
-
 	seeed_panel_i2c_write(sp->client, REG_POWERON, 0);
 	udelay(1);
 

@@ -15,8 +15,6 @@
 #include <linux/module.h>
 #include <linux/component.h>
 
-// #define USE_OLD_SCREEN  1
-
 struct starfive_drm_private {
 	struct drm_fb_helper fbdev_helper;
 	struct drm_gem_object *fbdev_bo;

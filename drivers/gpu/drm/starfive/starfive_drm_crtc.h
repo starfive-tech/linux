@@ -46,8 +46,11 @@ struct starfive_crtc {
 	void __iomem	*base_vpp2;   //0x120c0000
 	void __iomem	*base_lcdc;   //0x12000000
 
-	void __iomem	*topclk;      //(0x11800000, 0x10000);
-	void __iomem	*toprst;      //(0x11840000, 0x10000);
+	struct clk *clk_disp_axi;
+	struct clk *clk_vout_src;
+
+	struct reset_control *rst_disp_axi;
+	struct reset_control *rst_vout_src;
 
 	int				lcdc_irq;
 	int				vpp0_irq;

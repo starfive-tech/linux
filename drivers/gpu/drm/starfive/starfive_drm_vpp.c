@@ -15,9 +15,10 @@
  *
  */
 
+#include <linux/clk.h>
 #include <linux/module.h>
+#include <linux/reset.h>
 #include <video/starfive_fb.h>
-
 #include "starfive_drm_vpp.h"
 #include "starfive_drm_crtc.h"
 
@@ -40,16 +41,6 @@ static inline void sf_set_clear(void __iomem *addr, u32 reg, u32 set, u32 clear)
 	value &= ~clear;
 	value |= set;
 	iowrite32(value, addr + reg);
-}
-
-static inline void sf_reg_status_wait(void __iomem *addr, u32 reg, u8 offset, u8 value)
-{
-	u32 temp;
-
-	do {
-		temp = ioread32(addr + reg) >> offset;
-		temp &= 0x01;
-	} while (temp != value);
 }
 
 static u32 sf_fb_sysread32(struct starfive_crtc *sf_crtc, u32 reg)
@@ -330,11 +321,11 @@ static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_vi
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420P, 0x0, 0, 0x0, 0x0);
 		break;
 	case COLOR_YUV420_NV12:
-		PP_INFO("src_format: COLOR_YUV420_NV21\n");
+		PP_INFO("src_format: COLOR_YUV420_NV12\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0, COLOR_YUV420_NV12-COLOR_YUV420_NV12, 0x0);
 		break;
 	case COLOR_YUV420_NV21:
-		PP_INFO("src_format: COLOR_YUV420_NV12\n");
+		PP_INFO("src_format: COLOR_YUV420_NV21\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0, COLOR_YUV420_NV21-COLOR_YUV420_NV12, 0x0);
 		break;
 	case COLOR_RGB888_ARGB:
@@ -779,16 +770,15 @@ EXPORT_SYMBOL(starfive_pp_get_2lcdc_id);
 
 void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 {
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x1&0x1)<<23, (0x1<<23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x1&0x1)<<24, (0x1<<24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 0);
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x0&0x1)<<23, (0x1<<23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x0&0x1)<<24, (0x1<<24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 1);
+	u32 temp;
+
+	reset_control_assert(sf_crtc->rst_vout_src);
+	reset_control_assert(sf_crtc->rst_disp_axi);
+	clk_prepare_enable(sf_crtc->clk_disp_axi);
+	clk_prepare_enable(sf_crtc->clk_vout_src);
+	reset_control_deassert(sf_crtc->rst_vout_src);
+	reset_control_deassert(sf_crtc->rst_disp_axi);
+
 	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
 	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
 	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
@@ -801,7 +791,6 @@ void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
 
 	sf_set_clear(sf_crtc->base_rst, vout_rstgen_assert0_REG, ~0x1981ec, 0x1981ec);
-	u32 temp;
 
 	do {
 		temp = ioread32(sf_crtc->base_rst + vout_rstgen_status0_REG);
@@ -812,16 +801,14 @@ EXPORT_SYMBOL(dsitx_vout_init);
 
 void vout_reset(struct starfive_crtc *sf_crtc)
 {
+	u32 temp;
+
 	iowrite32(0xFFFFFFFF, sf_crtc->base_rst);
 
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x0&0x1)<<23, (0x1<<23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 1);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x0&0x1)<<24, (0x1<<24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 1);
+	clk_prepare_enable(sf_crtc->clk_disp_axi);
+	clk_prepare_enable(sf_crtc->clk_vout_src);
+	reset_control_deassert(sf_crtc->rst_vout_src);
+	reset_control_deassert(sf_crtc->rst_disp_axi);
 
 	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
 	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
@@ -841,7 +828,6 @@ void vout_reset(struct starfive_crtc *sf_crtc)
 	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
 
 	sf_set_clear(sf_crtc->base_rst, vout_rstgen_assert0_REG, ~0x19bfff, 0x19bfff);
-	u32 temp;
 
 	do {
 		temp = ioread32(sf_crtc->base_rst + vout_rstgen_status0_REG);
@@ -855,14 +841,10 @@ void vout_disable(struct starfive_crtc *sf_crtc)
 {
 	iowrite32(0xFFFFFFFF, sf_crtc->base_rst);
 
-	sf_set_clear(sf_crtc->topclk, clk_disp_axi_ctrl_REG, (0x0&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->topclk, clk_vout_src_ctrl_REG, (0x0&0x1)<<31, (0x1<<31));
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x1&0x1)<<23, (0x1<<23));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 23, 0);
-
-	sf_set_clear(sf_crtc->toprst, rstgen_assert1_REG, (0x1&0x1)<<24, (0x1<<24));
-	sf_reg_status_wait(sf_crtc->toprst, rstgen_status1_REG, 24, 0);
+	clk_disable_unprepare(sf_crtc->clk_disp_axi);
+	clk_disable_unprepare(sf_crtc->clk_vout_src);
+	reset_control_assert(sf_crtc->rst_vout_src);
+	reset_control_assert(sf_crtc->rst_disp_axi);
 }
 EXPORT_SYMBOL(vout_disable);
 

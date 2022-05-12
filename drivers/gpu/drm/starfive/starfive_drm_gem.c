@@ -30,7 +30,6 @@ static int starfive_drm_gem_object_mmap(struct drm_gem_object *obj,
 					struct vm_area_struct *vma)
 {
 	int ret;
-	struct starfive_drm_gem_obj *starfive_obj = to_starfive_gem_obj(obj);
 
 	/*
 	 * We allocated a struct page table for rk_obj, so clear
@@ -119,7 +118,6 @@ static int starfive_drm_gem_alloc_dma(struct starfive_drm_gem_obj *starfive_obj,
 {
 	struct drm_gem_object *obj = &starfive_obj->base;
 	struct drm_device *drm = obj->dev;
-	struct starfive_drm_private *private = drm->dev_private;
 
 	starfive_obj->dma_attrs = DMA_ATTR_WRITE_COMBINE;
 
@@ -284,7 +282,6 @@ starfive_drm_gem_prime_import_sg_table(struct drm_device *drm,
 				struct dma_buf_attachment *attach,
 				struct sg_table *sg)
 {
-	struct starfive_drm_private *private = drm->dev_private;
 	struct starfive_drm_gem_obj *starfive_obj;
 	int ret;
 

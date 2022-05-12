@@ -15,6 +15,12 @@ struct starfive_encoder {
 	int encoder_type;
 	struct starfive_encoder_data *data;
 };
+
+static struct starfive_encoder_data {
+	int endpoint_reg;
+	int encoder_type;
+};
+
 #define to_starfive_encoder(x) container_of(x, struct starfive_encoder, encoder)
 
 #endif /* _STARFIVE_DRM_CRTC_H */

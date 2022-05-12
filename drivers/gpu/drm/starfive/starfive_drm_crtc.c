@@ -6,6 +6,7 @@
 #include <linux/clk.h>
 #include <linux/component.h>
 #include <linux/of_device.h>
+#include <linux/reset.h>
 #include <linux/delay.h>
 
 #include <drm/drm_atomic.h>
@@ -217,10 +218,9 @@ static void starfive_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	DRM_DEBUG("ddr_format_change [%d],dma_addr_change [%d]\n",
 		crtcp->ddr_format_change, crtcp->dma_addr_change);
-	int ret;
 
 	if (crtcp->ddr_format_change || crtcp->dma_addr_change) {
-		ret = ddrfmt_to_ppfmt(crtcp);
+		ddrfmt_to_ppfmt(crtcp);
 		starfive_pp_update(crtcp);
 		starfive_lcdc_enable(crtcp);
 	} else
@@ -231,9 +231,7 @@ static void starfive_crtc_atomic_enable(struct drm_crtc *crtc,
 				 struct drm_crtc_state *old_state)
 {
 	struct starfive_crtc *crtcp = to_starfive_crtc(crtc);
-	struct drm_crtc_state *state = crtc->state;
 	struct drm_encoder *encoder = NULL;
-	struct drm_device *drm = crtc->dev;
 
 	encoder = starfive_head_atom_get_encoder(crtcp);
 
@@ -256,9 +254,7 @@ static void starfive_crtc_atomic_disable(struct drm_crtc *crtc,
 				 struct drm_crtc_state *old_state)
 {
 	struct starfive_crtc *crtcp = to_starfive_crtc(crtc);
-
 	int pp_id;
-	int ret = 0;
 
 	for (pp_id = 0; pp_id < PP_NUM; pp_id++) {
 		if (crtcp->pp[pp_id].inited == 1) {
@@ -364,10 +360,47 @@ static int starfive_crtc_get_memres(struct platform_device *pdev,
 			dev_err(&pdev->dev, "Could not match resource name\n");
 	}
 
-	sf_crtc->topclk = ioremap(0x11800000, 0x10000);
-	sf_crtc->toprst = ioremap(0x11840000, 0x10000);
-
 	return 0;
+}
+
+static int starfive_crtc_get_clks(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
+{
+	int ret = 0;
+
+	sf_crtc->clk_disp_axi = devm_clk_get(&pdev->dev, "disp_axi");
+	if (IS_ERR(sf_crtc->clk_disp_axi)) {
+		dev_warn(&pdev->dev, "Can't get disp_axi clock\n");
+		return PTR_ERR(sf_crtc->clk_disp_axi);
+	}
+
+	sf_crtc->clk_vout_src = devm_clk_get(&pdev->dev, "vout_src");
+	if (IS_ERR(sf_crtc->clk_vout_src)) {
+		dev_warn(&pdev->dev, "Can't get vout_src clock\n");
+		devm_clk_put(&pdev->dev, sf_crtc->clk_disp_axi);
+		return PTR_ERR(sf_crtc->clk_vout_src);
+	}
+
+	return ret;
+}
+
+static int starfive_crtc_get_resets(struct platform_device *pdev, struct starfive_crtc *sf_crtc)
+{
+	int ret = 0;
+
+	sf_crtc->rst_disp_axi = devm_reset_control_get_exclusive(&pdev->dev, "disp_axi");
+	if (IS_ERR(sf_crtc->rst_disp_axi)) {
+		dev_warn(&pdev->dev, "Can't get disp_axi reset_control\n");
+		return PTR_ERR(sf_crtc->rst_disp_axi);
+	}
+
+	sf_crtc->rst_vout_src = devm_reset_control_get_exclusive(&pdev->dev, "vout_src");
+	if (IS_ERR(sf_crtc->rst_vout_src)) {
+		dev_warn(&pdev->dev, "Can't get vout_src reset_control\n");
+	    reset_control_put(sf_crtc->rst_disp_axi);
+		return PTR_ERR(sf_crtc->rst_vout_src);
+	}
+
+	return ret;
 }
 
 static int starfive_parse_dt(struct device *dev,
@@ -432,7 +465,6 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 	struct platform_device *pdev = to_platform_device(dev);
 	struct drm_device *drm_dev = data;
 	struct starfive_crtc *crtcp;
-	struct device_node *np = dev->of_node;
 	int ret;
 
 	crtcp = devm_kzalloc(dev, sizeof(*crtcp), GFP_KERNEL);
@@ -445,7 +477,18 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 
 	spin_lock_init(&crtcp->reg_lock);
 
-	starfive_crtc_get_memres(pdev, crtcp);
+	ret = starfive_crtc_get_memres(pdev, crtcp);
+	if (ret)
+		return ret;
+
+	ret = starfive_crtc_get_clks(pdev, crtcp);
+	if (ret)
+		return ret;
+
+	ret = starfive_crtc_get_resets(pdev, crtcp);
+	if (ret)
+		return ret;
+
 	ret = starfive_parse_dt(dev, crtcp);
 
 	crtcp->pp_conn_lcdc = starfive_pp_get_2lcdc_id(crtcp);
@@ -474,7 +517,6 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 		return ret;
 	}
 
-
 	ret = devm_request_irq(&pdev->dev, crtcp->vpp1_irq, vpp1_isr_handler, 0,
 			       "sf_vpp1", crtcp);
 	if (ret) {
@@ -495,10 +537,7 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 
 static void starfive_crtc_unbind(struct device *dev, struct device *master, void *data)
 {
-	struct platform_device *pdev = to_platform_device(dev);
 	struct starfive_crtc *crtcp = dev_get_drvdata(dev);
-
-	vout_disable(crtcp);// disable crtc HW
 
 	crtcp->is_enabled = false;
 }

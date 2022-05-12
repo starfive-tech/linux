@@ -15,6 +15,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/clk.h>
 #include <video/starfive_fb.h>
 #include <drm/drm_crtc.h>
 
@@ -415,16 +416,14 @@ EXPORT_SYMBOL(lcdc_run);
 static int sf_fb_lcdc_clk_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
 {
 	u32 tmp_val = 0;
-	int ret = 0;
-
-	int reg_val = 1485000/state->mode.clock;//vout_src:148500
+	int reg_val = clk_get_rate(sf_crtc->clk_vout_src) / (state->mode.clock * 1000);
 
 	tmp_val = sf_fb_clkread32(sf_crtc, CLK_LCDC_OCLK_CTRL);
 	tmp_val &= ~(0x3F);
 	tmp_val |= (reg_val & 0x3F);
 	sf_fb_clkwrite32(sf_crtc, CLK_LCDC_OCLK_CTRL, tmp_val);
 
-	return ret;
+	return 0;
 }
 
 static int sf_fb_lcdc_init(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state)
@@ -483,8 +482,6 @@ EXPORT_SYMBOL(starfive_lcdc_enable);
 
 void starfive_lcdc_disable(struct starfive_crtc *sf_crtc)
 {
-	struct drm_crtc_state *state = sf_crtc->crtc.state;
-
 	lcdc_disable_intr(sf_crtc);
 	lcdc_run(sf_crtc, sf_crtc->winNum, LCDC_STOP);
 }

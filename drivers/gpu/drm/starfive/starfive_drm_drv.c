@@ -36,8 +36,6 @@ static struct drm_framebuffer *
 starfive_drm_mode_fb_create(struct drm_device *dev, struct drm_file *file,
 		   const struct drm_mode_fb_cmd2 *mode_cmd)
 {
-	const struct drm_format_info *info = drm_get_format_info(dev, mode_cmd);
-
 	return drm_gem_fb_create(dev, file, mode_cmd);
 }
 
@@ -215,7 +213,6 @@ static int starfive_drm_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct component_match *match = NULL;
-	int ret;
 
 	starfive_drm_match_add(dev, &match,
 					starfive_component_drivers, ARRAY_SIZE(starfive_component_drivers));

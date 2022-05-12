@@ -51,6 +51,7 @@ static const struct drm_plane_funcs starfive_plane_funcs = {
 static void starfive_plane_atomic_disable(struct drm_plane *plane,
 				     struct drm_plane_state *old_state)
 {
+	return;
 }
 
 static int starfive_plane_atomic_check(struct drm_plane *plane,
@@ -58,7 +59,6 @@ static int starfive_plane_atomic_check(struct drm_plane *plane,
 {
 	struct drm_framebuffer *fb = state->fb;
 	struct drm_crtc_state *crtc_state;
-	int ret;
 
 	if (!fb)
 		return 0;
@@ -156,7 +156,6 @@ static void starfive_plane_atomic_async_update(struct drm_plane *plane,
 					 struct drm_plane_state *new_state)
 {
 	struct starfive_crtc *crtcp = to_starfive_crtc(plane->state->crtc);
-	struct drm_framebuffer *old_fb = plane->state->fb;
 
 	plane->state->crtc_x = new_state->crtc_x;
 	plane->state->crtc_y = new_state->crtc_y;
@@ -189,7 +188,6 @@ int starfive_plane_init(struct drm_device *dev, struct starfive_crtc *starfive_c
 						enum drm_plane_type type)
 {
 	int ret;
-	int i;
 
 	ret = drm_universal_plane_init(dev, starfive_crtc->planes, 0,
 				       &starfive_plane_funcs, formats,
