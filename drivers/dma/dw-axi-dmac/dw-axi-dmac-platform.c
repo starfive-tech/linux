@@ -176,11 +176,6 @@ static inline u32 axi_chan_irq_read(struct axi_dma_chan *chan)
 	return axi_chan_ioread32(chan, CH_INTSTATUS);
 }
 
-static inline bool axi_chan_get_nr8(struct axi_dma_chan *chan)
-{
-	return chan->chip->flag->nr_chan_8;
-}
-
 static inline void axi_chan_disable(struct axi_dma_chan *chan)
 {
 	u32 val;
@@ -334,7 +329,6 @@ dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
 		bytes = length - completed_length;
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 		dma_set_residue(txstate, bytes);
-		
 	} else {
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 	}
@@ -356,19 +350,16 @@ static void write_chan_llp(struct axi_dma_chan *chan, dma_addr_t adr)
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
 {
-	struct axi_dma_hw_desc *hw_desc = NULL;
 	u32 priority = chan->chip->dw->hdata->priority[chan->id];
 	struct axi_dma_chan_config config = {};
 	u32 irq_mask;
 	u8 lms = 0; /* Select AXI0 master for LLI fetching */
 
-	chan->is_err = false;
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
 
 		axi_chan_disable(chan);
-		chan->is_err = true;
 	}
 
 	axi_dma_enable(chan->chip);
@@ -381,7 +372,6 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	config.hs_sel_src = DWAXIDMAC_HS_SEL_HW;
 	switch (chan->direction) {
 	case DMA_MEM_TO_DEV:
-		dw_axi_dma_set_byte_halfword(chan, true);
 		config.tt_fc = chan->config.device_fc ?
 				DWAXIDMAC_TT_FC_MEM_TO_PER_DST :
 				DWAXIDMAC_TT_FC_MEM_TO_PER_DMAC;
@@ -714,6 +704,11 @@ dw_axi_dma_chan_prep_cyclic(struct dma_chan *dchan, dma_addr_t dma_addr,
 
 	num_segments = DIV_ROUND_UP(period_len, axi_block_len);
 	segment_len = DIV_ROUND_UP(period_len, num_segments);
+	if (!IS_ALIGNED(segment_len, 4))
+	{
+		segment_len = ALIGN(segment_len, 4);
+		period_len = segment_len * num_segments;
+	}
 
 	total_segments = num_periods * num_segments;
 
@@ -926,10 +921,6 @@ dma_chan_prep_dma_memcpy(struct dma_chan *dchan, dma_addr_t dst_adr,
 		num++;
 	}
 
-	/* Total len of src/dest sg == 0, so no descriptor were allocated */
-	if (unlikely(!desc))
-		return NULL;
-
 	/* Set end-of-link to the last link descriptor of list */
 	set_desc_last(&desc->hw_desc[num - 1]);
 	/* Managed transfer list */
@@ -989,7 +980,7 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 	unsigned long flags;
 	u32 val;
 	int ret;
-	
+
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
 					!(val & chan_active), 10, 2000);
 	if (ret == -ETIMEDOUT)
@@ -997,14 +988,14 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 			 "irq %s failed to stop\n", axi_chan_name(chan));
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
-	
+
 	/* The bad descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
 	if (!vd) {
 		dev_warn(chan2dev(chan),
 			 "%s vd is null\n", axi_chan_name(chan));
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
-		return; 
+		return;
 	}
 
 	if (chan->cyclic) {
@@ -1033,13 +1024,13 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 {
 	unsigned long flags;
-	
+
 	spin_lock_irqsave(&chan->vc.lock, flags);
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		axi_chan_disable(chan);
 	}
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
-	
+
 	tasklet_schedule(&chan->dma_tasklet);
 }
 
@@ -1062,12 +1053,6 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 
 	/* The completed descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
-	if (!vd) {
-		dev_err(chan2dev(chan),
-			 "%s vd is null\n", axi_chan_name(chan));
-		spin_unlock_irqrestore(&chan->vc.lock, flags);
-		return;
-	}
 
 	if (chan->cyclic) {
 		desc = vd_to_axi_desc(vd);
@@ -1078,9 +1063,6 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
-					#ifdef CONFIG_SOC_STARFIVE_VIC7100
-					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
-					#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1125,9 +1107,8 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 
 		if (status & DWAXIDMAC_IRQ_ALL_ERR)
 			axi_chan_handle_err(chan, status);
-		else if (status & DWAXIDMAC_IRQ_DMA_TRF) {
+		else if (status & DWAXIDMAC_IRQ_DMA_TRF)
 			axi_chan_block_xfer_complete(chan);
-		}
 	}
 
 	/* Re-enable interrupts */
@@ -1314,13 +1295,6 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 	if (tmp <= DMA_REG_MAP_CH_REF)
 		chip->dw->hdata->reg_map_8_channels = true;
 
-	if(chip->dw->hdata->nr_channels > 8){
-		chip->flag->nr_chan_8 = true;
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
-		chip->flag->need_flush = true;
-#endif
-	}
-
 	ret = device_property_read_u32(dev, "snps,dma-masters", &tmp);
 	if (ret)
 		return ret;
@@ -1369,7 +1343,7 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 			return -EINVAL;
 
 		chip->dw->hdata->restrict_axi_burst_len = true;
-		chip->dw->hdata->axi_rw_burst_len = tmp - 1;
+		chip->dw->hdata->axi_rw_burst_len = tmp;
 	}
 
 	return 0;
@@ -1381,7 +1355,6 @@ static int dw_probe(struct platform_device *pdev)
 	struct resource *mem;
 	struct dw_axi_dma *dw;
 	struct dw_axi_dma_hcfg *hdata;
-	struct dw_dma_flag *flag;
 	u32 i;
 	int ret;
 
@@ -1397,14 +1370,9 @@ static int dw_probe(struct platform_device *pdev)
 	if (!hdata)
 		return -ENOMEM;
 
-	flag = devm_kzalloc(&pdev->dev, sizeof(*flag), GFP_KERNEL);
-	if (!flag)
-		return -ENOMEM;
-
 	chip->dw = dw;
 	chip->dev = &pdev->dev;
 	chip->dw->hdata = hdata;
-	chip->flag = flag;
 
 	chip->irq = platform_get_irq(pdev, 0);
 	if (chip->irq < 0)
@@ -1437,7 +1405,6 @@ static int dw_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-
 	INIT_LIST_HEAD(&dw->dma.channels);
 	for (i = 0; i < hdata->nr_channels; i++) {
 		struct axi_dma_chan *chan = &dw->chan[i];
@@ -1449,7 +1416,7 @@ static int dw_probe(struct platform_device *pdev)
 
 		chan->vc.desc_free = vchan_desc_put;
 		vchan_init(&chan->vc, &dw->dma);
-		
+
 		tasklet_setup(&chan->dma_tasklet, axi_chan_tasklet);
 	}
 
@@ -1460,6 +1427,7 @@ static int dw_probe(struct platform_device *pdev)
 
 	/* DMA capabilities */
 	dw->dma.chancnt = hdata->nr_channels;
+	dw->dma.max_burst = hdata->axi_rw_burst_len;
 	dw->dma.src_addr_widths = AXI_DMA_BUSWIDTHS;
 	dw->dma.dst_addr_widths = AXI_DMA_BUSWIDTHS;
 	dw->dma.directions = BIT(DMA_MEM_TO_MEM);

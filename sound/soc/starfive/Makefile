@@ -1,4 +1,7 @@
-# starfive Platform Support
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (C) 2021 StarFive Technology Co., Ltd.
+#
 obj-$(CONFIG_SND_STARFIVE_SPDIF) += spdif.o
 
 spdif-y := starfive_spdif.o

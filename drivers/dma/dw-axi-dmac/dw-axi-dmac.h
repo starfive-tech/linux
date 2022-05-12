@@ -24,13 +24,6 @@
 #define DMAC_MAX_MASTERS	2
 #define DMAC_MAX_BLK_SIZE	0x200000
 
-struct dw_dma_flag {
-	bool nr_chan_8;
-#ifdef CONFIG_SOC_STARFIVE_VIC7100
-	bool need_flush;
-#endif
-};
-
 struct dw_axi_dma_hcfg {
 	u32	nr_channels;
 	u32	nr_masters;
@@ -58,7 +51,7 @@ struct axi_dma_chan {
 	struct dma_slave_config		config;
 	enum dma_transfer_direction	direction;
 	bool				cyclic;
-	bool				is_err;
+	bool 				is_err;
 	/* these other elements are all protected by vc.lock */
 	bool				is_paused;
 	struct tasklet_struct		dma_tasklet;
@@ -77,10 +70,10 @@ struct axi_dma_chip {
 	struct device		*dev;
 	int			irq;
 	void __iomem		*regs;
+	void __iomem		*apb_regs;
 	struct clk		*core_clk;
 	struct clk		*cfgr_clk;
 	struct dw_axi_dma	*dw;
-	struct dw_dma_flag	*flag;
 };
 
 /* LLI == Linked List Item */
