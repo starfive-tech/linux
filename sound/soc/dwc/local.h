@@ -135,11 +135,6 @@ struct dw_i2s_dev {
 	void __iomem *i2s_base;
 	void __iomem *vad_base;
 	struct clk *clk;
-	struct clk *clk_apb;
-	struct clk* i2svad;
-	struct clk* i2s_mclk;
-	struct clk* i2s_bclk;
-	struct clk* i2s_lrclk;
 	int active;
 	unsigned int capability;
 	unsigned int quirks;

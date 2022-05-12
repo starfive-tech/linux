@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * ALSA SoC Synopsys I2S Audio Layer
  *
@@ -164,13 +165,13 @@ static irqreturn_t i2s_irq_handler(int irq, void *dev_id)
 
 		/* Error Handling: TX */
 		if (isr[i] & ISR_TXFO) {
-			//dev_err(dev->dev, "TX overrun (ch_id=%d)\n", i);
+			dev_err(dev->dev, "TX overrun (ch_id=%d)\n", i);
 			irq_valid = true;
 		}
 
 		/* Error Handling: TX */
 		if (isr[i] & ISR_RXFO) {
-			//dev_err(dev->dev, "RX overrun (ch_id=%d)\n", i);
+			dev_err(dev->dev, "RX overrun (ch_id=%d)\n", i);
 			irq_valid = true;
 		}
 	}
@@ -281,10 +282,6 @@ static int init_audio_subsys(struct platform_device *pdev, struct dw_i2s_dev *de
 		{ .id = "audio_12288" },
 		{ .id = "dma1p_ahb" },
 	};
-	struct reset_control_bulk_data resets[] = {
-		{ .id = "apb_bus" },
-		{ .id = "dma1p_ahb" },
-	};
 
 	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
 	if (ret) {
@@ -295,14 +292,13 @@ static int init_audio_subsys(struct platform_device *pdev, struct dw_i2s_dev *de
 	for (i = 0; i < CLK_ADC_MCLK; i++)
 		dev->clks[i] = clks[i].clk;
 
-	ret = devm_reset_control_bulk_get_exclusive(&pdev->dev, ARRAY_SIZE(resets), resets);
-	if (ret) {
+	dev->rstc[RST_APB_BUS] = devm_reset_control_get_exclusive(&pdev->dev, "apb_bus");
+	dev->rstc[RST_DMA1P_AHB] = devm_reset_control_get_exclusive(&pdev->dev, "dma1p_ahb");
+	if (IS_ERR(dev->rstc[RST_APB_BUS]) || IS_ERR(dev->rstc[RST_DMA1P_AHB])) {
 		printk(KERN_INFO "%s: failed to get audio_subsys resets\n", __func__);
 		goto err_out_clock;
 	}
-	
-	dev->rstc[RST_APB_BUS] = resets[0].rstc;
-	dev->rstc[RST_DMA1P_AHB] = resets[1].rstc;
+
 
 	ret = clk_bulk_prepare_enable(ARRAY_SIZE(clks), clks);
 	if (ret) {
@@ -319,7 +315,6 @@ static int init_audio_subsys(struct platform_device *pdev, struct dw_i2s_dev *de
 		goto err_out_clock;
         }
 
-	reset_control_bulk_put(ARRAY_SIZE(resets), resets);
 	return 0;
 
 err_out_clock:
@@ -953,7 +948,6 @@ static int dw_i2s_dai_probe(struct snd_soc_dai *dai)
 
 static int dw_i2s_probe(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
 	const struct i2s_platform_data *pdata = pdev->dev.platform_data;
 	struct device_node *np = pdev->dev.of_node;
 	struct dw_i2s_dev *dev;
@@ -1025,24 +1019,12 @@ static int dw_i2s_probe(struct platform_device *pdev)
 			}
 		}
 		dev->clk = devm_clk_get(&pdev->dev, clk_id);
-		if (IS_ERR(dev->clk)) {
-			ret = PTR_ERR(dev->clk);
-			goto err_clk_disable;
-		}
+		if (IS_ERR(dev->clk))
+			return PTR_ERR(dev->clk);
 
 		ret = clk_prepare_enable(dev->clk);
 		if (ret < 0)
-			goto err_clk_disable;
-	}
-
-	if (of_device_is_compatible(np, "snps,designware-i2sadc0")) {
-		ret = dw_i2sadc_clk_init(dev, &pdev->dev);
-		if (ret < 0)
-			goto err_clk_disable;
-	} else if (of_device_is_compatible(np, "snps,designware-i2sdac0")) {
-		ret = dw_i2sdac_clk_init(dev, &pdev->dev);
-		if (ret < 0)
-			goto err_clk_disable;
+			return ret;
 	}
 
 	if (of_device_is_compatible(np, "snps,designware-i2sadc0")) { //record
@@ -1078,7 +1060,7 @@ static int dw_i2s_probe(struct platform_device *pdev)
 					 dw_i2s_dai, 1);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "not able to register dai\n");
-		goto err_all_clk_disable;
+		goto err_clk_disable;
 	}
 
 	if (!pdata) {
@@ -1094,20 +1076,13 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "could not register pcm: %d\n",
 					ret);
-			goto err_all_clk_disable;
+			goto err_clk_disable;
 		}
 	}
 
 	pm_runtime_enable(&pdev->dev);
 
 	return 0;
-	
-err_all_clk_disable:
-	clk_disable_unprepare(dev->i2s_lrclk);
-	clk_disable_unprepare(dev->i2s_bclk);
-	clk_disable_unprepare(dev->i2s_mclk);
-	clk_disable_unprepare(dev->i2svad);
-	clk_disable_unprepare(dev->clk_apb);
 
 err_clk_disable:
 	if (dev->capability & DW_I2S_MASTER)
@@ -1156,6 +1131,7 @@ module_platform_driver(dw_i2s_driver);
 
 MODULE_AUTHOR("Rajeev Kumar <rajeevkumar.linux@gmail.com>");
 MODULE_AUTHOR("Walker Chen <walker.chen@starfivetech.com>");
+MODULE_AUTHOR("Xingyu Wu <xingyu.wu@starfivetech.com>");
 MODULE_DESCRIPTION("DESIGNWARE I2S SoC Interface");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:designware_i2s");
