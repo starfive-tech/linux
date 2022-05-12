@@ -1168,7 +1168,7 @@ out:
 static const struct mipi_dsi_host_ops cdns_dsi_ops = {
 	.attach = cdns_dsi_attach,
 	.detach = cdns_dsi_detach,
-	// .transfer = cdns_dsi_transfer,
+	.transfer = cdns_dsi_transfer,
 };
 
 static int __maybe_unused cdns_dsi_resume(struct device *dev)
