@@ -315,6 +315,9 @@ static int init_audio_subsys(struct platform_device *pdev, struct dw_i2s_dev *de
 		goto err_out_clock;
         }
 
+	reset_control_put(dev->rstc[RST_APB_BUS]);
+	reset_control_put(dev->rstc[RST_DMA1P_AHB]);
+
 	return 0;
 
 err_out_clock:

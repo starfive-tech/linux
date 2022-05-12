@@ -662,6 +662,108 @@ err_clk_pwmdac:
 
 }
 
+static int sf_pwmdac_clks_get(struct platform_device *pdev,
+				struct sf_pwmdac_dev *dev)
+{
+	static struct clk_bulk_data clks[] = {
+		{ .id = "audio_root" },		//clock-names in dts file
+		{ .id = "audio_src" },
+		{ .id = "audio_12288" },
+		{ .id = "dma1p_ahb" },
+		{ .id = "pwmdac_apb" },
+		{ .id = "dac_mclk" },
+	};
+	int ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
+	dev->clk_audio_root = clks[0].clk;
+	dev->clk_audio_src = clks[1].clk;
+	dev->clk_audio_12288 = clks[2].clk;
+	dev->clk_dma1p_ahb = clks[3].clk;
+	dev->clk_pwmdac_apb = clks[4].clk;
+	dev->clk_dac_mclk = clks[5].clk;
+
+	return ret;
+}
+
+static int sf_pwmdac_resets_get(struct platform_device *pdev,
+				struct sf_pwmdac_dev *dev)
+{
+	dev->rst_apb_bus = devm_reset_control_get_exclusive(&pdev->dev, "apb_bus");
+	if (IS_ERR(dev->rst_apb_bus))
+		return PTR_ERR(dev->rst_apb_bus);
+	dev->rst_dma1p_ahb = devm_reset_control_get_exclusive(&pdev->dev, "dma1p_ahb");
+	if (IS_ERR(dev->rst_dma1p_ahb))
+		return PTR_ERR(dev->rst_dma1p_ahb);
+	dev->rst_apb_pwmdac = devm_reset_control_get_exclusive(&pdev->dev, "apb_pwmdac");
+	if (IS_ERR(dev->rst_apb_pwmdac))
+		return PTR_ERR(dev->rst_apb_pwmdac);
+
+	return 0;
+}
+
+static int sf_pwmdac_clk_init(struct platform_device *pdev,
+				struct sf_pwmdac_dev *dev)
+{
+	int ret = 0;
+
+	ret = clk_prepare_enable(dev->clk_audio_root);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable clk_audio_root\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_audio_src);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable clk_audio_src\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_audio_12288);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable clk_audio_12288\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_dma1p_ahb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable clk_dma1p_ahb\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = reset_control_deassert(dev->rst_apb_bus);
+	if (ret) {
+		printk(KERN_INFO "failed to deassert apb_bus\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = reset_control_deassert(dev->rst_dma1p_ahb);
+	if (ret) {
+		printk(KERN_INFO "failed to deassert dma1p_ahb\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = reset_control_assert(dev->rst_apb_pwmdac);
+	if (ret) {
+		printk(KERN_INFO "failed to assert apb_pwmdac\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = clk_prepare_enable(dev->clk_pwmdac_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to prepare enable clk_pwmdac_apb\n");
+		goto err_clk_pwmdac;
+	}
+
+	ret = reset_control_deassert(dev->rst_apb_pwmdac);
+	if (ret) {
+		printk(KERN_INFO "failed to deassert apb_pwmdac\n");
+		goto err_clk_pwmdac;
+	}
+	printk(KERN_INFO "Initialize pwmdac...success\n");
+
+err_clk_pwmdac:
+	return ret;
+}
+
 static int sf_pwmdac_dai_probe(struct snd_soc_dai *dai)
 {
 	struct sf_pwmdac_dev *dev = dev_get_drvdata(dai->dev);
@@ -743,48 +845,22 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 
 	dev->mapbase = res->start;
 
-	dev->audio_src = devm_clk_get(&pdev->dev, "audiosrc");
-	if (IS_ERR(dev->audio_src)) {
-		dev_err(&pdev->dev, "failed to get audiosrc: %ld\n",
-			PTR_ERR(dev->audio_src));
-		return PTR_ERR(dev->audio_src);
+	ret = sf_pwmdac_clks_get(pdev, dev);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to get audio clock\n");
+		return ret;
 	}
 
-	dev->pwmdac_apb = devm_clk_get(&pdev->dev, "pwmdacapb");
-	if (IS_ERR(dev->pwmdac_apb)) {
-		dev_err(&pdev->dev, "failed to get pwmdacapb: %ld\n",
-			PTR_ERR(dev->pwmdac_apb));
-		return PTR_ERR(dev->pwmdac_apb);
-	}
+	ret = sf_pwmdac_resets_get(pdev, dev);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to get audio reset controls\n");
+		return ret;
+        }
 
-	dev->pwmdac_mclk = devm_clk_get(&pdev->dev, "pwmdacclk");
-	if (IS_ERR(dev->pwmdac_mclk)) {
-		dev_err(&pdev->dev, "failed to get pwmdacclk: %ld\n",
-			PTR_ERR(dev->pwmdac_mclk));
-		return PTR_ERR(dev->pwmdac_mclk);
-	}
-	ret = clk_prepare_enable(dev->pwmdac_mclk);
+	ret = sf_pwmdac_clk_init(pdev, dev);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable pwmdacclk\n");
-		goto err_clk_mux_disable;
-	}
-	
-	ret = clk_set_parent(dev->pwmdac_mclk, dev->audio_src);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to set pwmdac parent audio_src\n");
-		goto err_clk_mux_disable;
-	}
-	
-	ret = clk_set_rate(dev->pwmdac_mclk, PWMDAC_MCLK);
-	if (ret) {
-		dev_err(&pdev->dev, "setting sysclk failed\n");
-		goto err_clk_mux_disable;
-	}
-
-	ret = clk_prepare_enable(dev->pwmdac_apb);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable pwmdac_apb\n");
-		goto err_clk_mux_disable;
+		dev_err(&pdev->dev, "failed to enable audio clock\n");
+		return ret;
 	}
 
 	dev->dev = &pdev->dev;
@@ -810,10 +886,6 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_clk_mux_disable:
-	clk_disable(dev->pwmdac_mclk);
-
-	return ret;
 }
 
 
@@ -824,7 +896,7 @@ static int sf_pwmdac_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 static const struct of_device_id sf_pwmdac_of_match[] = {
-	{ .compatible = "sf,pwmdac",	 },
+	{ .compatible = "starfive,pwmdac",	 },
 	{},
 };
 
@@ -844,6 +916,7 @@ static struct platform_driver sf_pwmdac_driver = {
 module_platform_driver(sf_pwmdac_driver);
 
 MODULE_AUTHOR("curry.zhang <curry.zhang@starfivetech.com>");
+MODULE_AUTHOR("Xingyu Wu <xingyu.wu@starfivetech.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("starfive pwmdac SoC Interface");
 MODULE_ALIAS("platform:starfive-pwmdac");

@@ -22,6 +22,7 @@
 #define __STARFIVE_PWMDAC_LOCAL_H
 
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/device.h>
 #include <linux/types.h>
 #include <sound/dmaengine_pcm.h>
@@ -41,8 +42,6 @@
 
 #define FIFO_UN_FULL	0
 #define FIFO_FULL	1
-
-#define PWMDAC_MCLK	(4096000)
 
 enum pwmdac_lr_change{
 	NO_CHANGE = 0,
@@ -130,6 +129,16 @@ struct sf_pwmdac_dev {
 	bool use_pio;
 	spinlock_t lock;
 	int active;
+
+	struct clk *clk_audio_root;
+	struct clk *clk_audio_src;
+	struct clk *clk_audio_12288;
+	struct clk *clk_dma1p_ahb;
+	struct clk *clk_pwmdac_apb;
+	struct clk *clk_dac_mclk;
+	struct reset_control *rst_apb_bus;
+	struct reset_control *rst_dma1p_ahb;
+	struct reset_control *rst_apb_pwmdac;
 	
 	struct device *dev;
 	struct snd_dmaengine_dai_dma_data play_dma_data;
@@ -141,9 +150,6 @@ struct sf_pwmdac_dev {
 	struct task_struct *tx_thread;
 	bool tx_thread_exit;
 
-	struct clk* audio_src;
-	struct clk* pwmdac_apb;
-	struct clk* pwmdac_mclk;
 };
 
 
