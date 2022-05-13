@@ -17,6 +17,8 @@
 	aliases {
 		mshc0 = &sdio0;
 		mshc1 = &sdio1;
+		mmc0 = &sdio0;
+		mmc1 = &sdio1;
 		serial0 = &uart3;
 		serial1 = &uart0;
 	};

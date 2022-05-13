@@ -211,6 +211,7 @@ struct starfive_pinctrl {
 	void __iomem *base;
 	void __iomem *padctl;
 	struct pinctrl_dev *pctl;
+	struct mutex mutex;
 };
 
 static inline unsigned int starfive_pin_to_gpio(const struct starfive_pinctrl *sfp,
@@ -526,6 +527,7 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	nmaps = 0;
 	ngroups = 0;
+	mutex_lock(&sfp->mutex);
 	for_each_child_of_node(np, child) {
 		int npins;
 		int i;
@@ -619,12 +621,14 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	*maps = map;
 	*num_maps = nmaps;
+	mutex_unlock(&sfp->mutex);
 	return 0;
 
 put_child:
 	of_node_put(child);
 free_map:
 	pinctrl_utils_free_map(pctldev, map, nmaps);
+	mutex_unlock(&sfp->mutex);
 	return ret;
 }
 
@@ -1320,6 +1324,8 @@ static int starfive_probe(struct platform_device *pdev)
 	ret = reset_control_deassert(rst);
 	if (ret)
 		return dev_err_probe(dev, ret, "could not deassert reset\n");
+
+	mutex_init(&sfp->mutex);
 
 	platform_set_drvdata(pdev, sfp);
 	sfp->gc.parent = dev;
