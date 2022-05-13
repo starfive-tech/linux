@@ -598,7 +598,6 @@ static int sc2235_load_regs(struct sc2235_dev *sensor,
 	u8 mask, val;
 	int ret = 0;
 
-	st_info(ST_SENSOR, "%s, mode = 0x%x\n", __func__, mode->id);
 	for (i = 0; i < mode->reg_data_size; ++i, ++regs) {
 		delay_ms = regs->delay_ms;
 		reg_addr = regs->reg_addr;
@@ -687,6 +686,7 @@ static int sc2235_set_stream_dvp(struct sc2235_dev *sensor, bool on)
 	return 0;
 }
 
+#if 0
 static int sc2235_get_sysclk(struct sc2235_dev *sensor)
 {
 	return 0;
@@ -707,6 +707,7 @@ static int sc2235_get_hts(struct sc2235_dev *sensor)
 		return ret;
 	return hts;
 }
+#endif
 
 static int sc2235_get_vts(struct sc2235_dev *sensor)
 {
@@ -719,6 +720,7 @@ static int sc2235_get_vts(struct sc2235_dev *sensor)
 	return vts;
 }
 
+#if 0
 static int sc2235_set_vts(struct sc2235_dev *sensor, int vts)
 {
 	return sc2235_write_reg16(sensor, SC2235_REG_TIMING_VTS, vts);
@@ -748,6 +750,7 @@ static int sc2235_set_binning(struct sc2235_dev *sensor, bool enable)
 {
 	return 0;
 }
+#endif
 
 static const struct sc2235_mode_info *
 sc2235_find_mode(struct sc2235_dev *sensor, enum sc2235_frame_rate fr,
@@ -800,16 +803,11 @@ static u64 sc2235_calc_pixel_rate(struct sc2235_dev *sensor)
 static int sc2235_set_dvp_pclk(struct sc2235_dev *sensor,
 				unsigned long rate)
 {
-	const struct sc2235_mode_info *mode = sensor->current_mode;
-	const struct sc2235_mode_info *orig_mode = sensor->last_mode;
 	u8 prediv, mult, sysdiv;
 	int ret = 0;
 
 	sc2235_calc_sys_clk(sensor, rate, &prediv, &mult,
 				&sysdiv);
-
-	st_info(ST_SENSOR, "%s, prediv = %d, mult = %d, sysdiv = %d\n",
-			__func__, prediv, mult, sysdiv);
 
 	ret = sc2235_mod_reg(sensor, SC2235_REG_SC_PLL_CTRL0, 0x7f,
 			(sysdiv << 4) | (prediv << 1) | ((mult & 0x20) >> 5));
@@ -837,7 +835,6 @@ static int sc2235_set_mode_direct(struct sc2235_dev *sensor,
 static int sc2235_set_mode(struct sc2235_dev *sensor)
 {
 	const struct sc2235_mode_info *mode = sensor->current_mode;
-	const struct sc2235_mode_info *orig_mode = sensor->last_mode;
 	bool auto_gain = sensor->ctrls.auto_gain->val == 1;
 	bool auto_exp =  sensor->ctrls.auto_exp->val == V4L2_EXPOSURE_AUTO;
 	unsigned long rate;
@@ -976,9 +973,7 @@ static void sc2235_set_power_off(struct sc2235_dev *sensor)
 static int sc2235_set_power_dvp(struct sc2235_dev *sensor, bool on)
 {
 	unsigned int flags = sensor->ep.bus.parallel.flags;
-	bool bt656 = sensor->ep.bus_type == V4L2_MBUS_BT656;
 	u8 polarities = 0;
-	int ret;
 
 	/*
 	 * configure parallel port control lines polarity
@@ -1107,7 +1102,7 @@ find_mode:
 }
 
 static int sc2235_get_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_state *state,
 			struct v4l2_subdev_format *format)
 {
 	struct sc2235_dev *sensor = to_sc2235_dev(sd);
@@ -1119,7 +1114,7 @@ static int sc2235_get_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&sensor->lock);
 
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		fmt = v4l2_subdev_get_try_format(&sensor->sd, cfg,
+		fmt = v4l2_subdev_get_try_format(&sensor->sd, state,
 						format->pad);
 	else
 		fmt = &sensor->fmt;
@@ -1165,7 +1160,7 @@ static int sc2235_try_fmt_internal(struct v4l2_subdev *sd,
 }
 
 static int sc2235_set_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_state *state,
 			struct v4l2_subdev_format *format)
 {
 	struct sc2235_dev *sensor = to_sc2235_dev(sd);
@@ -1188,7 +1183,7 @@ static int sc2235_set_fmt(struct v4l2_subdev *sd,
 		goto out;
 
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		fmt = v4l2_subdev_get_try_format(sd, cfg, 0);
+		fmt = v4l2_subdev_get_try_format(sd, state, 0);
 	else
 		fmt = &sensor->fmt;
 
@@ -1513,7 +1508,7 @@ free_ctrls:
 }
 
 static int sc2235_enum_frame_size(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *state,
 				struct v4l2_subdev_frame_size_enum *fse)
 {
 	if (fse->pad != 0)
@@ -1533,7 +1528,7 @@ static int sc2235_enum_frame_size(struct v4l2_subdev *sd,
 
 static int sc2235_enum_frame_interval(
 	struct v4l2_subdev *sd,
-	struct v4l2_subdev_pad_config *cfg,
+	struct v4l2_subdev_state *state,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct sc2235_dev *sensor = to_sc2235_dev(sd);
@@ -1619,7 +1614,7 @@ out:
 }
 
 static int sc2235_enum_mbus_code(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *state,
 				struct v4l2_subdev_mbus_code_enum *code)
 {
 	if (code->pad != 0)

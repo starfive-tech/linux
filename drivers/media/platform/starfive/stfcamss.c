@@ -1181,6 +1181,11 @@ static int stfcamss_probe(struct platform_device *pdev)
 	stfcamss->media_dev.dev = stfcamss->dev;
 	strscpy(stfcamss->media_dev.model, "Starfive Camera Subsystem",
 		sizeof(stfcamss->media_dev.model));
+	strscpy(stfcamss->media_dev.serial, "0123456789ABCDEF",
+		sizeof(stfcamss->media_dev.serial));
+	snprintf(stfcamss->media_dev.bus_info, sizeof(stfcamss->media_dev.bus_info),
+			"%s-%s", dev->bus->name, pdev->name);
+	stfcamss->media_dev.hw_revision = 0x01;
 	stfcamss->media_dev.ops = &stfcamss_media_ops;
 	media_device_init(&stfcamss->media_dev);
 
@@ -1252,15 +1257,11 @@ err_cam_noti_med:
 	media_device_cleanup(&stfcamss->media_dev);
 err_cam_noti:
 	v4l2_async_notifier_cleanup(&stfcamss->notifier);
+	i = stfcamss->nrsts - 1;
 err_cam_rst:
-	for (i = stfcamss->nrsts; i > 0; i--) {
-		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
-
-		reset_control_put(reset->rst);
-		st_debug(ST_CAMSS, "put %s reset\n", reset->name);
-	}	
+	i = stfcamss->nclks - 1;
 err_cam_clk:
-	for (i = stfcamss->nclks; i > 0; i--) {
+	for (; i >= 0; i--) {
 		struct stfcamss_clk *clock = &stfcamss->sys_clk[i];
 
 		devm_clk_put(dev, clock->clk);
@@ -1284,11 +1285,13 @@ static int stfcamss_remove(struct platform_device *pdev)
 	stfcamss->debugfs_entry = NULL;
 #endif
 
+	if (stfcamss->media_dev.devnode)
+		media_device_unregister(&stfcamss->media_dev);
 	stfcamss_unregister_subdevices(stfcamss);
 	v4l2_device_unregister(&stfcamss->v4l2_dev);
 	media_device_cleanup(&stfcamss->media_dev);
-
-	kfree(stfcamss);
+	v4l2_async_notifier_unregister(&stfcamss->notifier);
+	v4l2_async_notifier_cleanup(&stfcamss->notifier);
 
 	return 0;
 }

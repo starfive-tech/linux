@@ -14,38 +14,30 @@ config VIDEO_STARFIVE_VIN
 	  To compile this driver as a module, choose M here: the module
 	  will be called stf-vin.
 
-choice
-	prompt "Image Sensor for VIC board"
-	default VIN_SENSOR_IMX219
-	depends on VIDEO_STARFIVE_VIN
-	optional
-
 config VIN_SENSOR_OV5640
-	bool "VIN SENSOR support OV5640"
+	tristate "VIN SENSOR support OV5640"
 	depends on VIDEO_STARFIVE_VIN
 	select V4L2_FWNODE
 	help
 	  Say Y here if you want to have support for VIN sensor OV5640
 
 config VIN_SENSOR_SC2235
-	bool "VIN SENSOR support SC2235"
+	tristate "VIN SENSOR support SC2235"
 	depends on VIDEO_STARFIVE_VIN
 	select V4L2_FWNODE
 	help
 	  Say Y here if you want to have support for VIN sensor SC2235
 
 config VIN_SENSOR_OV4689
-	bool "VIN SENSOR support OV4689"
+	tristate "VIN SENSOR support OV4689"
 	depends on VIDEO_STARFIVE_VIN
 	select V4L2_FWNODE
 	help
 	  Say Y here if you want to have support for VIN sensor OV4689
 
 config VIN_SENSOR_IMX219
-	bool "VIN SENSOR support imx219"
+	tristate "VIN SENSOR support imx219"
 	depends on VIDEO_STARFIVE_VIN
 	select V4L2_FWNODE
 	help
 	  Say Y here if you want to have support for VIN sensor IMX219
-
-endchoice
