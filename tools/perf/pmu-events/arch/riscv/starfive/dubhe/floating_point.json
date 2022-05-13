@@ -1,0 +1,42 @@
+[
+  {
+    "EventName": "FPU0_UNCOMMIT_WAKEUP_BY_LOAD",
+    "EventCode": "0x76",
+    "BriefDescription": "The oldest FPU0's instruction is woken up by load",
+  },
+  {
+    "EventName": "FPU0_UNCOMMIT_WAKEUP_BY_FX",
+    "EventCode": "0x77",
+    "BriefDescription": "The oldest FPU0's instruction is woken up by INT",
+  },
+  {
+    "EventName": "FPU0_UNCOMMIT_WAKEUP_BY_FP",
+    "EventCode": "0x78",
+    "BriefDescription": "The oldest FPU0's instruction is woken up by FP",
+  },
+  {
+    "EventName": "FPU1_UNCOMMIT_WAKEUP_BY_LOAD",
+    "EventCode": "0x79",
+    "BriefDescription": "The oldest FPU1's instruction is wakeup by load",
+  },
+  {
+    "EventName": "FPU1_UNCOMMIT_WAKEUP_BY_FX",
+    "EventCode": "0x7A",
+    "BriefDescription": "The oldest FPU1's instruction is wakeup by INT",
+  },
+  {
+    "EventName": "FPU1_UNCOMMIT_WAKEUP_BY_FP",
+    "EventCode": "0x7B",
+    "BriefDescription": "The oldest FPU1's instruction is wakeup by FP",
+  },
+  {
+    "EventName": "FPU0_COMMIT_WAIT",
+    "EventCode": "0x7C",
+    "BriefDescription": "The total cycles of the oldest BasicBlock which is waiting for FPU0",
+  },
+  {
+    "EventName": "FPU1_COMMIT_WAIT",
+    "EventCode": "0x7D",
+    "BriefDescription": "The total cycles of the oldest BasicBlock which is waiting for FPU1",
+  },
+]
