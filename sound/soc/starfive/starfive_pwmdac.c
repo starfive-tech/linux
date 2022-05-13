@@ -440,7 +440,9 @@ static void pwmdac_set(struct sf_pwmdac_dev *dev)
 
 	pwmdac_LR_data_change(dev, dev->lr_change);
 	pwmdac_data_mode(dev, dev->data_mode);
-	pwmdac_data_shift(dev, dev->shift); 		
+	if (dev->shift) {
+		pwmdac_data_shift(dev, dev->shift);
+	}
 }
 
 static void pwmdac_stop(struct sf_pwmdac_dev *dev)
