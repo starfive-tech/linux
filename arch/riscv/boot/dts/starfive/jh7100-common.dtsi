@@ -570,13 +570,13 @@
 	pinctrl-0 = <&pwm_pins>;
 	status = "okay";
 };
-#if 0
+
 &pwmdac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwmdac_pins>;
 	status = "okay";
 };
-#endif
+
 &qspi {
 	nor_flash: nor-flash@0 {
 		compatible = "spi-flash";
