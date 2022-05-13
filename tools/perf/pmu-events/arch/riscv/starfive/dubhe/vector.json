@@ -1,0 +1,117 @@
+[
+  {
+    "EventName": "VEC_LD_CL_MFULL",
+    "EventCode": "0xC4",
+    "BriefDescription": "load cache-line manager full",
+  },
+  {
+    "EventName": "VEC_LD_CL_MREP_VA2PA_ARB",
+    "EventCode": "0xC5",
+    "BriefDescription": "load cache-line manager replay due to VA2PA arbitration",
+  },
+  {
+    "EventName": "VEC_LD_CL_MREP_VDCACHE_ARB",
+    "EventCode": "0xC6",
+    "BriefDescription": "load cache-line manager replay due to VDCache arbitration",
+  },
+  {
+    "EventName": "VEC_LD_QFULL",
+    "EventCode": "0xC7",
+    "BriefDescription": "load queue full",
+  },
+  {
+    "EventName": "VEC_ST_CL_MFULL",
+    "EventCode": "0xC8",
+    "BriefDescription": "store cache-line manager full",
+  },
+  {
+    "EventName": "VEC_ST_CL_MREP_VA2PA_ARB",
+    "EventCode": "0xC9",
+    "BriefDescription": "store cache-line manager replay due to VA2PA arbitration",
+  },
+  {
+    "EventName": "VEC_ST_WAIT_CMT_NOT_OLDEST",
+    "EventCode": "0xCA",
+    "BriefDescription": "store wait to commit due to not oldest",
+  },
+  {
+    "EventName": "VEC_LD_ALLOC_MISS_QFAIL_FULL",
+    "EventCode": "0xCB",
+    "BriefDescription": "load allocate miss queue fail due to full",
+  },
+  {
+    "EventName": "VEC_ST_ALLOC_MERGE_BUFF_FAIL_FULL",
+    "EventCode": "0xCC",
+    "BriefDescription": "store allocates merge buffer fail due to full",
+  },
+  {
+    "EventName": "VEC_LD_VDCACHE",
+    "EventCode": "0xCD",
+    "BriefDescription": "load access VDCache",
+  },
+  {
+    "EventName": "VEC_LD_MISS_VDCACHE",
+    "EventCode": "0xCE",
+    "BriefDescription": "load miss VDCache",
+  },
+  {
+    "EventName": "VEC_COM_IRV_STALL",
+    "EventCode": "0xCF",
+    "BriefDescription": "computing instruction RV stall",
+  },
+  {
+    "EventName": "VEC_COM_IRV_STALL_VECTAG",
+    "EventCode": "0xD0",
+    "BriefDescription": "computing instruction RV stall due to vectag",
+  },
+  {
+    "EventName": "VEC_COM_IRV_STALL_REGBUSY_FULL",
+    "EventCode": "0xD1",
+    "BriefDescription": "computing instruction RV stall due to REGBUSY full",
+  },
+  {
+    "EventName": "VEC_COM_IRV_E1_STALL_WAW_WAR",
+    "EventCode": "0xD2",
+    "BriefDescription": "computing instruction RV's entry1 stall due to WAW or WAR hazard",
+  },
+  {
+    "EventName": "VEC_COM_IRV_E1_READY_E0_NREADY",
+    "EventCode": "0xD3",
+    "BriefDescription": "computing instruction RV's entry1 ready while entry0 not ready",
+  },
+  {
+    "EventName": "VEC_COM_IRV_E0_STALL_WAIT_LD_DATA",
+    "EventCode": "0xD4",
+    "BriefDescription": "computing instruction RV's entry 0 stall due to wait load's data",
+  },
+  {
+    "EventName": "VEC_COM_IRV_E0_STALL_PREV_COM_INST",
+    "EventCode": "0xD5",
+    "BriefDescription": "computing instruction RV's entry 0 stall due to wait previous computing instruction's result",
+  },
+  {
+    "EventName": "VEC_LD_ST_IRV_STALL",
+    "EventCode": "0xD6",
+    "BriefDescription": "load/store instruction RV's stall",
+  },
+  {
+    "EventName": "VEC_LD_ST_IRV_STALL_VECTAG",
+    "EventCode": "0xD7",
+    "BriefDescription": "load/store instruction RV's stall due to vectag",
+  },
+  {
+    "EventName": "VEC_LD_ST_IRV_STALL_REGBUSY_FULL",
+    "EventCode": "0xD8",
+    "BriefDescription": "load/store instruction RV's stall due to REGBUSY full",
+  },
+  {
+    "EventName": "VEC_LD_ST_IRV_E1_STALL_WAW_WAR",
+    "EventCode": "0xD9",
+    "BriefDescription": "load/store instruction RV's entry1 stall due to WAW or WAR hazard",
+  },
+  {
+    "EventName": "VEC_LD_ST_IRV_E1_READY_E0_NREADY",
+    "EventCode": "0xDA",
+    "BriefDescription": "load/store instruction RV's entry1 ready while entry0 not ready",
+  },
+]
