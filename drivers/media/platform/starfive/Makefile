@@ -21,7 +21,6 @@ starfivecamss-objs += stfcamss.o \
 			stf_csi_hw_ops.o \
 			stf_csiphy_hw_ops.o \
 			stf_isp_hw_ops.o \
-			stf_dvp_hw_ops.o \
-			stf_dmabuf.o
+			stf_dvp_hw_ops.o
 
-obj-$(CONFIG_VIDEO_STARFIVE_VIN) += starfivecamss.o \
+obj-$(CONFIG_VIDEO_STARFIVE_VIN) += starfivecamss.o
