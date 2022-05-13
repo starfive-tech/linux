@@ -18,7 +18,7 @@ static int _get_cpuid(char *buf, size_t sz)
 	if (!sysfs || sz < ID_SIZE)
 		return -EINVAL;
 
-	scnprintf(path, PATH_MAX, "%s/devices/platform/soc/soc:pmu/id",
+	scnprintf(path, PATH_MAX, "%s/devices/platform/riscv-pmu/id",
 			sysfs);
 
 	file = fopen(path, "r");
