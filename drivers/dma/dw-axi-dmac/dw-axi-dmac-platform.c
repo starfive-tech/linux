@@ -88,7 +88,7 @@ static inline void axi_chan_config_write(struct axi_dma_chan *chan,
 
 	cfg_lo = (config->dst_multblk_type << CH_CFG_L_DST_MULTBLK_TYPE_POS |
 		  config->src_multblk_type << CH_CFG_L_SRC_MULTBLK_TYPE_POS);
-	if (!IS_ENABLED(CONFIG_SOC_STARFIVE) && chan->chip->dw->hdata->reg_map_8_channels) {
+	if (!IS_ENABLED(CONFIG_SOC_STARFIVE_VIC7100) && chan->chip->dw->hdata->reg_map_8_channels) {
 		cfg_hi = config->tt_fc << CH_CFG_H_TT_FC_POS |
 			 config->hs_sel_src << CH_CFG_H_HS_SEL_SRC_POS |
 			 config->hs_sel_dst << CH_CFG_H_HS_SEL_DST_POS |
