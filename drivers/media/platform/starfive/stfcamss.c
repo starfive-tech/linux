@@ -1259,14 +1259,6 @@ err_cam_noti:
 	v4l2_async_notifier_cleanup(&stfcamss->notifier);
 	i = stfcamss->nrsts - 1;
 err_cam_rst:
-#if 0
-	for (; i >= 0; i--) {
-		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
-
-		reset_control_put(reset->rst);
-		st_debug(ST_CAMSS, "put %s reset\n", reset->name);
-	}
-#endif
 	i = stfcamss->nclks - 1;
 err_cam_clk:
 	for (; i >= 0; i--) {
@@ -1301,25 +1293,6 @@ static int stfcamss_remove(struct platform_device *pdev)
 	v4l2_async_notifier_unregister(&stfcamss->notifier);
 	v4l2_async_notifier_cleanup(&stfcamss->notifier);
 
-#if 0
-	int i;
-
-	i = stfcamss->nrsts - 1;
-	for (; i >= 0; i--) {
-		struct stfcamss_rst *reset = &stfcamss->sys_rst[i];
-
-		st_debug(ST_CAMSS, "put %s reset\n", reset->name);
-		reset_control_put(reset->rst);
-	}
-
-	i = stfcamss->nclks - 1;
-	for (; i >= 0; i--) {
-		struct stfcamss_clk *clock = &stfcamss->sys_clk[i];
-
-		st_debug(ST_CAMSS, "put %s clocks\n", clock->name);
-		devm_clk_put(&pdev->dev, clock->clk);
-	}
-#endif
 	// kfree(stfcamss);
 
 	return 0;
