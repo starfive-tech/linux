@@ -1293,8 +1293,6 @@ static int stfcamss_remove(struct platform_device *pdev)
 	v4l2_async_notifier_unregister(&stfcamss->notifier);
 	v4l2_async_notifier_cleanup(&stfcamss->notifier);
 
-	// kfree(stfcamss);
-
 	return 0;
 }
 
