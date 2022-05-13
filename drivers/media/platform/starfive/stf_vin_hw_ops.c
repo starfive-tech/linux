@@ -105,7 +105,6 @@ static int stf_vin_clk_init(struct stf_vin2_dev *vin_dev)
 
 	for (i = STFRST_VIN_SRC; i <= STFRST_ISP1NOC_AXI; i++) {
 		st_debug(ST_VIN, "start %s control deassert %s\n", __func__, stfcamss->sys_rst[i].name);
-		// ret = reset_control_reset(stfcamss->sys_rst[i].rst);
 		ret = reset_control_deassert(stfcamss->sys_rst[i].rst);
 		if (ret) {
 			st_err(ST_VIN, "%s control deassert %d failed\n", __func__, i);
