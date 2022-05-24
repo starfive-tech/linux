@@ -479,7 +479,6 @@
 		data-protocol = <0>;
 	};
 #endif
-	#if 0
 
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
@@ -526,7 +525,6 @@
 			};
 		};
 	};
-	#endif
 };
 
 &i2c2 {
@@ -545,6 +543,10 @@
 		port {
 			panel_dsi_port: endpoint {
 				remote-endpoint = <&dsi_out_port>;
+			};
+		};
+	};
+
 	imx219sub@10 {
 		compatible = "imx219";
 		reg = <0x10>;
