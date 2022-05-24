@@ -448,6 +448,14 @@
 	};
 #endif
 
+#ifdef AC108_ENABLED
+	ac108_a: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
+	};
+#endif
 	#if 0
 	/* TODO: Used for EVB board, should comment here for starlight board, remove it later*/
 	ov5640: ov5640@3c {
@@ -667,7 +675,7 @@
 				remote-endpoint = <&dsi_out_port>;
 				encoder-type = <6>;	//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
 				reg = <1>;
-				status = "failed";
+				status = "okay";
 			};
 		};
 
@@ -681,6 +689,20 @@
 				reg = <0>;
 				status = "failed";
 			};
+		};
+	};
+};
+
+&mipi_dphy {
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port {
+		dsi_out_port: endpoint {
+			remote-endpoint = <&panel_dsi_port>;
 		};
 	};
 };

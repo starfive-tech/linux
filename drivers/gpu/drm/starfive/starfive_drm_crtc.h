@@ -82,6 +82,8 @@ struct starfive_crtc {
 };
 #define to_starfive_crtc(x) container_of(x, struct starfive_crtc, crtc)
 
+extern struct drm_encoder *
+starfive_head_atom_get_encoder(struct starfive_crtc *sf_crtc);
 void starfive_crtc_hw_config_simple(struct starfive_crtc *starfive_crtc);
 
 #endif /* _STARFIVE_DRM_CRTC_H */

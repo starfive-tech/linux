@@ -1,18 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/* driver/video/starfive/starfive_vpp.c
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * Copyright (C) 2020 StarFive, Inc.
- *
- * PURPOSE:	This files contains the driver of VPP.
- *
- * CHANGE HISTORY:
- *	Version		Date		Author		Description
- *	0.1.0		2020-10-09	starfive		created
- *
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2021 StarFive Technology Co., Ltd.
  */
 
 #include <linux/clk.h>
@@ -104,7 +92,6 @@ void mapconv_pp0_sel(struct starfive_crtc *sf_crtc, int sel)
 	temp |= (sel & 0x1);
 	sf_fb_syswrite32(sf_crtc, SYS_MAP_CONV, temp);
 }
-EXPORT_SYMBOL(mapconv_pp0_sel);
 
 void pp_output_cfg(struct starfive_crtc *sf_crtc, int ppNum, int outSel, int progInter, int desformat, int ptMode)
 {
@@ -231,7 +218,6 @@ void pp_desOffset_cfg(struct starfive_crtc *sf_crtc, int ppNum, int yoff, int uo
 	PP_PRT("PP%d des-Offset Y: 0x%4x, U: 0x%4x, V: 0x%4x\n", ppNum, yoff, uoff, voff);
 }
 
-
 void pp_intcfg(struct starfive_crtc *sf_crtc, int ppNum, int intMask)
 {
 	int intcfg = ~(0x1<<0);
@@ -240,7 +226,6 @@ void pp_intcfg(struct starfive_crtc *sf_crtc, int ppNum, int intMask)
 		intcfg = 0xf;
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, intcfg);
 }
-EXPORT_SYMBOL(pp_intcfg);
 
 //next source frame Y/RGB start address, ?
 void pp_srcAddr_next(struct starfive_crtc *sf_crtc, int ppNum, int ysa, int usa, int vsa)
@@ -250,7 +235,6 @@ void pp_srcAddr_next(struct starfive_crtc *sf_crtc, int ppNum, int ysa, int usa,
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_V_SA_NXT, vsa);
 	PP_PRT("PP%d next Y startAddr: 0x%8x, U startAddr: 0x%8x, V startAddr: 0x%8x\n", ppNum, ysa, usa, vsa);
 }
-EXPORT_SYMBOL(pp_srcAddr_next);
 
 void pp_srcOffset_cfg(struct starfive_crtc *sf_crtc, int ppNum, int yoff, int uoff, int voff)
 {
@@ -259,14 +243,12 @@ void pp_srcOffset_cfg(struct starfive_crtc *sf_crtc, int ppNum, int yoff, int uo
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_V_OFS, voff);
 	PP_PRT("PP%d src-Offset Y: 0x%4x, U: 0x%4x, V: 0x%4x\n", ppNum, yoff, uoff, voff);
 }
-EXPORT_SYMBOL(pp_srcOffset_cfg);
 
 void pp_nxtAddr_load(struct starfive_crtc *sf_crtc, int ppNum, int nxtPar, int nxtPos)
 {
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_LOAD_NXT_PAR, nxtPar | nxtPos);
 	PP_PRT("PP%d next addrPointer: %d, %d set Regs\n", ppNum, nxtPar, nxtPos);
 }
-EXPORT_SYMBOL(pp_nxtAddr_load);
 
 void pp_run(struct starfive_crtc *sf_crtc, int ppNum, int start)
 {
@@ -274,13 +256,11 @@ void pp_run(struct starfive_crtc *sf_crtc, int ppNum, int start)
 	//if(start)
 	//  PP_PRT("Now start the PP%d\n\n", ppNum);
 }
-EXPORT_SYMBOL(pp_run);
 
 void pp1_enable_intr(struct starfive_crtc *sf_crtc)
 {
 	sf_fb_vppwrite32(sf_crtc, 1, PP_INT_MASK, 0x0);
 }
-EXPORT_SYMBOL(pp1_enable_intr);
 
 void pp_enable_intr(struct starfive_crtc *sf_crtc, int ppNum)
 {
@@ -288,64 +268,54 @@ void pp_enable_intr(struct starfive_crtc *sf_crtc, int ppNum)
 
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, cfg);
 }
-EXPORT_SYMBOL(pp_enable_intr);
 
 void pp_disable_intr(struct starfive_crtc *sf_crtc, int ppNum)
 {
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, 0xf);
 	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_CLR, 0xf);
 }
-EXPORT_SYMBOL(pp_disable_intr);
 
 static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *src)
 {
 	switch (src->format) {
 	case COLOR_YUV422_YVYU:
-		PP_INFO("src_format: COLOR_YUV422_YVYU\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_YVYU, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_VYUY:
-		PP_INFO("src_format: COLOR_YUV422_VYUY\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_VYUY, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_YUYV:
-		PP_INFO("src_format: COLOR_YUV422_YUYV\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_YUYV, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_UYVY:
-		PP_INFO("src_format: COLOR_YUV422_UYVY\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_UYVY, 0x0, 0x0);
 		break;
 	case COLOR_YUV420P:
-		PP_INFO("src_format: COLOR_YUV420P\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420P, 0x0, 0, 0x0, 0x0);
 		break;
 	case COLOR_YUV420_NV12:
-		PP_INFO("src_format: COLOR_YUV420_NV12\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0, COLOR_YUV420_NV12-COLOR_YUV420_NV12, 0x0);
 		break;
 	case COLOR_YUV420_NV21:
-		PP_INFO("src_format: COLOR_YUV420_NV21\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0, COLOR_YUV420_NV21-COLOR_YUV420_NV12, 0x0);
 		break;
 	case COLOR_RGB888_ARGB:
-		PP_INFO("src_format: COLOR_RGB888_ARGB\n");
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ARGB-COLOR_RGB888_ARGB);//0x0);
+		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+				0x0, COLOR_RGB888_ARGB - COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_ABGR:
-		PP_INFO("src_format: COLOR_RGB888_ABGR\n");
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_ABGR-COLOR_RGB888_ARGB);//0x1);
+		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+				0x0, COLOR_RGB888_ABGR-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_RGBA:
-		PP_INFO("src_format: COLOR_RGB888_RGBA\n");
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_RGBA-COLOR_RGB888_ARGB);//0x2);
+		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+				0x0, COLOR_RGB888_RGBA-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_BGRA:
-		PP_INFO("src_format: COLOR_RGB888_BGRA\n");
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0, 0x0, COLOR_RGB888_BGRA-COLOR_RGB888_ARGB);//0x3);
+		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+				0x0, COLOR_RGB888_BGRA-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB565:
-		PP_INFO("src_format: COLOR_RGB888_RGB565\n");
 		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_RGB565, 0x0, 0x0, 0x0, 0x0);
 		break;
 	}
@@ -360,70 +330,58 @@ static void pp_dstfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_vi
 
 	switch (dst->format) {
 	case COLOR_YUV422_YVYU:
-		PP_INFO("dst_format: COLOR_YUV422_YVYU\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
 		break;
 	case COLOR_YUV422_VYUY:
-		PP_INFO("dst_format: COLOR_YUV422_VYUY\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_VYUY);
 		break;
 	case COLOR_YUV422_YUYV:
-		PP_INFO("dst_format: COLOR_YUV422_YUYV\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YUYV);
 		break;
 	case COLOR_YUV422_UYVY:
-		PP_INFO("dst_format: COLOR_YUV422_UYVY\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
 		break;
 	case COLOR_YUV420P:
-		PP_INFO("dst_format: COLOR_YUV420P\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420P, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
 		break;
 	case COLOR_YUV420_NV12:
-		PP_INFO("dst_format: COLOR_YUV420_NV21\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420I, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, COLOR_YUV420_NV12 - COLOR_YUV420_NV12, 0);
 		break;
 	case COLOR_YUV420_NV21:
-		PP_INFO("dst_format: COLOR_YUV420_NV12\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420I, 0x0);///0x2, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, COLOR_YUV420_NV21 - COLOR_YUV420_NV12, 0);
 		break;
 	case COLOR_RGB888_ARGB:
-		PP_INFO("dst_format: COLOR_RGB888_ARGB\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_ARGB888, 0x0);
 		//pp_output_fmt_cfg(ppNum, 0, 0);
 		break;
 	case COLOR_RGB888_ABGR:
-		PP_INFO("dst_format: COLOR_RGB888_ABGR\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_ABGR888, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
 		break;
 	case COLOR_RGB888_RGBA:
-		PP_INFO("dst_format: COLOR_RGB888_RGBA\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_RGBA888, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
 		break;
 	case COLOR_RGB888_BGRA:
-		PP_INFO("dst_format: COLOR_RGB888_BGRA\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_BGRA888, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
 		break;
 	case COLOR_RGB565:
-		PP_INFO("dst_format: COLOR_RGB565\n");
 		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_RGB565, 0x0);
 		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
 		break;
 	}
 }
 
-
-void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *src, struct pp_video_mode *dst)
+static void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum,
+		   struct pp_video_mode *src, struct pp_video_mode *dst)
 {
 	/* 1:bypass, 0:not bypass */
 	unsigned int scale_byp = 1;
@@ -431,7 +389,7 @@ void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mod
 	pp_srcfmt_set(sf_crtc, ppNum, src);
 	pp_dstfmt_set(sf_crtc, ppNum, dst);
 
-	if ((src->height != dst->height) || (src->width != dst->width))
+	if (src->height != dst->height || src->width != dst->width)
 		scale_byp = 0;
 
 	if ((src->format >= COLOR_RGB888_ARGB) && (dst->format <= COLOR_YUV420_NV21)) {
@@ -461,9 +419,10 @@ void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mod
 	pp_int_interval_cfg(sf_crtc, ppNum, 0x1);
 }
 
-void pp_size_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *src, struct pp_video_mode *dst)
+static void pp_size_set(struct starfive_crtc *sf_crtc, int ppNum,
+			struct pp_video_mode *src, struct pp_video_mode *dst)
 {
-	uint32_t srcAddr, dstaddr;
+	u32 srcAddr, dstaddr;
 	unsigned int size, y_rgb_ofst, uofst;
 	unsigned int v_uvofst = 0, next_y_rgb_addr = 0, next_u_addr = 0, next_v_addr = 0;
 	unsigned int i = 0;
@@ -612,11 +571,10 @@ void pp_size_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode 
 		pp_desAddr_cfg(sf_crtc, ppNum, next_y_rgb_addr, next_u_addr, next_v_addr);
 		pp_desOffset_cfg(sf_crtc, ppNum, y_rgb_ofst, uofst, v_uvofst);
 	}
-
 }
 
-
-static void pp_config(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *src, struct pp_video_mode *dst)
+static void pp_config(struct starfive_crtc *sf_crtc, int ppNum,
+		      struct pp_video_mode *src, struct pp_video_mode *dst)
 {
 	//pp_disable_intr(sf_dev, ppNum);
 	pp_format_set(sf_crtc, ppNum, src, dst);
@@ -625,19 +583,14 @@ static void pp_config(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_
 
 irqreturn_t vpp1_isr_handler(int this_irq, void *dev_id)
 {
-	struct starfive_crtc *sf_crtc = (struct starfive_crtc *)dev_id;
-	static int count;
+	struct starfive_crtc *sf_crtc = dev_id;
 	u32 intr_status = 0;
 
 	intr_status = sf_fb_vppread32(sf_crtc, 1, PP_INT_STATUS);
 	sf_fb_vppwrite32(sf_crtc, 1, PP_INT_CLR, 0xf);
 
-	count++;
-
 	return IRQ_HANDLED;
 }
-EXPORT_SYMBOL(vpp1_isr_handler);
-
 
 static void starfive_pp_enable_intr(struct starfive_crtc *sf_crtc, int enable)
 {
@@ -653,15 +606,17 @@ static void starfive_pp_enable_intr(struct starfive_crtc *sf_crtc, int enable)
 	}
 }
 
-static int starfive_pp_video_mode_init(struct starfive_crtc *sf_crtc, struct pp_video_mode *src,
-		struct pp_video_mode *dst, int pp_id)
+static int starfive_pp_video_mode_init(struct starfive_crtc *sf_crtc,
+				       struct pp_video_mode *src,
+				       struct pp_video_mode *dst,
+				       int pp_id)
 {
-	if ((!src) || (!dst)) {
+	if (!src || !dst) {
 		dev_err(sf_crtc->dev, "Invalid argument!\n");
 		return -EINVAL;
 	}
 
-	if ((pp_id < PP_NUM) && (pp_id >= 0)) {
+	if (pp_id < PP_NUM && pp_id >= 0) {
 		src->format = sf_crtc->vpp_format;
 		src->width = sf_crtc->crtc.state->adjusted_mode.hdisplay;
 		src->height = sf_crtc->crtc.state->adjusted_mode.vdisplay;
@@ -723,9 +678,7 @@ int starfive_pp_enable(struct starfive_crtc *sf_crtc)
 	starfive_pp_enable_intr(sf_crtc, PP_INTR_ENABLE);
 
 	return 0;
-
 }
-EXPORT_SYMBOL(starfive_pp_enable);
 
 int starfive_pp_update(struct starfive_crtc *sf_crtc)
 {
@@ -745,10 +698,7 @@ int starfive_pp_update(struct starfive_crtc *sf_crtc)
 	}
 
 	return 0;
-
 }
-EXPORT_SYMBOL(starfive_pp_update);
-
 
 int starfive_pp_get_2lcdc_id(struct starfive_crtc *sf_crtc)
 {
@@ -766,7 +716,6 @@ int starfive_pp_get_2lcdc_id(struct starfive_crtc *sf_crtc)
 
 	return -ENODEV;
 }
-EXPORT_SYMBOL(starfive_pp_get_2lcdc_id);
 
 void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 {
@@ -779,16 +728,16 @@ void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 	reset_control_deassert(sf_crtc->rst_vout_src);
 	reset_control_deassert(sf_crtc->rst_disp_axi);
 
-	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_lcdc_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp2_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_ppi_tx_esc_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_dsi_apb_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
+	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_lcdc_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp0_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp1_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp2_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_ppi_tx_esc_clk_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_dsi_apb_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, BIT(31), BIT(31));
 
 	sf_set_clear(sf_crtc->base_rst, vout_rstgen_assert0_REG, ~0x1981ec, 0x1981ec);
 
@@ -797,7 +746,6 @@ void dsitx_vout_init(struct starfive_crtc *sf_crtc)
 		temp &= 0x1981ec;
 	} while (temp != 0x1981ec);
 }
-EXPORT_SYMBOL(dsitx_vout_init);
 
 void vout_reset(struct starfive_crtc *sf_crtc)
 {
@@ -810,22 +758,22 @@ void vout_reset(struct starfive_crtc *sf_crtc)
 	reset_control_deassert(sf_crtc->rst_vout_src);
 	reset_control_deassert(sf_crtc->rst_disp_axi);
 
-	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_lcdc_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp0_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp1_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_vpp2_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_mapconv_apb_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_mapconv_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_pixrawout_apb_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_pixrawout_axi_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_csi2tx_strm0_apb_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_csi2tx_strm0_pixclk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_ppi_tx_esc_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_dsi_apb_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
-	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, (0x1&0x1)<<31, (0x1<<31));
+	sf_set_clear(sf_crtc->base_clk, clk_disp0_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_disp1_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_lcdc_oclk_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_lcdc_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp0_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp1_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_vpp2_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_mapconv_apb_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_mapconv_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_pixrawout_apb_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_pixrawout_axi_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_csi2tx_strm0_apb_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_csi2tx_strm0_pixclk_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_ppi_tx_esc_clk_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_dsi_apb_ctrl_REG, BIT(31), BIT(31));
+	sf_set_clear(sf_crtc->base_clk, clk_dsi_sys_clk_ctrl_REG, BIT(31), BIT(31));
 
 	sf_set_clear(sf_crtc->base_rst, vout_rstgen_assert0_REG, ~0x19bfff, 0x19bfff);
 
@@ -833,9 +781,7 @@ void vout_reset(struct starfive_crtc *sf_crtc)
 		temp = ioread32(sf_crtc->base_rst + vout_rstgen_status0_REG);
 		temp &= 0x19bfff;
 	} while (temp != 0x19bfff);
-
 }
-EXPORT_SYMBOL(vout_reset);
 
 void vout_disable(struct starfive_crtc *sf_crtc)
 {
@@ -846,8 +792,6 @@ void vout_disable(struct starfive_crtc *sf_crtc)
 	reset_control_assert(sf_crtc->rst_vout_src);
 	reset_control_assert(sf_crtc->rst_disp_axi);
 }
-EXPORT_SYMBOL(vout_disable);
-
 
 MODULE_AUTHOR("StarFive Technology Co., Ltd.");
 MODULE_DESCRIPTION("loadable VPP driver for StarFive");

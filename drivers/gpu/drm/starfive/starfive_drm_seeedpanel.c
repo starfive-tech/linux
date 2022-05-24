@@ -383,13 +383,11 @@ static const struct drm_panel_funcs seeed_panel_funcs = {
 static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	u8 reg_value = 0;
-	int i;
 	struct seeed_panel_dev *seeed_panel;
 	struct device_node *endpoint, *dsi_host_node;
 	struct mipi_dsi_host *host;
 	struct device *dev = &client->dev;
 
-	int ver;
 	struct mipi_dsi_device_info info = {
 		.type = RPI_DSI_DRIVER_NAME,
 		.channel = 0, //0,

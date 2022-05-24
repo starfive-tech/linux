@@ -654,10 +654,6 @@
 			status = "disabled";
 		};
 
-		connector0: display-connector {
-			compatible = "starfive,connector-tda998x";
-		};
-
 		encoder: display-encoder {
 			compatible = "starfive,display-encoder";
 			status = "disabled";
@@ -705,7 +701,7 @@
 			clocks = <&uartclk>, <&apb2clk>;
 			clock-names = "baudclk", "apb_pclk";
 			#phy-cells = <0>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		mipi_dsi: mipi@12100000 {
@@ -716,13 +712,7 @@
 			clock-names = "dsi_p_clk", "dsi_sys_clk";
 			phys = <&mipi_dphy>;
 			phy-names = "dphy";
-			status = "okay";
-
-			port {
-				dsi_out_port: endpoint {
-					remote-endpoint = <&panel_dsi_port>;
-				};
-			};
+			status = "disabled";
 		};
 
 		wm8960_mclk: wm8960_mclk {
@@ -730,7 +720,7 @@
 			#clock-cells = <0>;
 			clock-frequency = <24576000>;
 		};
-#if 0
+
 		i2sadc0: i2sadc0@10400000 {
 			compatible = "snps,designware-i2sadc0";
 			reg = <0x0 0x10400000 0x0 0x1000>;

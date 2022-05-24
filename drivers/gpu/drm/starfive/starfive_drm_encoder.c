@@ -83,6 +83,8 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 	struct drm_bridge *tmp_bridge;
 	struct starfive_encoder_data *encoder_data = NULL;
 	u32 num_ports = 0;
+	u32 num_bridge = 0;
+	static u32 num_probe = 0;
 
 	num_ports = starfive_encoder_of_parse_ports(dev, &encoder_data);
 
@@ -112,16 +114,36 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 			dev_info(dev, "found panel on endpoint@%d\n",
 				encoder_data[i].endpoint_reg);
 
-		if (!tmp_bridge)
-			dev_err(dev, "can not found bridge on endpoint@%d\n",
-				encoder_data[i].endpoint_reg);
-		else {
-			ret = drm_bridge_attach(&encoderp[i].encoder,
-				tmp_bridge, NULL, 0);
-			if (ret)
-				goto err_bridge;
+		if (!tmp_bridge) {
+			if (encoder_data[i].endpoint_reg == 0) {
+				dev_err(dev, "wait endpoint@%d init\n",
+						encoder_data[i].endpoint_reg);
+				return -EPROBE_DEFER;
+			} else if (encoder_data[i].endpoint_reg == 1) {
+				dev_err(dev, "wait endpoint@%d init\n",
+						encoder_data[i].endpoint_reg);
+
+				num_probe++;
+				if (num_probe > 2) {
+					dev_err(dev, "dont exist endpoint@%d\n",
+							encoder_data[i].endpoint_reg);
+					return -EINVAL;
+				}
+
+				return -EPROBE_DEFER;
+			}
 		}
+
+		ret = drm_bridge_attach(&encoderp[i].encoder,
+			tmp_bridge, NULL, 0);
+		if (ret)
+			goto err_bridge;
+
+		num_bridge++;
 	}
+
+	if (num_bridge < num_ports)
+		return -EINVAL;
 
 	return 0;
 

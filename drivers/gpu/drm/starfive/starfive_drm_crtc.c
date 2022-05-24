@@ -37,12 +37,11 @@ static const struct resource_name mem_res_name[] = {
 	{"sys"}
 };
 
-static inline struct drm_encoder *
+struct drm_encoder *
 starfive_head_atom_get_encoder(struct starfive_crtc *sf_crtc)
 {
 	struct drm_encoder *encoder = NULL;
 
-	/* We only ever have a single encoder */
 	drm_for_each_encoder_mask(encoder, sf_crtc->crtc.dev,
 				  sf_crtc->crtc.state->encoder_mask)
 		break;
