@@ -211,6 +211,7 @@ struct starfive_pinctrl {
 	void __iomem *base;
 	void __iomem *padctl;
 	struct pinctrl_dev *pctl;
+	struct mutex mutex;
 };
 
 static inline unsigned int starfive_pin_to_gpio(const struct starfive_pinctrl *sfp,
@@ -526,6 +527,7 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	nmaps = 0;
 	ngroups = 0;
+	mutex_lock(&sfp->mutex);
 	for_each_child_of_node(np, child) {
 		int npins;
 		int i;
@@ -619,12 +621,14 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	*maps = map;
 	*num_maps = nmaps;
+	mutex_unlock(&sfp->mutex);
 	return 0;
 
 put_child:
 	of_node_put(child);
 free_map:
 	pinctrl_utils_free_map(pctldev, map, nmaps);
+	mutex_unlock(&sfp->mutex);
 	return ret;
 }
 
@@ -1321,17 +1325,23 @@ static int starfive_probe(struct platform_device *pdev)
 	if (ret)
 		return dev_err_probe(dev, ret, "could not deassert reset\n");
 
+	mutex_init(&sfp->mutex);
+
 	platform_set_drvdata(pdev, sfp);
 	sfp->gc.parent = dev;
 	raw_spin_lock_init(&sfp->lock);
 
 	ret = devm_pinctrl_register_and_init(dev, &starfive_desc, sfp, &sfp->pctl);
-	if (ret)
+	if (ret) {
+		mutex_destroy(&sfp->mutex);
 		return dev_err_probe(dev, ret, "could not register pinctrl driver\n");
+	}
 
 	if (!of_property_read_u32(dev->of_node, "starfive,signal-group", &value)) {
-		if (value > 6)
+		if (value > 6) {
+			mutex_destroy(&sfp->mutex);
 			return dev_err_probe(dev, -EINVAL, "invalid signal group %u\n", value);
+		}
 		writel(value, sfp->padctl + IO_PADSHARE_SEL);
 	}
 
@@ -1356,6 +1366,7 @@ static int starfive_probe(struct platform_device *pdev)
 		sfp->gpios.pin_base = PAD_FUNC_SHARE(0);
 		break;
 	default:
+		mutex_destroy(&sfp->mutex);
 		return dev_err_probe(dev, -EINVAL, "invalid signal group %u\n", value);
 	}
 
@@ -1381,20 +1392,27 @@ static int starfive_probe(struct platform_device *pdev)
 	sfp->gc.irq.num_parents = 1;
 	sfp->gc.irq.parents = devm_kcalloc(dev, sfp->gc.irq.num_parents,
 					   sizeof(*sfp->gc.irq.parents), GFP_KERNEL);
-	if (!sfp->gc.irq.parents)
+	if (!sfp->gc.irq.parents) {
+		mutex_destroy(&sfp->mutex);
 		return -ENOMEM;
+	}
+
 	sfp->gc.irq.default_type = IRQ_TYPE_NONE;
 	sfp->gc.irq.handler = handle_bad_irq;
 	sfp->gc.irq.init_hw = starfive_gpio_init_hw;
 
 	ret = platform_get_irq(pdev, 0);
-	if (ret < 0)
+	if (ret < 0) {
+		mutex_destroy(&sfp->mutex);
 		return ret;
+	}
 	sfp->gc.irq.parents[0] = ret;
 
 	ret = devm_gpiochip_add_data(dev, &sfp->gc, sfp);
-	if (ret)
+	if (ret) {
+		mutex_destroy(&sfp->mutex);
 		return dev_err_probe(dev, ret, "could not register gpiochip\n");
+	}
 
 out_pinctrl_enable:
 	return pinctrl_enable(sfp->pctl);
