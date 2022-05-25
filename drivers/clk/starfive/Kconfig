@@ -17,6 +17,6 @@ config CLK_STARFIVE_JH7100_AUDIO
 config CLK_STARFIVE_JH7100_ISP
 	tristate "StarFive JH7100 isp clock support"
 	depends on CLK_STARFIVE_JH7100
-	default SOC_STARFIVE
+	default SOC_STARFIVE_VIC7100
 	help
 	  Say yes here to support the isp clocks on the StarFive JH7100 SoC.
