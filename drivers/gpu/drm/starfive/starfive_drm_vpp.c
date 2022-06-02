@@ -9,7 +9,7 @@
 #include <video/starfive_fb.h>
 #include "starfive_drm_vpp.h"
 #include "starfive_drm_crtc.h"
-
+#include <soc/sifive/sifive_l2_cache.h>
 
 //#define SF_PP_DEBUG	1
 #ifdef SF_PP_DEBUG
@@ -588,6 +588,7 @@ irqreturn_t vpp1_isr_handler(int this_irq, void *dev_id)
 
 	intr_status = sf_fb_vppread32(sf_crtc, 1, PP_INT_STATUS);
 	sf_fb_vppwrite32(sf_crtc, 1, PP_INT_CLR, 0xf);
+	sifive_l2_flush64_range(sf_crtc->dma_addr, sf_crtc->size);
 
 	return IRQ_HANDLED;
 }

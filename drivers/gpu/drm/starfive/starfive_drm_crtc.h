@@ -79,6 +79,7 @@ struct starfive_crtc {
 	int			encoder_type;
 	dma_addr_t	dma_addr;
 	bool		dma_addr_change;
+	size_t		size;
 };
 #define to_starfive_crtc(x) container_of(x, struct starfive_crtc, crtc)
 

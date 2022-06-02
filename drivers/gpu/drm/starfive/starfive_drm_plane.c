@@ -123,6 +123,7 @@ static void starfive_plane_atomic_update(struct drm_plane *plane,
 	} else
 		sf_crtc->dma_addr_change = false;
 
+	sf_crtc->size = obj->size;
 }
 
 static int starfive_plane_atomic_async_check(struct drm_plane *plane,
