@@ -463,6 +463,9 @@ static int sf_fb_lcdc_init(struct starfive_crtc *sf_crtc, struct drm_crtc_state 
 int starfive_lcdc_enable(struct starfive_crtc *sf_crtc)
 {
 	struct drm_crtc_state *state = sf_crtc->crtc.state;
+	struct drm_encoder *encoder = NULL;
+
+	encoder = starfive_head_atom_get_encoder(sf_crtc);
 
 	lcdc_disable_intr(sf_crtc);
 
@@ -476,8 +479,10 @@ int starfive_lcdc_enable(struct starfive_crtc *sf_crtc)
 		return -EINVAL;
 	}
 
-	lcdc_run(sf_crtc, sf_crtc->winNum, LCDC_RUN);
-	lcdc_enable_intr(sf_crtc);
+	if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS) {
+		lcdc_run(sf_crtc, sf_crtc->winNum, LCDC_RUN);
+		lcdc_enable_intr(sf_crtc);
+	}
 
 	return 0;
 }
