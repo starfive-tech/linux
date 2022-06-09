@@ -721,7 +721,7 @@
 				remote-endpoint = <&dsi_out_port>;
 				encoder-type = <6>;	//2-TMDS, 3-LVDS, 6-DSI, 8-DPI
 				reg = <1>;
-				status = "disabled";
+				status = "okay";
 			};
 		};
 

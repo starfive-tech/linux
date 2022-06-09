@@ -12,3 +12,11 @@ config DRM_STARFIVE
 	  The module will be called starfive-drm
 	  This driver provides kernel mode setting and
 	  buffer management to userspace.
+
+config DRM_STARFIVE_MIPI_DSI
+	bool "Starfive MIPI DSI Select"
+	help
+	  This selects support for starfive SoC specific extensions
+	  for the Synopsys DesignWare MIPI driver. If you want to
+	  enable MIPI DSI on VIC7100 based SoC, you should
+	  select this option.

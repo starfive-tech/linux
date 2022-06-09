@@ -52,6 +52,9 @@ static int starfive_encoder_of_parse_ports(struct device *dev,
 		num_port++;
 	}
 
+	//use CONFIG_DRM_STARFIVE_MIPI_DSI change only support one encoder
+	num_port = 1;
+
 	encoder_data = kzalloc(num_port * sizeof(*encoder_data), GFP_KERNEL);
 	*data = encoder_data;
 
@@ -61,7 +64,20 @@ static int starfive_encoder_of_parse_ports(struct device *dev,
 			continue;
 
 		of_property_read_u32(node, "encoder-type", &encoder_data->encoder_type);
-		of_property_read_u32(node, "reg", &encoder_data->endpoint_reg);
+		if (encoder_data->encoder_type == 2) {
+#ifndef CONFIG_DRM_STARFIVE_MIPI_DSI
+			of_property_read_u32(node, "reg", &encoder_data->endpoint_reg);
+#else
+			continue;
+#endif
+		} else {
+#ifdef CONFIG_DRM_STARFIVE_MIPI_DSI
+			of_property_read_u32(node, "reg", &encoder_data->endpoint_reg);
+#else
+			continue;
+#endif
+		}
+
 		encoder_data++;
 	}
 
