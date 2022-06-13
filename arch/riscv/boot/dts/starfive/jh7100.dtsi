@@ -447,16 +447,36 @@
 			compatible = "cm,cm521-vpu";
 			reg = <0x0 0x118e0000 0x0 0x4000>;
 			reg-names = "control";
-			clocks = <&clkgen JH7100_CLK_VP6_CORE>;
-			clock-names = "vcodec";
+			clocks =<&clkgen JH7100_CLK_VENC_AXI>,
+					<&clkgen JH7100_CLK_VENCBRG_MAIN>,
+					<&clkgen JH7100_CLK_VENC_BCLK>,
+					<&clkgen JH7100_CLK_VENC_CCLK>,
+					<&clkgen JH7100_CLK_VENC_APB>;
+			clock-names = "venc_axi", "vencbrg_main", "venc_bclk", "venc_cclk", "venc_apb";
+			resets = <&rstgen JH7100_RSTN_VENC_AXI>,
+					<&rstgen JH7100_RSTN_VENCBRG_MAIN>,
+					<&rstgen JH7100_RSTN_VENC_BCLK>,
+					<&rstgen JH7100_RSTN_VENC_CCLK>,
+					<&rstgen JH7100_RSTN_VENC_APB>;
+			reset-names = "venc_axi", "vencbrg_main", "venc_bclk", "venc_cclk", "venc_apb";
 			interrupts = <26>;
 		};
 
 		vpu_dec: vpu_dec@118f0000 {
 			compatible = "c&m,cm511-vpu";
 			reg = <0 0x118f0000 0 0x10000>;
-			clocks = <&clkgen JH7100_CLK_VP6_CORE>;
-			clock-names = "vcodec";
+			clocks =<&clkgen JH7100_CLK_VDEC_AXI>,
+					<&clkgen JH7100_CLK_VDECBRG_MAIN>,
+					<&clkgen JH7100_CLK_VDEC_BCLK>,
+					<&clkgen JH7100_CLK_VDEC_CCLK>,
+					<&clkgen JH7100_CLK_VDEC_APB>;
+			clock-names = "vdec_axi", "vdecbrg_main", "vdec_bclk", "vdec_cclk", "vdec_apb";
+			resets = <&rstgen JH7100_RSTN_VDEC_AXI>,
+					<&rstgen JH7100_RSTN_VDECBRG_MAIN>,
+					<&rstgen JH7100_RSTN_VDEC_BCLK>,
+					<&rstgen JH7100_RSTN_VDEC_CCLK>,
+					<&rstgen JH7100_RSTN_VDEC_APB>;
+			reset-names = "vdec_axi", "vdecbrg_main", "vdec_bclk", "vdec_cclk", "vdec_apb";
 			interrupts = <23>;
 			//memory-region = <&vpu_reserved>;
 		};
@@ -465,8 +485,16 @@
 			compatible = "cm,codaj12-jpu-1";
 			reg = <0x0 0x11900000 0x0 0x300>;
 			reg-names = "control";
-			clocks = <&clkgen JH7100_CLK_JPEG_APB>;
-			clock-names = "jpege";
+			clocks = <&clkgen JH7100_CLK_JPEG_AXI>,
+					<&clkgen JH7100_CLK_JPEG_CCLK>,
+					<&clkgen JH7100_CLK_JPEG_APB>,
+					<&clkgen JH7100_CLK_VDECBRG_MAIN>,
+					<&clkgen JH7100_CLK_JPCGC300_MAIN>;
+			clock-names = "jpeg_axi", "jpeg_cclk", "jpeg_apb", "vdecbrg_main", "jpcgc300_main";
+			resets = <&rstgen JH7100_RSTN_JPEG_AXI>,
+					<&rstgen JH7100_RSTN_JPEG_CCLK>,
+					<&rstgen JH7100_RSTN_JPEG_APB>;
+			reset-names = "jpeg_axi", "jpeg_cclk", "jpeg_apb";
 			interrupts = <24>;
 			memory-region = <&jpu_reserved>;
 		};
