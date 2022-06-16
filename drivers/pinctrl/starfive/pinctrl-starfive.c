@@ -148,11 +148,13 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 			pins_id =  &(grp->pins)[i + offset];
 
 			if (!info->starfive_pinctrl_parse_pin) {
-				dev_err(sfp->dev, "pinmux ops lacks necessary functions\n");
+				dev_err(sfp->dev,
+						"pinmux ops lacks necessary functions\n");
 				goto put_child;
 			}
 
-			info->starfive_pinctrl_parse_pin(sfp, pins_id, pin_data, list, child);
+			info->starfive_pinctrl_parse_pin(sfp,
+					pins_id, pin_data, list, child);
 			list++;
 		}
 		offset += i;
@@ -162,15 +164,16 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 		map[nmaps].data.mux.group = grpname;
 		nmaps += 1;
 
-		ret = pinctrl_generic_add_group(pctldev, grpname, pins_id, child_num_pins, pin_data);
+		ret = pinctrl_generic_add_group(pctldev,
+				grpname, pins_id, child_num_pins, pin_data);
 		if (ret < 0) {
 			dev_err(dev, "error adding group %s: %d\n", grpname, ret);
 			goto put_child;
 		}
 
 		ret = pinconf_generic_parse_dt_config(child, pctldev,
-											  &map[nmaps].data.configs.configs,
-											  &map[nmaps].data.configs.num_configs);
+				&map[nmaps].data.configs.configs,
+				&map[nmaps].data.configs.num_configs);
 		if (ret) {
 			dev_err(dev, "error parsing pin config of group %s: %d\n",
 					grpname, ret);
