@@ -350,7 +350,7 @@
 		};
 
 		gpio: gpio@13040000 {
-			compatible = "starfive_jh7110-sys-pinctrl";
+			compatible = "starfive,jh7110-sys-pinctrl";
 			reg = <0x0 0x13040000 0x0 0x10000>;
 			reg-names = "control";
 			clocks = <&clkgen JH7110_SYS_IOMUX_PCLK>;
