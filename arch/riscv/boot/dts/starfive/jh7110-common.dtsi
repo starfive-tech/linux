@@ -179,3 +179,11 @@
 	dr_mode = "host"; /*host or peripheral*/
 	status = "okay";
 };
+
+&mailbox_contrl0 {
+	status = "okay";
+};
+
+&mailbox_client0 {
+	status = "okay";
+};
