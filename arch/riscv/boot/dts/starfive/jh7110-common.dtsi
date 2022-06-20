@@ -191,3 +191,7 @@
 &mailbox_client0 {
 	status = "okay";
 };
+
+&co_process {
+	status = "okay";
+};
