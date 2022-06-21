@@ -297,6 +297,17 @@
 			status = "disabled";
 		};
 
+		trng: trng@1600C000 {
+			compatible = "starfive,trng";
+			reg = <0x0 0x1600C000 0x0 0x4000>;
+			clocks = <&clkgen JH7110_SEC_HCLK>,
+				 <&clkgen JH7110_SEC_MISCAHB_CLK>;
+			clock-names = "hclk", "miscahb_clk";
+			resets = <&rstgen RSTN_U0_SEC_TOP_HRESETN>;
+			interrupts = <30>;
+			status = "disabled";
+		};
+
 		usbdrd30: usbdrd{
 			compatible = "starfive,jh7110-cdns3";
 			clocks = <&clkgen JH7110_USB0_CLK_APP_125>,
