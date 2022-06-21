@@ -689,6 +689,23 @@
 			status = "disabled";
 		};
 
+		jpu: jpu@11900000 {
+                        compatible = "starfive,jpu";
+                        reg = <0x0 0x13090000 0x0 0x300>;
+                        interrupts = <14>;
+                        clocks = <&clkgen JH7110_CODAJ12_CLK_AXI>,
+                                 <&clkgen JH7110_CODAJ12_CLK_CORE>,
+                                 <&clkgen JH7110_CODAJ12_CLK_APB>,
+                                 <&clkgen JH7110_NOC_BUS_CLK_VDEC_AXI>;
+                        clock-names = "axi_clk", "core_clk",
+                                      "apb_clk", "noc_bus";
+                        resets = <&rstgen RSTN_U0_CODAJ12_AXI>,
+                                 <&rstgen RSTN_U0_CODAJ12_CORE>,
+                                 <&rstgen RSTN_U0_CODAJ12_APB>;
+                        reset-names = "rst_axi", "rst_core", "rst_apb";
+                        status = "disabled";
+                };
+
 		sfctemp: tmon@120e0000  {
                         compatible = "starfive,jh7110-temp";
                         reg = <0x0 0x120e0000 0x0 0x10000>;
