@@ -157,6 +157,16 @@
 	status = "okay";
 };
 
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac0_pins>;
+	status = "okay";
+};
+
+&pwmdac_codec {
+	status = "okay";
+};
+
 &pcie0 {
 	pinctrl-names = "perst-default", "perst-active", "power-active";
 	pinctrl-0 = <&pcie0_perst_default>;
