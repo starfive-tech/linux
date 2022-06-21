@@ -507,6 +507,21 @@
 			status = "disabled";
 		};
 
+		wdog: wdog@13070000 {
+			compatible = "starfive,dskit-wdt";
+			reg = <0x0 0x13070000 0x0 0x10000>;
+			interrupts = <68>;
+			interrupt-names = "wdog";
+			clocks = <&clkgen JH7110_DSKIT_WDT_CLK_WDT>,
+				 <&clkgen JH7110_DSKIT_WDT_CLK_APB>;
+			clock-names = "core_clk", "apb_clk";
+			resets = <&rstgen RSTN_U0_DSKIT_WDT_APB>,
+				 <&rstgen RSTN_U0_DSKIT_WDT_CORE>;
+			reset-names = "rst_apb", "rst_core";
+			timeout-sec = <15>;
+			status = "okay";
+		};
+
 		i2c0: i2c@10030000 {
 			compatible = "snps,designware-i2c";
 			reg = <0x0 0x10030000 0x0 0x10000>;
