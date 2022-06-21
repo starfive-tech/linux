@@ -707,5 +707,12 @@
 			mboxes = <&mailbox_contrl0 0 1>,<&mailbox_contrl0 1 0>;
 			status = "disabled";
 		};
+
+		pmu: pmu@17030000 {
+                        compatible = "starfive,jh7110-pmu";
+                        reg = <0x0 0x17030000 0x0 0x10000>;
+                        interrupts = <111>;
+                        status = "okay";
+                };
 	};
 };
