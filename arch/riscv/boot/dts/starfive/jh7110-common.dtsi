@@ -183,6 +183,10 @@
 	status = "okay";
 };
 
+&jpu {
+        status = "okay";
+};
+
 &sfctemp {
         status = "okay";
 };
