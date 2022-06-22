@@ -627,11 +627,47 @@
 			#sound-dai-cells = <0>;
 			status = "disabled";
 		};
+
 		pwmdac_codec: pwmdac-transmitter {
 			compatible = "linux,pwmdac-dit";
 			#sound-dai-cells = <0>;
 			status = "disabled";
 		};
+
+		can0: can@130d0000 {
+                        compatible = "ipms,can";
+                        reg = <0x0 0x130d0000 0x0 0x1000>;
+                        interrupts = <112>;
+                        clocks = <&clkgen JH7110_CAN0_CTRL_CLK_APB>,
+                                 <&clkgen JH7110_CAN0_CTRL_CLK_CAN>,
+                                 <&clkgen JH7110_CAN0_CTRL_CLK_TIMER>;
+                        clock-names = "apb_clk", "core_clk", "timer_clk";
+                        resets = <&rstgen RSTN_U0_CAN_CTRL_APB>,
+                                 <&rstgen RSTN_U0_CAN_CTRL_CORE>,
+                                 <&rstgen RSTN_U0_CAN_CTRL_TIMER>;
+                        reset-names = "rst_apb", "rst_core", "rst_timer";
+                        starfive,sys-syscon = <&sys_syscon 0x10 0x3 0x8>;
+                        syscon,can_or_canfd = <0>;
+                        status = "disabled";
+                };
+
+                can1: can@130e0000 {
+                        compatible = "ipms,can";
+                        reg = <0x0 0x130e0000 0x0 0x1000>;
+                        interrupts = <113>;
+                        clocks = <&clkgen JH7110_CAN1_CTRL_CLK_APB>,
+                                 <&clkgen JH7110_CAN1_CTRL_CLK_CAN>,
+                                 <&clkgen JH7110_CAN1_CTRL_CLK_TIMER>;
+                        clock-names = "apb_clk", "core_clk", "timer_clk";
+                        resets = <&rstgen RSTN_U1_CAN_CTRL_APB>,
+                                 <&rstgen RSTN_U1_CAN_CTRL_CORE>,
+                                 <&rstgen RSTN_U1_CAN_CTRL_TIMER>;
+                        reset-names = "rst_apb", "rst_core", "rst_timer";
+                        starfive,sys-syscon = <&sys_syscon 0x88 0x12 0x40000>;
+                        syscon,can_or_canfd = <0>;
+                        status = "disabled";
+                };
+
 		pcie0: pcie@2B000000 {
 			compatible = "plda,pci-xpressrich3-axi";
 			#address-cells = <3>;
