@@ -14,6 +14,7 @@
 		ethernet0 = &gmac0;
 		ethernet1 = &gmac1;
 		mmc0 = &sdio0;
+		mmc1 = &sdio1;
 		serial0 = &uart0;
 		serial3 = &uart3;
 	};
@@ -74,6 +75,20 @@
         pinctrl-names = "default";
         pinctrl-0 = <&sdcard0_pins>;
         //cd-gpios = <&gpio 23 0>;
+        status = "okay";
+};
+
+&sdio1 {
+        clock-frequency = <102400000>;
+        max-frequency = <100000000>;
+        card-detect-delay = <300>;
+        bus-width = <8>;
+        cap-mmc-hw-reset;
+        non-removable;
+        cap-mmc-highspeed;
+        post-power-on-delay-ms = <200>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&mmc1_pins>;
         status = "okay";
 };
 
