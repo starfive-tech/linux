@@ -13,6 +13,7 @@
 		gpio0 = &gpio;
 		ethernet0 = &gmac0;
 		ethernet1 = &gmac1;
+		mmc0 = &sdio0;
 		serial0 = &uart0;
 		serial3 = &uart3;
 	};
@@ -59,6 +60,21 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart3_pins>;
 	status = "okay";
+};
+
+/* default sd card */
+&sdio0 {
+        clock-frequency = <102400000>;
+        max-frequency = <200000000>;
+        card-detect-delay = <300>;
+        bus-width = <4>;
+        broken-cd;
+        cap-sd-highspeed;
+        post-power-on-delay-ms = <200>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&sdcard0_pins>;
+        //cd-gpios = <&gpio 23 0>;
+        status = "okay";
 };
 
 &dma {
