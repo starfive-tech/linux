@@ -24,7 +24,30 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/dmaengine_pcm.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#include <linux/reset.h>
 #include "local.h"
+
+static const char * const rst_name[RST_AUDIO_NUM] = {
+	[RST_APB0_BUS] = "rst_apb0",
+	[RST_BCLK_0] = "rst_bclk0",
+	[RST_APB1_BUS] = "rst_apb1",
+	[RST_BCLK_1] = "rst_bclk1",
+	[RST_APB_RX] = "rst_apb_rx",
+	[RST_BCLK_RX] = "rst_bclk_rx",
+};
+
+#define CLOCK_BASE	0x13020000UL
+
+static void saif_set_reg(void __iomem *addr, u32 data, u32 shift, u32 mask)
+{
+	u32 tmp;
+	tmp = readl(addr);
+	tmp &= ~mask;
+	tmp |= (data << shift) & mask;
+	writel(tmp, addr);
+}
 
 static inline void i2s_write_reg(void __iomem *io_base, int reg, u32 val)
 {
@@ -187,7 +210,9 @@ static int dw_i2s_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *cpu_dai)
 {
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(cpu_dai);
+#ifndef CONFIG_SND_DESIGNWARE_I2S_STARFIVE_JH7110
 	union dw_i2s_snd_dma_data *dma_data = NULL;
+#endif
 
 	if (!(dev->capability & DWC_I2S_RECORD) &&
 			(substream->stream == SNDRV_PCM_STREAM_CAPTURE))
@@ -197,13 +222,14 @@ static int dw_i2s_startup(struct snd_pcm_substream *substream,
 			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK))
 		return -EINVAL;
 
+#ifndef CONFIG_SND_DESIGNWARE_I2S_STARFIVE_JH7110
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		dma_data = &dev->play_dma_data;
 	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		dma_data = &dev->capture_dma_data;
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, (void *)dma_data);
-
+#endif
 	return 0;
 }
 
@@ -239,6 +265,7 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	struct i2s_clk_config_data *config = &dev->config;
 	int ret;
+	unsigned int txrx = substream->stream;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -277,6 +304,29 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
+	if (txrx == SNDRV_PCM_STREAM_PLAYBACK)
+	{
+		//_SWITCH_CLOCK_CLK_MCLK_SOURCE_CLK_MCLK_EXT_;
+		saif_set_reg(dev->clk_base + 0x48, 1, 24, 0x1000000);
+
+		//_SWITCH_CLOCK_CLK_U1_I2STX_4CH_BCLK_SOURCE_CLK_I2STX_BCLK_EXT_;
+		saif_set_reg(dev->clk_base + 0x2B0, 1, 24, 0x1000000);
+
+		//_SWITCH_CLOCK_CLK_U1_I2STX_4CH_LRCK_SOURCE_CLK_I2STX_LRCK_EXT_;
+		saif_set_reg(dev->clk_base + 0x2B8, 1, 24, 0x1000000);
+	}
+	else if (txrx == SNDRV_PCM_STREAM_CAPTURE)
+	{
+		//_SWITCH_CLOCK_CLK_MCLK_SOURCE_CLK_MCLK_EXT_;
+		saif_set_reg(dev->clk_base + 0x48, 1, 24, 0x1000000);
+
+		//_SWITCH_CLOCK_CLK_U1_I2STX_4CH_BCLK_SOURCE_CLK_I2STX_BCLK_EXT_;
+		saif_set_reg(dev->clk_base + 0x2CC, 1, 24, 0x1000000);
+
+		//_SWITCH_CLOCK_CLK_U1_I2STX_4CH_LRCK_SOURCE_CLK_I2STX_LRCK_EXT_;
+		saif_set_reg(dev->clk_base + 0x2D4, 1, 24, 0x1000000);
+	}
+
 	dw_i2s_config(dev, substream->stream);
 
 	i2s_write_reg(dev->i2s_base, CCR, dev->ccr);
@@ -308,7 +358,9 @@ static int dw_i2s_hw_params(struct snd_pcm_substream *substream,
 static void dw_i2s_shutdown(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
+#ifndef CONFIG_SND_DESIGNWARE_I2S_STARFIVE_JH7110
 	snd_soc_dai_set_dma_data(dai, substream, NULL);
+#endif
 }
 
 static int dw_i2s_prepare(struct snd_pcm_substream *substream,
@@ -447,6 +499,437 @@ static const struct snd_soc_component_driver dw_i2s_component = {
 	.resume		= dw_i2s_resume,
 };
 
+static int dw_i2srx_clk_init(struct platform_device *pdev, struct dw_i2s_dev *dev)
+{
+	int ret = 0;
+
+	static struct clk_bulk_data clks[] = {
+		{ .id = "apb0" },
+		{ .id = "3ch-apb" },
+		{ .id = "audioroot" },
+		{ .id = "mclk-inner" },
+		{ .id = "bclk_mst" },
+		{ .id = "3ch-lrck" },
+		{ .id = "rx-bclk" },
+		{ .id = "rx-lrck" },
+	};
+
+	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to get audio_subsys clocks\n", __func__);
+		return ret;
+	}
+	dev->clks[CLK_ADC_APB0] = clks[0].clk;
+	dev->clks[CLK_ADC_APB] = clks[1].clk;
+	dev->clks[CLK_ADC_AUDROOT] = clks[2].clk;
+	dev->clks[CLK_ADC_MCLK_INNER] = clks[3].clk;
+	dev->clks[CLK_ADC_BCLK] = clks[4].clk;
+	dev->clks[CLK_ADC_LRCLK] = clks[5].clk;
+	dev->clks[CLK_ADC_RX_BCLK] = clks[6].clk;
+	dev->clks[CLK_ADC_RX_LRCK] = clks[7].clk;
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_APB0]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_APB0\n", __func__);
+		goto disable_APB0_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_APB]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_APB\n", __func__);
+		goto disable_APB_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_AUDROOT]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_AUDROOT\n", __func__);
+		goto disable_audroot_clk;
+	}
+	ret = clk_set_rate(dev->clks[CLK_ADC_AUDROOT], 204800000);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set rate for CLK_ADC_MCLK \n");
+		goto disable_audroot_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_MCLK_INNER]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_MCLK_INNER\n", __func__);
+		goto disable_inner_clk;
+	}
+
+	ret = clk_set_rate(dev->clks[CLK_ADC_MCLK_INNER], 4096000);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set rate for CLK_ADC_MCLK \n");
+		goto disable_inner_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_BCLK]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_BCLK\n", __func__);
+		goto disable_bclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_LRCLK]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_LRCLK\n", __func__);
+		goto disable_lrclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_RX_BCLK]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_RX_BCLK\n", __func__);
+		goto disable_rx_bclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_ADC_RX_LRCK]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_ADC_RX_LRCK\n", __func__);
+		goto disable_rx_lrclk;
+	}
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_APB0] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_APB0]));
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_APB] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_APB]));
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_BCLK] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_BCLK]));
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_LRCLK] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_LRCLK]));
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_RX_BCLK] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_RX_BCLK]));
+	dev_dbg(&pdev->dev, "dev->clks[CLK_ADC_RX_LRCK] = %lu \n", clk_get_rate(dev->clks[CLK_ADC_RX_LRCK]));
+
+	dev->rstc[RST_APB_RX] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_APB_RX]);
+	if (IS_ERR(dev->rstc[RST_APB_RX])) {
+		dev_err(&pdev->dev, "%s: failed to get apb_i2srx reset control\n", __func__);
+                return PTR_ERR(dev->rstc[RST_APB_RX]);
+	}
+
+	dev->rstc[RST_BCLK_RX] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_BCLK_RX]);
+	if (IS_ERR(dev->rstc[RST_BCLK_RX])) {
+		dev_err(&pdev->dev, "%s: failed to get i2s bclk rx reset control", __func__);
+                return PTR_ERR(dev->rstc[RST_BCLK_RX]);
+	}
+	reset_control_assert(dev->rstc[RST_APB_RX]);
+	reset_control_assert(dev->rstc[RST_BCLK_RX]);
+
+	udelay(5);
+
+	reset_control_deassert(dev->rstc[RST_APB_RX]);
+	reset_control_deassert(dev->rstc[RST_BCLK_RX]);
+
+	/*i2srx_3ch_adc_enable*/
+	regmap_update_bits(dev->syscon_base, dev->syscon_offset_18,
+					0x1 << 1, 0x1 << 1);
+
+	/*set i2sdin_sel*/
+	regmap_update_bits(dev->syscon_base, dev->syscon_offset_34,
+		(0x1 << 10) | (0x1 << 14) | (0x1<<17), (0x0<<10) | (0x0<<14) | (0x0<<17));
+
+	return 0;
+
+disable_rx_lrclk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_RX_LRCK]);
+disable_rx_bclk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_RX_BCLK]);
+disable_lrclk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_LRCLK]);
+disable_bclk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_BCLK]);
+disable_inner_clk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_MCLK_INNER]);
+disable_audroot_clk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_AUDROOT]);
+disable_APB_clk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_APB]);
+disable_APB0_clk:
+	clk_disable_unprepare(dev->clks[CLK_ADC_APB0]);
+
+	return ret;
+}
+
+static int dw_i2stx_4ch0_clk_init(struct platform_device *pdev, struct dw_i2s_dev *dev)
+{
+	static struct clk_bulk_data i2sclk[] = {
+		{ .id = "inner" },		//clock-names in dts file
+		{ .id = "bclk-mst" },
+		{ .id = "lrck-mst" },
+		{ .id = "mclk" },
+		{ .id = "bclk0" },
+		{ .id = "lrck0" },
+	};
+
+	int ret = 0;
+
+	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(i2sclk), i2sclk);
+	if (ret) {
+		printk(KERN_INFO "%s: failed to get i2stx 4ch0 clocks\n", __func__);
+		return ret;
+	}
+
+	dev->clks[CLK_DAC_INNER] = i2sclk[0].clk;
+	dev->clks[CLK_DAC_BCLK_MST] = i2sclk[1].clk;
+	dev->clks[CLK_DAC_LRCLK_MST] = i2sclk[2].clk;
+	dev->clks[CLK_MCLK] = i2sclk[3].clk;
+	dev->clks[CLK_DAC_BCLK0] = i2sclk[4].clk;
+	dev->clks[CLK_DAC_LRCLK0] = i2sclk[5].clk;
+
+	ret = clk_prepare_enable(dev->clks[CLK_DAC_INNER]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_DAC_INNER\n", __func__);
+		goto disable_inner_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_DAC_BCLK_MST]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_DAC_BCLK_MST\n", __func__);
+		goto disable_bclk_mst;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_DAC_LRCLK_MST]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_DAC_LRCLK_MST\n", __func__);
+		goto disable_lrclk_mst;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_MCLK]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_MCLK\n", __func__);
+		goto disable_mclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_DAC_BCLK0]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_DAC_BCLK0\n", __func__);
+		goto disable_bclk0;
+	}
+
+	ret = clk_prepare_enable(dev->clks[CLK_DAC_LRCLK0]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable CLK_DAC_LRCLK0\n", __func__);
+		goto disable_lrclk0;
+	}
+
+	dev->rstc[RST_APB0_BUS] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_APB0_BUS]);
+	if (IS_ERR(dev->rstc[RST_APB0_BUS])) {
+		dev_err(&pdev->dev, "%s: failed to get apb_i2stx reset control\n", __func__);
+                return PTR_ERR(dev->rstc[RST_APB0_BUS]);
+	}
+
+	dev->rstc[RST_BCLK_0] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_BCLK_0]);
+	if (IS_ERR(dev->rstc[RST_BCLK_0])) {
+		dev_err(&pdev->dev, "%s: failed to get i2s bclk0 reset control\n", __func__);
+                return PTR_ERR(dev->rstc[RST_BCLK_0]);
+	}
+
+	reset_control_deassert(dev->rstc[RST_APB0_BUS]);
+	reset_control_deassert(dev->rstc[RST_BCLK_0]);
+
+	return 0;
+
+disable_lrclk0:
+	clk_disable_unprepare(dev->clks[CLK_DAC_LRCLK0]);
+disable_bclk0:
+	clk_disable_unprepare(dev->clks[CLK_DAC_BCLK0]);
+disable_mclk:
+	clk_disable_unprepare(dev->clks[CLK_MCLK]);
+disable_lrclk_mst:
+	clk_disable_unprepare(dev->clks[CLK_DAC_LRCLK_MST]);
+disable_bclk_mst:
+	clk_disable_unprepare(dev->clks[CLK_DAC_BCLK_MST]);
+disable_inner_clk:
+	clk_disable_unprepare(dev->clks[CLK_DAC_INNER]);
+
+	return ret;
+}
+
+static int dw_i2stx_4ch1_clk_init(struct platform_device *pdev, struct dw_i2s_dev *dev)
+{
+	int ret = 0;
+
+	dev->clks_audroot = devm_clk_get(&pdev->dev, "audroot");
+	if (IS_ERR(dev->clks_audroot))
+		return PTR_ERR(dev->clks_audroot);
+
+	dev->clks_inner = devm_clk_get(&pdev->dev, "mclk_inner");
+	if (IS_ERR(dev->clks_inner))
+		return PTR_ERR(dev->clks_inner);
+
+	dev->clks_bclk_mst = devm_clk_get(&pdev->dev, "bclk_mst");
+	if (IS_ERR(dev->clks_bclk_mst))
+		return PTR_ERR(dev->clks_bclk_mst);
+
+	dev->clks_lrclk_mst = devm_clk_get(&pdev->dev, "lrck_mst");
+	if (IS_ERR(dev->clks_lrclk_mst))
+		return PTR_ERR(dev->clks_lrclk_mst);
+
+	dev->clks_mclk = devm_clk_get(&pdev->dev, "mclk");
+	if (IS_ERR(dev->clks_mclk))
+		return PTR_ERR(dev->clks_mclk);
+
+	dev->clks_bclk = devm_clk_get(&pdev->dev, "4chbclk");
+	if (IS_ERR(dev->clks_bclk))
+		return PTR_ERR(dev->clks_bclk);
+
+	dev->clks_lrclk = devm_clk_get(&pdev->dev, "4chlrck");
+	if (IS_ERR(dev->clks_lrclk))
+		return PTR_ERR(dev->clks_lrclk);
+
+	dev->clks_mclk_out = devm_clk_get(&pdev->dev, "mclk_out");
+	if (IS_ERR(dev->clks_mclk_out))
+		return PTR_ERR(dev->clks_mclk_out);
+
+	dev->clks_apb0 = devm_clk_get(&pdev->dev, "apb0");
+	if (IS_ERR(dev->clks_apb0))
+		return PTR_ERR(dev->clks_apb0);
+
+	dev->clks_4ch_apb = devm_clk_get(&pdev->dev, "clk_apb");
+	if (IS_ERR(dev->clks_4ch_apb))
+		return PTR_ERR(dev->clks_4ch_apb);
+
+	ret = clk_prepare_enable(dev->clks_audroot);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_audroot\n", __func__);
+		goto disable_audioroot_clk;
+	}
+	ret = clk_set_rate(dev->clks_audroot, 204800000);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set rate for clks_audroot ret=%d\n", ret);
+		goto disable_audioroot_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_inner);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_inner\n", __func__);
+		goto disable_audinner_clk;
+	}
+
+	ret = clk_set_rate(dev->clks_inner, 4096000);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set rate for clks_inner ret=%d\n", ret);
+		goto disable_audinner_clk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_bclk_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_bclk_mst\n", __func__);
+		goto disable_mst_bclk;
+	}
+
+	ret = clk_set_rate(dev->clks_bclk_mst, 1024000);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set rate for clks_bclk_mst ret=%d\n", ret);
+		goto disable_mst_bclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_lrclk_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_lrclk_mst\n", __func__);
+		goto disable_mst_lrclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_mclk);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_mclk\n", __func__);
+		goto disable_mclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_bclk);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_bclk\n", __func__);
+		goto disable_bclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_lrclk);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_lrclk\n", __func__);
+		goto disable_lrclk;
+	}
+
+	ret = clk_prepare_enable(dev->clks_mclk_out);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_mclk_out\n", __func__);
+		goto disable_mclk_out;
+	}
+
+	ret = clk_prepare_enable(dev->clks_apb0);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_apb0\n", __func__);
+		goto disable_apb0;
+	}
+
+	ret = clk_prepare_enable(dev->clks_4ch_apb);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to enable clks_4ch_apb\n", __func__);
+		goto disable_4ch_apb;
+	}
+
+
+	dev_dbg(&pdev->dev, "dev->clks_inner = %lu \n", clk_get_rate(dev->clks_inner));
+	dev_dbg(&pdev->dev, "dev->clks_bclk_mst = %lu \n", clk_get_rate(dev->clks_bclk_mst));
+	dev_dbg(&pdev->dev, "dev->clks_lrclk_mst = %lu \n", clk_get_rate(dev->clks_lrclk_mst));
+	dev_dbg(&pdev->dev, "dev->clks_mclk = %lu \n", clk_get_rate(dev->clks_mclk));
+	dev_dbg(&pdev->dev, "dev->clks_bclk = %lu \n", clk_get_rate(dev->clks_bclk));
+	dev_dbg(&pdev->dev, "dev->clks_lrclk = %lu \n", clk_get_rate(dev->clks_lrclk));
+	dev_dbg(&pdev->dev, "dev->clks_mclk_out = %lu \n", clk_get_rate(dev->clks_mclk_out));
+	dev_dbg(&pdev->dev, "dev->clks_apb0 = %lu \n", clk_get_rate(dev->clks_apb0));
+	dev_dbg(&pdev->dev, "dev->clks_4ch_apb = %lu \n", clk_get_rate(dev->clks_4ch_apb));
+
+	dev->rstc[RST_APB1_BUS] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_APB1_BUS]);
+	if (IS_ERR(dev->rstc[RST_APB1_BUS])) {
+		dev_err(&pdev->dev, "%s: failed to get apb_i2stx reset control\n", __func__);
+                return PTR_ERR(dev->rstc[RST_APB1_BUS]);
+	}
+
+	dev->rstc[RST_BCLK_1] = devm_reset_control_get_exclusive(&pdev->dev, rst_name[RST_BCLK_1]);
+	if (IS_ERR(dev->rstc[RST_BCLK_1])) {
+		dev_err(&pdev->dev, "%s: failed to get i2s bclk1 reset control\n", __func__);
+                return PTR_ERR(dev->rstc[RST_BCLK_1]);
+	}
+
+	ret = reset_control_assert(dev->rstc[RST_APB1_BUS]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to reset control assert RST_APB1_BUS\n", __func__);
+		goto disable_4ch_apb;
+	}
+	ret = reset_control_assert(dev->rstc[RST_BCLK_1]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to reset control assert RST_BCLK_1\n", __func__);
+		goto disable_4ch_apb;
+	}
+
+	ret = reset_control_deassert(dev->rstc[RST_APB1_BUS]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to reset control deassert RST_APB1_BUS\n", __func__);
+		goto disable_4ch_apb;
+	}
+
+	ret = reset_control_deassert(dev->rstc[RST_BCLK_1]);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to reset control deassert RST_APB1_BUS\n", __func__);
+		goto disable_4ch_apb;
+	}
+
+	return 0;
+
+disable_4ch_apb:
+	clk_disable_unprepare(dev->clks_4ch_apb);
+disable_apb0:
+	clk_disable_unprepare(dev->clks_apb0);
+disable_mclk_out:
+	clk_disable_unprepare(dev->clks_mclk_out);
+disable_lrclk:
+	clk_disable_unprepare(dev->clks_lrclk);
+disable_bclk:
+	clk_disable_unprepare(dev->clks_bclk);
+disable_mclk:
+	clk_disable_unprepare(dev->clks_mclk);
+disable_mst_lrclk:
+	clk_disable_unprepare(dev->clks_lrclk_mst);
+disable_mst_bclk:
+	clk_disable_unprepare(dev->clks_bclk_mst);
+disable_audinner_clk:
+	clk_disable_unprepare(dev->clks_inner);
+disable_audioroot_clk:
+	clk_disable_unprepare(dev->clks_audroot);
+
+	return ret;
+}
+
 /*
  * The following tables allow a direct lookup of various parameters
  * defined in the I2S block's configuration in terms of sound system
@@ -530,10 +1013,10 @@ static int dw_configure_dai(struct dw_i2s_dev *dev,
 	}
 
 	if (COMP1_MODE_EN(comp1)) {
-		dev_dbg(dev->dev, "designware: i2s master mode supported\n");
+		dev_info(dev->dev, "designware: i2s master mode supported\n");
 		dev->capability |= DW_I2S_MASTER;
 	} else {
-		dev_dbg(dev->dev, "designware: i2s slave mode supported\n");
+		dev_info(dev->dev, "designware: i2s slave mode supported\n");
 		dev->capability |= DW_I2S_SLAVE;
 	}
 
@@ -617,9 +1100,21 @@ static int dw_configure_dai_by_dt(struct dw_i2s_dev *dev,
 
 }
 
+#ifdef CONFIG_SND_DESIGNWARE_I2S_STARFIVE_JH7110
+static int dw_i2s_dai_probe(struct snd_soc_dai *dai)
+{
+	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
+
+	snd_soc_dai_init_dma_data(dai, &dev->play_dma_data, &dev->capture_dma_data);
+	return 0;
+}
+#endif
+
 static int dw_i2s_probe(struct platform_device *pdev)
 {
 	const struct i2s_platform_data *pdata = pdev->dev.platform_data;
+	struct device_node *np = pdev->dev.of_node;
+	struct of_phandle_args args;
 	struct dw_i2s_dev *dev;
 	struct resource *res;
 	int ret, irq;
@@ -635,11 +1130,19 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dw_i2s_dai->ops = &dw_i2s_dai_ops;
+#ifdef CONFIG_SND_DESIGNWARE_I2S_STARFIVE_JH7110
+	dw_i2s_dai->probe = dw_i2s_dai_probe;
+#endif
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	dev->i2s_base = devm_ioremap_resource(&pdev->dev, res);
+	dev->i2s_base = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(dev->i2s_base))
 		return PTR_ERR(dev->i2s_base);
+
+	dev->clk_base = ioremap(CLOCK_BASE, 0x300);
+    if (IS_ERR(dev->clk_base)) {
+        printk(KERN_INFO "%s: failed to alloc memory for clk_base\n", __func__);
+        return PTR_ERR(dev->clk_base);
+    }
 
 	dev->dev = &pdev->dev;
 
@@ -651,6 +1154,33 @@ static int dw_i2s_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "failed to request irq\n");
 			return ret;
 		}
+	}
+
+	if (of_device_is_compatible(np, "snps,designware-i2srx")) { //record
+		ret = of_parse_phandle_with_fixed_args(dev->dev->of_node,
+							"starfive,sys-syscon", 2, 0, &args);
+		if (ret) {
+			dev_err(dev->dev, "Failed to parse starfive,sys-syscon\n");
+			return -EINVAL;
+		}
+		dev->syscon_base = syscon_node_to_regmap(args.np);
+		of_node_put(args.np);
+		if (IS_ERR(dev->syscon_base))
+			return PTR_ERR(dev->syscon_base);
+
+		dev->syscon_offset_18 = args.args[0];
+		dev->syscon_offset_34 = args.args[1];
+		ret = dw_i2srx_clk_init(pdev, dev);
+		if (ret < 0)
+			goto err_clk_disable;
+	} else if (of_device_is_compatible(np, "snps,designware-i2stx-4ch0")) {   //playback
+		ret = dw_i2stx_4ch0_clk_init(pdev, dev);
+		if (ret < 0)
+			goto err_clk_disable;
+	} else if (of_device_is_compatible(np, "snps,designware-i2stx-4ch1")) {   //playback
+		ret = dw_i2stx_4ch1_clk_init(pdev, dev);
+		if (ret < 0)
+			goto err_clk_disable;
 	}
 
 	dev->i2s_reg_comp1 = I2S_COMP_PARAM_1;
@@ -665,7 +1195,7 @@ static int dw_i2s_probe(struct platform_device *pdev)
 		}
 		ret = dw_configure_dai_by_pd(dev, dw_i2s_dai, res, pdata);
 	} else {
-		clk_id = "i2sclk";
+		clk_id = "bclk_mst";
 		ret = dw_configure_dai_by_dt(dev, dw_i2s_dai, res);
 	}
 	if (ret < 0)
@@ -715,6 +1245,9 @@ static int dw_i2s_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_enable(&pdev->dev);
+	clk_disable_unprepare(dev->clks_mclk_out);
+	clk_disable_unprepare(dev->clks_bclk_mst);
+	clk_disable_unprepare(dev->clks_lrclk_mst);
 	return 0;
 
 err_clk_disable:
@@ -736,7 +1269,9 @@ static int dw_i2s_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_OF
 static const struct of_device_id dw_i2s_of_match[] = {
-	{ .compatible = "snps,designware-i2s",	 },
+	{ .compatible = "snps,designware-i2stx-4ch1",	 },
+	{ .compatible = "snps,designware-i2srx",	 },
+	{ .compatible = "snps,designware-i2stx-4ch0",	 },
 	{},
 };
 
