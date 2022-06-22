@@ -89,6 +89,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
 	status = "okay";
+
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		#sound-dai-cells = <0>;
+
+		wlf,shared-lrclk;
+	};
 };
 
 &i2c1 {
@@ -163,6 +171,22 @@
 	status = "okay";
 };
 
+
+&i2srx_3ch {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_pins>;
+	status = "okay";
+};
+
+&i2stx_4ch0 {
+	status = "disabled";
+};
+
+&i2stx_4ch1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s_clk_pins &i2stx_pins>;
+	status = "okay";
+};
 &pwmdac_codec {
 	status = "okay";
 };

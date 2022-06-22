@@ -198,8 +198,8 @@
 
 	i2c0_pins: i2c0-pins {
 		i2c0-pins-scl {
-			sf,pins = <PAD_GPIO36>;
-			sf,pinmux = <PAD_GPIO36_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO57>;
+			sf,pinmux = <PAD_GPIO57_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1)|(GPIO_PU(1)))>;
 			sf,pin-gpio-dout = <GPO_LOW>;
 			sf,pin-gpio-doen = <OEN_I2C0_IC_CLK_OE>;
@@ -207,8 +207,8 @@
 		};
 
 		i2c0-pins-sda {
-			sf,pins = <PAD_GPIO37>;
-			sf,pinmux = <PAD_GPIO37_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO58>;
+			sf,pinmux = <PAD_GPIO58_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1)|(GPIO_PU(1)))>;
 			sf,pin-gpio-dout = <GPO_LOW>;
 			sf,pin-gpio-doen = <OEN_I2C0_IC_DATA_OE>;
@@ -490,6 +490,7 @@
 	};
 
 	i2s_clk_pins: i2s-clk0 {
+/*
 		i2s-clk0_mclk {
 			sf,pins = <PAD_GPIO58>;
 			sf,pinmux = <PAD_GPIO58_FUNC_SEL 0>;
@@ -497,12 +498,28 @@
 			sf,pin-gpio-dout = <GPO_CRG0_MCLK_OUT>;
 			sf,pin-gpio-doen = <OEN_LOW>;
 		};
+*/
+                i2s-clk0_bclk {
+                       sf,pins = <PAD_GPIO38>;
+                       sf,pinmux = <PAD_GPIO38_FUNC_SEL 0>;
+                       sf,pin-ioconfig = <IO(GPIO_IE(1))>;
+                       sf,pin-gpio-din = <GPI_I2STX0_BCLK_SLV>;
+                       sf,pin-gpio-doen = <OEN_HIGH>;
+                };
+
+                i2s-clk0_lrclk {
+                       sf,pins = <PAD_GPIO63>;
+                       sf,pinmux = <PAD_GPIO63_FUNC_SEL 0>;
+                       sf,pin-ioconfig = <IO(GPIO_IE(1))>;
+                       sf,pin-gpio-din = <GPI_I2STX0_LRCK_SLV>;
+                       sf,pin-gpio-doen = <OEN_HIGH>;
+                };
 	};
 
 	i2stx_pins: i2stx-pins {
 		i2stx-pins0 {
-			sf,pins = <PAD_GPIO18>;
-			sf,pinmux = <PAD_GPIO18_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO44>;
+			sf,pinmux = <PAD_GPIO44_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
 			sf,pin-gpio-dout = <GPO_I2STX_4CH1_SDO0>;
 			sf,pin-gpio-doen = <OEN_LOW>;
@@ -511,8 +528,8 @@
 
 	i2srx_pins: i2srx-pins {
 		i2srx-pins0 {
-			sf,pins = <PAD_GPIO17>;
-			sf,pinmux = <PAD_GPIO17_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO61>;
+			sf,pinmux = <PAD_GPIO61_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
 			sf,pin-gpio-doen = <OEN_HIGH>;
 			sf,pin-gpio-din =  <GPI_I2SRX0_EXT_SDIN0>;
