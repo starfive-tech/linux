@@ -199,6 +199,10 @@
         status = "okay";
 };
 
+&vpu_enc {
+        status = "okay";
+};
+
 &sfctemp {
         status = "okay";
 };
