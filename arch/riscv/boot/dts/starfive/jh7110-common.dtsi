@@ -216,7 +216,7 @@
 &i2srx_3ch {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2srx_pins>;
-	status = "okay";
+	status = "disabled";
 };
 
 &i2stx_4ch0 {
@@ -242,6 +242,18 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&can1_pins>;
         status = "disabled";
+};
+
+&pdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pdm0_pins>;
+	status = "okay";
+};
+
+&i2srx_mst {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_clk_pins>;
+	status = "okay";
 };
 
 &pcie0 {

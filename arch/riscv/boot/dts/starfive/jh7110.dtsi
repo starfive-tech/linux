@@ -854,6 +854,47 @@
                         status = "disabled";
                 };
 
+		pdm: pdm@100d0000 {
+			compatible = "starfive,sf-pdm";
+			reg = <0x0 0x100d0000 0x0 0x1000>;
+			reg-names = "pdm";
+			clocks = <&clkgen JH7110_PDM_CLK_DMIC>,
+				 <&clkgen JH7110_APB0>,
+				 <&clkgen JH7110_PDM_CLK_APB>,
+				 <&clkgen JH7110_MCLK_INNER>,
+				 <&clkgen JH7110_MCLK>,
+				 <&clkgen JH7110_MCLK_OUT>;
+			clock-names = "pdm_mclk", "clk_apb0",
+				      "pdm_apb", "mclk_inner",
+				      "clk_mclk", "mclk_out";
+			resets = <&rstgen RSTN_U0_PDM_4MIC_DMIC>,
+				 <&rstgen RSTN_U0_PDM_4MIC_APB>;
+			reset-names = "pdm_dmic", "pdm_apb";
+			#sound-dai-cells = <0>;
+		};
+
+		i2srx_mst: i2srx_mst@100e0000 {
+			compatible = "snps,i2srx-master";
+			reg = <0x0 0x100e0000 0x0 0x1000>;
+			clocks = <&clkgen JH7110_APB0>,
+				 <&clkgen JH7110_I2SRX0_3CH_CLK_APB>,
+				 <&clkgen JH7110_I2SRX_3CH_BCLK_MST>,
+				 <&clkgen JH7110_I2SRX_3CH_LRCK_MST>,
+				 <&clkgen JH7110_I2SRX0_3CH_BCLK>,
+				 <&clkgen JH7110_I2SRX0_3CH_LRCK>;
+			clock-names = "apb0", "i2srx_apb",
+				      "i2srx_bclk_mst", "i2srx_lrck_mst",
+				      "i2srx_bclk", "i2srx_lrck";
+			resets = <&rstgen RSTN_U0_I2SRX_3CH_APB>,
+				 <&rstgen RSTN_U0_I2SRX_3CH_BCLK>;
+			reset-names = "rst_apb_rx", "rst_bclk_rx";
+			dmas = <&dma 24 1>;
+			dma-names = "rx";
+			starfive,sys-syscon = <&sys_syscon 0x18 0x34>;
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
 		pcie0: pcie@2B000000 {
 			compatible = "plda,pci-xpressrich3-axi";
 			#address-cells = <3>;
