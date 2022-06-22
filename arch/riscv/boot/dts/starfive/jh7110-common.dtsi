@@ -203,6 +203,10 @@
         status = "okay";
 };
 
+&vpu_dec {
+        status = "okay";
+};
+
 &sfctemp {
         status = "okay";
 };
