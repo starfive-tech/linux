@@ -125,3 +125,4 @@ obj-$(CONFIG_DRM_MCDE) += mcde/
 obj-$(CONFIG_DRM_TIDSS) += tidss/
 obj-y			+= xlnx/
 obj-$(CONFIG_DRM_VERISILICON) += verisilicon/
+obj-$(CONFIG_DRM_IMG) += img/
