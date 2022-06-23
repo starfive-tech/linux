@@ -9,6 +9,7 @@
 #include "codecs/sf_wm8960.dtsi"
 //#include "codecs/sf_pwmdac.dtsi"
 //#include "codecs/sf_pdm.dtsi"
+//#include "codecs/sf_tdm.dtsi"
 
 / {
 	model = "StarFive JH7110 EVB";

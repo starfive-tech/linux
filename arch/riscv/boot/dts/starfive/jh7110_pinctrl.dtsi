@@ -258,8 +258,8 @@
 
 	i2c3_pins: i2c3-pins {
 		i2c3-pins-scl {
-			sf,pins = <PAD_GPIO38>;
-			sf,pinmux = <PAD_GPIO38_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO27>;
+			sf,pinmux = <PAD_GPIO27_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1)|(GPIO_PU(1)))>;
 			sf,pin-gpio-dout = <GPO_LOW>;
 			sf,pin-gpio-doen = <OEN_I2C3_IC_CLK_OE>;
@@ -267,8 +267,8 @@
 		};
 
 		i2c3-pins-sda {
-			sf,pins = <PAD_GPIO39>;
-			sf,pinmux = <PAD_GPIO39_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO26>;
+			sf,pinmux = <PAD_GPIO26_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1)|(GPIO_PU(1)))>;
 			sf,pin-gpio-dout = <GPO_LOW>;
 			sf,pin-gpio-doen = <OEN_I2C3_IC_DATA_OE>;
@@ -449,43 +449,35 @@
 
 	tdm0_pins: tdm0-pins {
 		tdm0-pins-tx {
-			sf,pins = <PAD_GPIO21>;
-			sf,pinmux = <PAD_GPIO21_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO44>;
+			sf,pinmux = <PAD_GPIO44_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
 			sf,pin-gpio-dout = <GPO_TDM0_PCM_TXD>;
 			sf,pin-gpio-doen = <OEN_LOW>;
 		};
 
 		tdm0-pins-rx {
-			sf,pins = <PAD_GPIO15>;
-			sf,pinmux = <PAD_GPIO15_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO61>;
+			sf,pinmux = <PAD_GPIO61_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
 			sf,pin-gpio-doen = <OEN_HIGH>;
 			sf,pin-gpio-din =  <GPI_TDM0_PCM_RXD>;
 		};
 
 		tdm0-pins-sync {
-			sf,pins = <PAD_GPIO22>;
-			sf,pinmux = <PAD_GPIO22_FUNC_SEL 0>;
+			sf,pins = <PAD_GPIO63>;
+			sf,pinmux = <PAD_GPIO63_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
-			sf,pin-gpio-dout = <GPO_TDM0_PCM_SYNCOUT>;
-			sf,pin-gpio-doen = <OEN_LOW>;
+			sf,pin-gpio-doen = <OEN_HIGH>;
+			sf,pin-gpio-din = <GPI_TDM0_PCM_SYNCIN>;
 		};
 
-		tdm0-pins-mclk {
-			sf,pins = <PAD_GPIO30>;
-			sf,pinmux = <PAD_GPIO30_FUNC_SEL 0>;
+		tdm0-pins-pcmclk {
+			sf,pins = <PAD_GPIO38>;
+			sf,pinmux = <PAD_GPIO38_FUNC_SEL 0>;
 			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
-			sf,pin-gpio-dout = <GPO_CRG0_MCLK_OUT>;
-			sf,pin-gpio-doen = <OEN_LOW>;
-		};
-
-		tdm0-pins-mst {
-			sf,pins = <PAD_GPIO39>;
-			sf,pinmux = <PAD_GPIO39_FUNC_SEL 0>;
-			sf,pin-ioconfig = <IO(GPIO_IE(1))>;
-			sf,pin-gpio-dout = <GPO_TDM0_CLK_MST>;
-			sf,pin-gpio-doen = <OEN_LOW>;
+			sf,pin-gpio-doen = <OEN_HIGH>;
+			sf,pin-gpio-din = <GPI_TDM0_CLK_SLV>;
 		};
 	};
 
