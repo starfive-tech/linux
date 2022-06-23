@@ -444,13 +444,16 @@ static void *starfive_eqos_probe(struct platform_device *pdev,
 	struct device *dev = &pdev->dev;
 	struct starfive_eqos *eqos;
 	int err;
+	void *ret;
 
 	/* Get IRQ information early to have an ability to ask for deferred
 	 * probe if needed before we went too far with resource allocation.
 	 */
 	res->irq = platform_get_irq_byname(pdev, "macirq");
-	if (res->irq < 0)
-		return res->irq;
+	if (res->irq < 0) {
+		ret = (void *)(long)res->irq;
+		return ret;
+	}
 
 	/* On some platforms e.g. SPEAr the wake up irq differs from the mac irq
 	 * The external wake up irq can be passed through the platform code
@@ -462,8 +465,10 @@ static void *starfive_eqos_probe(struct platform_device *pdev,
 	res->wol_irq =
 		platform_get_irq_byname_optional(pdev, "eth_wake_irq");
 	if (res->wol_irq < 0) {
-		if (res->wol_irq == -EPROBE_DEFER)
-			return -EPROBE_DEFER;
+		if (res->wol_irq == -EPROBE_DEFER) {
+			err = -EPROBE_DEFER;
+			goto err;
+		}
 		dev_info(&pdev->dev, "IRQ eth_wake_irq not found\n");
 		res->wol_irq = res->irq;
 	}
@@ -471,8 +476,10 @@ static void *starfive_eqos_probe(struct platform_device *pdev,
 	res->lpi_irq =
 		platform_get_irq_byname_optional(pdev, "eth_lpi");
 	if (res->lpi_irq < 0) {
-		if (res->lpi_irq == -EPROBE_DEFER)
-			return -EPROBE_DEFER;
+		if (res->lpi_irq == -EPROBE_DEFER) {
+			err = -EPROBE_DEFER;
+			goto err;
+		}
 		dev_info(&pdev->dev, "IRQ eth_lpi not found\n");
 	}
 
