@@ -32,6 +32,8 @@
 #include "../dmaengine.h"
 #include "../virt-dma.h"
 
+#include <soc/starfive/jh7110.h>
+
 /*
  * The set of bus widths supported by the DMA controller. DW AXI DMAC supports
  * master data bus width up to 512 bits (for both AXI master interfaces), but
