@@ -113,6 +113,14 @@
 	status = "okay";
 };
 
+&crypto {
+	status = "okay";
+};
+
+&sec_dma {
+	status = "okay";
+};
+
 &gmac0 {
 	status = "okay";
 };

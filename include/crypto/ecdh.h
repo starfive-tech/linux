@@ -35,7 +35,7 @@
  */
 struct ecdh {
 	unsigned short curve_id;
-	char *key;
+	const char *key;
 	unsigned short key_size;
 };
 
