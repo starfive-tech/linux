@@ -18,8 +18,6 @@
 #include <sound/tlv.h>
 #include "starfive_tdm.h"
 
-#define CLOCK_BASE	0x13020000UL
-
 static inline u32 sf_tdm_readl(struct sf_tdm_dev *dev, u16 reg)
 {
 	return readl_relaxed(dev->tdm_base + reg);
