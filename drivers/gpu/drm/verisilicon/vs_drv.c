@@ -194,7 +194,6 @@ static int vs_drm_bind(struct device *dev)
 #else
 	static u64 dma_mask = DMA_40BIT_MASK;
 #endif
-	printk("vs_drm_bind KERNEL_VERSION(2, 6, 24) = %08x\n", KERNEL_VERSION(2, 6, 24));
 
 #if 0
 	/* Remove existing drivers that may own the framebuffer memory. */
