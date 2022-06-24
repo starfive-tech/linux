@@ -396,6 +396,11 @@
 	status = "okay";
 };
 
+&tdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&tdm0_pins>;
+	status = "okay";
+};
 
 &i2srx_3ch {
 	pinctrl-names = "default";
@@ -412,6 +417,7 @@
 	pinctrl-0 = <&i2s_clk_pins &i2stx_pins>;
 	status = "okay";
 };
+
 &pwmdac_codec {
 	status = "okay";
 };
