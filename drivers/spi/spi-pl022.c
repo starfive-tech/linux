@@ -34,6 +34,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/reset.h>
 
 /*
  * This macro is used to define some register default values.
@@ -41,7 +42,7 @@
  * val shifted sb steps to the left.
  */
 #define SSP_WRITE_BITS(reg, val, mask, sb) \
- ((reg) = (((reg) & ~(mask)) | (((val)<<(sb)) & (mask))))
+	((reg) = (((reg) & ~(mask)) | (((val)<<(sb)) & (mask))))
 
 /*
  * This macro is also used to define some default values.
@@ -49,7 +50,7 @@
  * the result with mask.
  */
 #define GEN_MASK_BITS(val, mask, sb) \
- (((val)<<(sb)) & (mask))
+	(((val)<<(sb)) & (mask))
 
 #define DRIVE_TX		0
 #define DO_NOT_DRIVE_TX		1
@@ -289,7 +290,7 @@
 #define SPI_POLLING_TIMEOUT 1000
 
 /*
- * The type of reading going on on this chip
+ * The type of reading going on in this chip
  */
 enum ssp_reading {
 	READING_NULL,
@@ -299,7 +300,7 @@ enum ssp_reading {
 };
 
 /*
- * The type of writing going on on this chip
+ * The type of writing going on in this chip
  */
 enum ssp_writing {
 	WRITING_NULL,
@@ -371,6 +372,7 @@ struct pl022 {
 	resource_size_t			phybase;
 	void __iomem			*virtbase;
 	struct clk			*clk;
+	struct reset_control		*rst;
 	struct spi_master		*master;
 	struct pl022_ssp_controller	*master_info;
 	/* Message per-transfer pump */
@@ -427,7 +429,7 @@ struct chip_data {
 	bool enable_dma;
 	enum ssp_reading read;
 	enum ssp_writing write;
-	void (*cs_control) (u32 command);
+	void (*cs_control)(u32 command);
 	int xfer_type;
 };
 
@@ -483,6 +485,7 @@ static void pl022_cs_control(struct pl022 *pl022, u32 command)
 static void giveback(struct pl022 *pl022)
 {
 	struct spi_transfer *last_transfer;
+
 	pl022->next_msg_cs_active = false;
 
 	last_transfer = list_last_entry(&pl022->cur_msg->transfers,
@@ -543,7 +546,7 @@ static int flush(struct pl022 *pl022)
 {
 	unsigned long limit = loops_per_jiffy << 1;
 
-	dev_dbg(&pl022->adev->dev, "flush\n");
+	dev_dbg(&pl022->adev->dev, "%s\n", __func__);
 	do {
 		while (readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RNE)
 			readw(SSP_DR(pl022->virtbase));
@@ -1195,7 +1198,7 @@ err_no_txchan:
 err_no_rxchan:
 	return err;
 }
-		
+
 static void terminate_dma(struct pl022 *pl022)
 {
 	struct dma_chan *rxchan = pl022->dma_rx_channel;
@@ -1579,7 +1582,6 @@ out:
 		message->status = -EIO;
 
 	giveback(pl022);
-	return;
 }
 
 static int pl022_transfer_one_message(struct spi_master *master,
@@ -1801,7 +1803,7 @@ static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
 		scr = SCR_MIN;
 	}
 
-	WARN(!best_freq, "pl022: Matching cpsdvsr and scr not found for %d Hz rate \n",
+	WARN(!best_freq, "pl022: Matching cpsdvsr and scr not found for %d Hz rate\n",
 			freq);
 
 	clk_freq->cpsdvsr = (u8) (best_cpsdvsr & 0xFF);
@@ -1908,8 +1910,8 @@ static int pl022_setup(struct spi_device *spi)
 	 * We can override with custom divisors, else we use the board
 	 * frequency setting
 	 */
-	if ((0 == chip_info->clk_freq.cpsdvsr)
-	    && (0 == chip_info->clk_freq.scr)) {
+	if ((chip_info->clk_freq.cpsdvsr == 0)
+	    && (chip_info->clk_freq.scr == 0)) {
 		status = calculate_effective_freq(pl022,
 						  spi->max_speed_hz,
 						  &clk_freq);
@@ -2243,6 +2245,19 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 		goto err_no_clk_en;
 	}
 
+	pl022->rst = devm_reset_control_get_exclusive(&adev->dev, "rst_apb");
+	if (!IS_ERR(pl022->rst)) {
+		status = reset_control_deassert(pl022->rst);
+		if (status) {
+			dev_err(&adev->dev, "could not deassert SSP/SPI bus reset\n");
+			goto err_no_rst_clr;
+		}
+	} else {
+		status = PTR_ERR(pl022->rst);
+		dev_err(&adev->dev, "could not retrieve SSP/SPI bus reset\n");
+		goto err_no_rst;
+	}
+
 	/* Initialize transfer pump */
 	tasklet_init(&pl022->pump_transfers, pump_transfers,
 		     (unsigned long)pl022);
@@ -2302,6 +2317,9 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 	if (platform_info->enable_dma)
 		pl022_dma_remove(pl022);
  err_no_irq:
+	reset_control_assert(pl022->rst);
+ err_no_rst_clr:
+ err_no_rst:
 	clk_disable_unprepare(pl022->clk);
  err_no_clk_en:
  err_no_clk:
