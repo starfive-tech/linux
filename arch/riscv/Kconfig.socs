@@ -19,6 +19,7 @@ config SOC_STARFIVE
 	select CLK_STARFIVE_JH7110
 	select RESET_STARFIVE_JH7110
 	select PINCTRL_STARFIVE
+	select ARM_AMBA
 	help
 	  StarFive SOC platform
 
