@@ -578,6 +578,10 @@
         status = "okay";
 };
 
+&gpu {
+	status = "okay";
+};
+
 &sfctemp {
         status = "okay";
 };
