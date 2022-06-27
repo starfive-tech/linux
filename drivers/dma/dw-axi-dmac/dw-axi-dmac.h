@@ -74,7 +74,7 @@ struct axi_dma_chan {
 	struct axi_dma_desc		*desc;
 	struct dma_slave_config		config;
 	enum dma_transfer_direction	direction;
-	bool 				fixed_burst_trans_len;
+	bool				fixed_burst_trans_len;
 	bool				cyclic;
 	bool				is_err;
 	/* these other elements are all protected by vc.lock */
@@ -161,7 +161,6 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 {
 	return vc_to_axi_dma_chan(to_virt_chan(dchan));
 }
-
 
 #define COMMON_REG_LEN		0x100
 #define CHAN_REG_LEN		0x100

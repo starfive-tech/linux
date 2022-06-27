@@ -301,8 +301,8 @@ static void axi_desc_put(struct axi_dma_desc *desc)
 	kfree(desc);
 	atomic_sub(descs_put, &chan->descs_allocated);
 	dev_vdbg(chan2dev(chan), "%s: %d descs put, %d still allocated\n",
-		axi_chan_name(chan), descs_put,
-		atomic_read(&chan->descs_allocated));
+		 axi_chan_name(chan), descs_put,
+		 atomic_read(&chan->descs_allocated));
 }
 
 static void vchan_desc_put(struct virt_dma_desc *vdesc)
@@ -312,7 +312,7 @@ static void vchan_desc_put(struct virt_dma_desc *vdesc)
 
 static enum dma_status
 dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
-		  struct dma_tx_state *txstate)
+		   struct dma_tx_state *txstate)
 {
 	struct axi_dma_chan *chan = dchan_to_axi_dma_chan(dchan);
 	struct virt_dma_desc *vdesc;
@@ -339,7 +339,6 @@ dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
 		bytes = length - completed_length;
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 		dma_set_residue(txstate, bytes);
-
 	} else {
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 	}
@@ -380,6 +379,7 @@ static void dw_axi_dma_set_byte_halfword(struct axi_dma_chan *chan, bool set)
 
 	iowrite32(val, chan->chip->apb_regs + offset);
 }
+
 /* Called in chan locked context */
 static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 				      struct axi_dma_desc *first)
@@ -481,7 +481,7 @@ static void axi_chan_start_first_queued(struct axi_dma_chan *chan)
 
 	desc = vd_to_axi_desc(vd);
 	dev_vdbg(chan2dev(chan), "%s: started %u\n", axi_chan_name(chan),
-		vd->tx.cookie);
+		 vd->tx.cookie);
 	axi_chan_block_xfer_start(chan, desc);
 }
 
@@ -784,8 +784,7 @@ dw_axi_dma_chan_prep_cyclic(struct dma_chan *dchan, dma_addr_t dma_addr,
 
 	num_segments = DIV_ROUND_UP(period_len, axi_block_len);
 	segment_len = DIV_ROUND_UP(period_len, num_segments);
-	if (!IS_ALIGNED(segment_len, 4))
-	{
+	if (!IS_ALIGNED(segment_len, 4)) {
 		segment_len = ALIGN(segment_len, 4);
 		period_len = segment_len * num_segments;
 	}
@@ -1055,7 +1054,6 @@ static void axi_chan_list_dump_lli(struct axi_dma_chan *chan,
 		axi_chan_dump_lli(chan, &desc_head->hw_desc[i]);
 }
 
-
 static void axi_chan_tasklet(struct tasklet_struct *t)
 {
 	struct axi_dma_chan *chan = from_tasklet(chan, t, dma_tasklet);
@@ -1104,16 +1102,14 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
 }
 
-
 static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 {
 	unsigned long flags;
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 
-	if (unlikely(axi_chan_is_hw_enable(chan))) {
+	if (unlikely(axi_chan_is_hw_enable(chan)))
 		axi_chan_disable(chan);
-	}
 
 	tasklet_schedule(&chan->dma_tasklet);
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
@@ -1131,7 +1127,8 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
-		dev_err(chan2dev(chan), "BUG: %s caught DWAXIDMAC_IRQ_DMA_TRF, but channel not idle!\n",
+		dev_err(chan2dev(chan),
+			"BUG: %s caught DWAXIDMAC_IRQ_DMA_TRF, but channel not idle!\n",
 			axi_chan_name(chan));
 		axi_chan_disable(chan);
 	}
@@ -1140,7 +1137,7 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 	vd = vchan_next_desc(&chan->vc);
 	if (!vd) {
 		dev_err(chan2dev(chan),
-			 "%s vd is null\n", axi_chan_name(chan));
+			"%s vd is null\n", axi_chan_name(chan));
 		spin_unlock_irqrestore(&chan->vc.lock, flags);
 		return;
 	}
@@ -1154,9 +1151,6 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
-					#ifdef CONFIG_SOC_STARFIVE_VIC7100
-					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
-					#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1197,7 +1191,7 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 		axi_chan_irq_clear(chan, status);
 
 		dev_vdbg(chip->dev, "%s %u IRQ status: 0x%08x\n",
-			axi_chan_name(chan), i, status);
+			 axi_chan_name(chan), i, status);
 
 		if (status & DWAXIDMAC_IRQ_ALL_ERR)
 			axi_chan_handle_err(chan, status);
@@ -1438,7 +1432,6 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 		chip->dw->hdata->axi_rw_burst_len = tmp;
 	}
 
-
 	/* get number of handshak interface and configure multi reg */
 	ret = device_property_read_u32(dev, "snps,num-hs-if", &tmp);
 	if (!ret)
@@ -1507,13 +1500,13 @@ static int dw_probe(struct platform_device *pdev)
 	chip->rst_core = devm_reset_control_get_exclusive(&pdev->dev, "rst_axi");
 	if (IS_ERR(chip->rst_core)) {
 		dev_err(&pdev->dev, "%s: failed to get rst_core reset control\n", __func__);
-                return PTR_ERR(chip->rst_core);
-   }
+		return PTR_ERR(chip->rst_core);
+	}
 	chip->rst_cfgr = devm_reset_control_get_exclusive(&pdev->dev, "rst_ahb");
 	if (IS_ERR(chip->rst_cfgr)) {
 		dev_err(&pdev->dev, "%s: failed to get rst_cfgr reset control\n", __func__);
-                return PTR_ERR(chip->rst_cfgr);
-    }
+		return PTR_ERR(chip->rst_cfgr);
+	}
 
 	reset_control_deassert(chip->rst_core);
 	reset_control_deassert(chip->rst_cfgr);
@@ -1650,7 +1643,7 @@ static int dw_remove(struct platform_device *pdev)
 	of_dma_controller_free(chip->dev->of_node);
 
 	list_for_each_entry_safe(chan, _chan, &dw->dma.channels,
-			vc.chan.device_node) {
+				 vc.chan.device_node) {
 		list_del(&chan->vc.chan.device_node);
 		tasklet_kill(&chan->vc.task);
 	}
