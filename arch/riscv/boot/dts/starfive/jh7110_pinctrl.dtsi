@@ -940,7 +940,7 @@
 		rgb-0-pins {
 			sf,pins = <PAD_GPIO36>;
 			sf,pinmux = <PAD_GPIO36_FUNC_SEL 1>;
-			sf,pin-ioconfig = <IO(GPIO_IE(0))>;
+			sf,pin-ioconfig = <IO(GPIO_IE(0)|GPIO_SLEW(1)|GPIO_DS(3))>;
 		};
 		rgb-1-pins {
 			sf,pins = <PAD_GPIO37>;

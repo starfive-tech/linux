@@ -615,8 +615,8 @@
 
 &hdmi {
 	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&inno_hdmi_pins>;
+	pinctrl-names = "default";/*enable for inno_hdmi, disable for rgb2hdmi*/
+	pinctrl-0 = <&inno_hdmi_pins>;/*enable for inno_hdmi, disable for rgb2hdmi*/
 
 	hdmi_in: port {
 		#address-cells = <1>;
@@ -629,8 +629,6 @@
 };
 
 &dc8200 {
-	//pinctrl-names = "default";
-	//pinctrl-0 = <&rgb_pad_pins>;
 	status = "okay";
 
 	dc_out: port {
@@ -654,6 +652,9 @@
 
 &hdmi_output {
 	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&rgb_pad_pins>;
+
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -699,7 +700,9 @@
 };
 
 &mipi_dsi {
-	pinctrl-names = "default";
-	pinctrl-0 = <&mipitx_pins>;
+	status = "disabled";
+};
+
+&mipi_dphy {
 	status = "disabled";
 };

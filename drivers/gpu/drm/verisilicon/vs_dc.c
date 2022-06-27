@@ -805,6 +805,11 @@ static int dc_vout_clk_rst_init(struct device *dev, struct vs_dc *dc)
 
 int sys_vout_mux_config(void)
 {
+	#ifdef CONFIG_DRM_I2C_NXP_TDA998X//tda998x-rgb2hdmi
+		SET_U0_LCD_DATA_MAPPING_DPI_DP_SEL(0);//DC8200_INTERFACE_DPI
+		SET_U0_LCD_DATA_MAPPING_DP_RGB_FMT(0);//0-RGB888
+		SET_U0_DISPLAY_PANEL_MUX_PANEL_SEL(0);//panel 0
+	#else
     if(1){
 		SET_U0_HDMI_DATA_MAPPING_DPI_DP_SEL(0);
 		SET_U0_HDMI_DATA_MAPPING_DPI_BIT_DEPTH(0);
@@ -813,13 +818,20 @@ int sys_vout_mux_config(void)
 		SET_U2_DISPLAY_PANEL_MUX_PANEL_SEL(0);
 
     }
+	#endif
     return 0;
 }
 
 int sys_dispctrl_clk(void)
 {
-	_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX0_SOURCE_CLK_HDMITX0_PIXELCLK_;
-	//_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX0_SOURCE_CLK_DC8200_PIX0_;
+	#ifdef CONFIG_DRM_I2C_NXP_TDA998X//tda998x-rgb2hdmi
+		_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX1_SOURCE_CLK_HDMITX0_PIXELCLK_;
+		_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX0_SOURCE_CLK_HDMITX0_PIXELCLK_;
+		//_ENABLE_CLOCK_CLK_DOM_VOUT_TOP_LCD_CLK_;//disabled standard
+	#else
+		_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX0_SOURCE_CLK_HDMITX0_PIXELCLK_;
+		//_SWITCH_CLOCK_CLK_U0_DC8200_CLK_PIX0_SOURCE_CLK_DC8200_PIX0_;
+	#endif
 
     return 0;
 }
@@ -892,6 +904,7 @@ static int dc_init(struct device *dev)
 	}
 
 	#ifdef CONFIG_STARFIVE_DSI
+	dev_info(dev, "dc mipi channel\n");
 	dc->vout_src = devm_clk_get(dev, "vout_src");
 	if (IS_ERR(dc->vout_src)){
 		dev_err(dev,"failed to get dc->vout_src\n");
@@ -908,7 +921,24 @@ static int dc_init(struct device *dev)
 		dev_err(dev, "failed to drv_config_dc_4_dsi: %d\n", ret);
 		return ret;
 	}
-		printk("lqw %s,%d\n",__func__,__LINE__);
+	#endif
+
+	#ifdef CONFIG_DRM_I2C_NXP_TDA998X
+	dev_info(dev, "rgb2hdmi channel\n");
+	_ENABLE_CLOCK_CLK_DOM_VOUT_TOP_LCD_CLK_;
+	/*
+	dev_info(dev, "dc rgb2hdmi channel\n");
+	dc->vout_top_lcd = devm_clk_get(dev, "vout_top_lcd");
+	if (IS_ERR(dc->vout_top_lcd)){
+		dev_err(dev,"failed to get dc->vout_top_lcd\n");
+		return PTR_ERR(dc->vout_top_lcd);
+	}
+	ret = clk_prepare_enable(dc->vout_top_lcd);
+	if (ret) {
+		dev_err(dev, "failed to prepare/enable vout_top_lcd\n");
+		return ret;
+	}
+	*/
 	#endif
 	printk("====> %s, %d.\n", __func__, __LINE__);
 
@@ -943,6 +973,12 @@ static void vs_dc_enable(struct device *dev, struct drm_crtc *crtc)
 	struct vs_crtc_state *crtc_state = to_vs_crtc_state(crtc->state);
 	struct drm_display_mode *mode = &crtc->state->adjusted_mode;
 	struct dc_hw_display display;
+#ifdef CONFIG_STARFIVE_DSI//7110 mipi
+	uint32_t vout_clock;
+	uint32_t div;
+	uint32_t div_new;
+	const uint32_t wanted_pxclk = mode->clock * 1000;
+#endif
 
 	display.bus_format = crtc_state->output_fmt;
 	display.h_active = mode->hdisplay;
@@ -1001,11 +1037,6 @@ static void vs_dc_enable(struct device *dev, struct drm_crtc *crtc)
 	/*-----------------div freq clk  sys_dispctrl_clk()----------*/
 	//const uint32_t wanted_pxclk = 20144262;//dpi->pixelclock;
 	//wanted_pxclk = mode->clock * 1000;
-	uint32_t vout_clock;
-	uint32_t div;
-	uint32_t div_new;
-	const uint32_t wanted_pxclk = mode->clock * 1000;
-
 	dev_info(dev, "wanted_pxclk = %d\n",wanted_pxclk);
     //uint32_t vout_clock = 614400000;
 	vout_clock = clk_get_rate(dc->vout_src);

@@ -200,13 +200,16 @@ static const struct drm_encoder_helper_funcs encoder_helper_funcs = {
 
 static int encoder_bind(struct device *dev, struct device *master, void *data)
 {
-
 	struct drm_device *drm_dev = data;
 	struct simple_encoder *simple = dev_get_drvdata(dev);
 	struct drm_encoder *encoder;
 	struct drm_bridge *bridge;
+#ifdef CONFIG_STARFIVE_DSI
+	struct drm_panel *tmp_panel;
+#endif
 	int ret;
 
+	dev_info(dev, "==encoder_bind begin\n");
 	encoder = &simple->encoder;
 
 	/* Encoder. */
@@ -233,6 +236,7 @@ static int encoder_bind(struct device *dev, struct device *master, void *data)
 	if (tmp_panel)
 		dev_err(dev, "found panel on endpoint\n");
 #else
+dev_info(dev, "==rgb2hdmi encoder\n");
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, -1, NULL, &bridge);
 		if (ret)
 			goto err;
@@ -244,7 +248,7 @@ static int encoder_bind(struct device *dev, struct device *master, void *data)
 #endif
 	if (ret)
 		goto err;
-
+dev_info(dev, "==encoder_bind end\n");
 	return 0;
 err:
 	drm_encoder_cleanup(encoder);
