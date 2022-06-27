@@ -822,7 +822,6 @@ static irqreturn_t inno_hdmi_hardirq(int irq, void *dev_id)
 	struct inno_hdmi *hdmi = dev_id;
 	irqreturn_t ret = IRQ_NONE;
 	u8 interrupt;
-	printk("lqw inno_hdmi_hardirq\n");
 	if (hdmi->i2c)
 		ret = inno_hdmi_i2c_irq(hdmi);
 
@@ -838,7 +837,6 @@ static irqreturn_t inno_hdmi_hardirq(int irq, void *dev_id)
 static irqreturn_t inno_hdmi_irq(int irq, void *dev_id)
 {
 	struct inno_hdmi *hdmi = dev_id;
-	printk("lqw inno_hdmi_irq\n");
 	drm_helper_hpd_irq_event(hdmi->connector.dev);
 
 	return IRQ_HANDLED;
