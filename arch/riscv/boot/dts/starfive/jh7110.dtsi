@@ -518,10 +518,6 @@
 			clock-names = "sec_hclk","sec_ahb";
 			resets = <&rstgen RSTN_U0_SEC_TOP_HRESETN>;
 			reset-names = "sec_hre";
-			enable-dma = "true";
-			dmas = <&sec_dma 1 2>,
-			       <&sec_dma 0 2>;
-			dma-names = "sec_m","sec_p";
 			status = "disabled";
 		};
 
