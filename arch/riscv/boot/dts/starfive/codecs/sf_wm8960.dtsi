@@ -6,7 +6,7 @@
 		format = "i2s";
 		bitclock-master = <&sndcodec1>;
 		frame-master = <&sndcodec1>;
-		
+
 		widgets =
 				"Microphone", "Mic Jack",
 				"Line", "Line In",
@@ -28,7 +28,7 @@
 		cpu1 {
 			sound-dai = <&i2stx_4ch1>;
 		};
-		
+
 		sndcodec1:codec {
 			sound-dai = <&wm8960>;
 			clocks = <&wm8960_mclk>;
