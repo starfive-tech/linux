@@ -6,10 +6,11 @@
 
 /dts-v1/;
 #include "jh7110.dtsi"
-#include "jh7110_pinctrl.dtsi"
+#include "jh7110-evb-pinctrl.dtsi"
 
 / {
 	aliases {
+		spi0 = &qspi;
 		gpio0 = &gpio;
 		ethernet0 = &gmac0;
 		ethernet1 = &gmac1;
@@ -49,28 +50,19 @@
 			linux,cma-default;
 		};
 
-		xrp_reserved: xrpbuffer@f0000000 {
-                       reg = <0x0 0xf0000000 0x0 0x01ffffff
-                               0x0 0xf2000000 0x0 0x00001000
-                               0x0 0xf2001000 0x0 0x00fff000
-                               0x0 0xf3000000 0x0 0x00001000>;
-               };
-
 		e24_mem: e24@c0000000 {
 			no-map;
 			reg = <0x0 0xc0110000 0x0 0xf0000>;
 		};
+
+		xrp_reserved: xrpbuffer@f0000000 {
+			reg = <0x0 0xf0000000 0x0 0x01ffffff
+				0x0 0xf2000000 0x0 0x00001000
+				0x0 0xf2001000 0x0 0x00fff000
+				0x0 0xf3000000 0x0 0x00001000>;
+		};
+
 	};
-};
-
-&ptc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pwm_ch0_pins>;
-	status = "okay";
-};
-
-&trng {
-	status = "okay";
 };
 
 &uart0 {
@@ -79,42 +71,41 @@
 	status = "okay";
 };
 
+&uart1 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart1_pins>;
+       status = "disabled";
+};
+
+&uart2 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart2_pins>;
+       status = "disabled";
+};
+
 &uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart3_pins>;
-	status = "okay";
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart3_pins>;
+       status = "disabled";
 };
 
-/* default sd card */
-&sdio0 {
-        clock-frequency = <102400000>;
-        max-frequency = <200000000>;
-        card-detect-delay = <300>;
-        bus-width = <4>;
-        broken-cd;
-        cap-sd-highspeed;
-        post-power-on-delay-ms = <200>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&sdcard0_pins>;
-        //cd-gpios = <&gpio 23 0>;
-        status = "okay";
+&uart4 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart4_pins>;
+       status = "disabled";
 };
 
-&sdio1 {
-        clock-frequency = <102400000>;
-        max-frequency = <100000000>;
-        card-detect-delay = <300>;
-        bus-width = <8>;
-        cap-mmc-hw-reset;
-        non-removable;
-        cap-mmc-highspeed;
-        post-power-on-delay-ms = <200>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&mmc1_pins>;
-        status = "okay";
+&uart5 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&uart5_pins>;
+       status = "disabled";
 };
 
 &dma {
+	status = "okay";
+};
+
+&trng {
 	status = "okay";
 };
 
@@ -126,21 +117,6 @@
 	status = "okay";
 };
 
-&gmac0 {
-	status = "okay";
-};
-
-&gmac1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-	phy0: ethernet-phy@0 {
-		rxc-skew-ps = <1060>;
-		txc-skew-ps = <1800>;
-		reg = <0>;
-	};
-};
-
 &i2c0 {
 	clock-frequency = <100000>;
 	i2c-sda-hold-time-ns = <300>;
@@ -149,7 +125,14 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
-	status = "okay";
+	status = "disabled";
+
+	ac108_a: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
+	};
 
 	wm8960: codec@1a {
 		compatible = "wlf,wm8960";
@@ -179,7 +162,7 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
-	status = "disabled";
+	status = "okay";
 
 	seeed_plane_i2c@45 {
 		compatible = "seeed_panel";
@@ -191,6 +174,7 @@
 			};
 		};
 	};
+
 };
 
 &i2c3 {
@@ -201,17 +185,7 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3_pins>;
-	status = "okay";
-	tda998x@70 {
-		compatible = "nxp,tda998x";
-		reg = <0x70>;
-
-		port {
-			tda998x_0_input: endpoint {
-				remote-endpoint = <&hdmi_out>;
-			};
-		};
-	};
+	status = "disabled";
 };
 
 &i2c4 {
@@ -261,6 +235,17 @@
 				hsync-active = <1>;
 				vsync-active = <1>;
 				pclk-sample = <1>;
+			};
+		};
+	};
+
+	tda998x@70 {
+		compatible = "nxp,tda998x";
+		reg = <0x70>;
+
+		port {
+			tda998x_0_input: endpoint {
+				remote-endpoint = <&hdmi_out>;
 			};
 		};
 	};
@@ -326,10 +311,197 @@
 	};
 };
 
+&sdio0 {
+	status = "disabled";
+};
+
+&sdio1 {
+	status = "disabled";
+};
+
+&vin_sysctl {
+	/* when use dvp open this pinctrl*/
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Parallel bus endpoint */
+			parallel_from_ov5640: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&ov5640_to_parallel>;
+				bus-type = <5>;		/* Parallel */
+				bus-width = <8>;
+				data-shift = <2>;	/* lines 9:2 are used */
+				hsync-active = <1>;
+				vsync-active = <0>;
+				pclk-sample = <1>;
+				status = "failed";
+			};
+
+			/* Parallel bus endpoint */
+			parallel_from_sc2235: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&sc2235_to_parallel>;
+				bus-type = <5>;		/* Parallel */
+				bus-width = <8>;
+				data-shift = <2>;	/* lines 9:2 are used */
+				hsync-active = <1>;
+				vsync-active = <0>;
+				pclk-sample = <1>;
+				status = "okay";
+			};
+		};
+
+		port@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_ov13850: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&ov13850_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				status = "failed";
+			};
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_ov4689: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&ov4689_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				status = "okay";
+			};
+		};
+	};
+};
+
+&sfctemp {
+	status = "okay";
+};
+
+&jpu {
+	status = "okay";
+};
+
+&vpu_dec {
+	status = "okay";
+};
+
+&vpu_enc {
+	status = "okay";
+};
+
+&gmac0 {
+	status = "okay";
+};
+
+&gmac1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	phy0: ethernet-phy@0 {
+		rxc-skew-ps = <1060>;
+		txc-skew-ps = <1800>;
+		reg = <0>;
+	};
+};
+
+&gpu {
+	status = "okay";
+};
+
+&can0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0_pins>;
+	status = "disabled";
+};
+
+&can1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1_pins>;
+	status = "disabled";
+};
+
+&tdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&tdm0_pins>;
+	status = "disabled";
+};
+
+&spdif0 {
+	status = "disabled";
+};
+
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac0_pins>;
+	status = "disabled";
+};
+
+&i2stx {
+	status = "disabled";
+};
+
+&pdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pdm0_pins>;
+	status = "disabled";
+};
+
+&i2srx_mst {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_clk_pins>;
+	status = "disabled";
+};
+
+&i2srx_3ch {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_pins>;
+	status = "disabled";
+};
+
+&i2stx_4ch0 {
+	status = "disabled";
+};
+
+&i2stx_4ch1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s_clk_pins &i2stx_pins>;
+	status = "disabled";
+};
+
+&spdif_transmitter {
+	status = "disabled";
+};
+
+&spdif_receiver {
+	status = "disabled";
+};
+
+&pwmdac_codec {
+	status = "okay";
+};
+
+&dmic_codec {
+	status = "okay";
+};
+
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&ssp0_pins>;
-	status = "okay";
+	status = "disabled";
 
 	spi_dev0: spi@0 {
 		compatible = "rohm,dh2228fv";
@@ -424,68 +596,12 @@
 	};
 };
 
-&pwmdac {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pwmdac0_pins>;
-	status = "okay";
-};
-
-&tdm {
-	pinctrl-names = "default";
-	pinctrl-0 = <&tdm0_pins>;
-	status = "okay";
-};
-
-&i2srx_3ch {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2srx_pins>;
-	status = "disabled";
-};
-
-&i2stx_4ch0 {
-	status = "disabled";
-};
-
-&i2stx_4ch1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2s_clk_pins &i2stx_pins>;
-	status = "okay";
-};
-
-&pwmdac_codec {
-	status = "okay";
-};
-
-&can0 {
-        pinctrl-names = "default";
-        pinctrl-0 = <&can0_pins>;
-        status = "disabled";
-};
-
-&can1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&can1_pins>;
-        status = "disabled";
-};
-
-&pdm {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pdm0_pins>;
-	status = "okay";
-};
-
-&i2srx_mst {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2srx_clk_pins>;
-	status = "okay";
-};
-
 &pcie0 {
 	pinctrl-names = "perst-default", "perst-active", "power-active";
 	pinctrl-0 = <&pcie0_perst_default>;
 	pinctrl-1 = <&pcie0_perst_active>;
 	pinctrl-2 = <&pcie0_power_active>;
-	status = "okay";
+	status = "disabled";
 };
 
 &pcie1 {
@@ -493,104 +609,7 @@
 	pinctrl-0 = <&pcie1_perst_default>;
 	pinctrl-1 = <&pcie1_perst_active>;
 	pinctrl-2 = <&pcie1_power_active>;
-	status = "okay";
-};
-
-&vin_sysctl {
-	/* when use dvp open this pinctrl*/
-	//pinctrl-names = "default";
-	//pinctrl-0 = <&dvp_pins>;
-	status = "okay";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@2 {
-			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Parallel bus endpoint */
-			parallel_from_ov5640: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&ov5640_to_parallel>;
-				bus-type = <5>;		/* Parallel */
-				bus-width = <8>;
-				data-shift = <2>;	/* lines 9:2 are used */
-				hsync-active = <1>;
-				vsync-active = <0>;
-				pclk-sample = <1>;
-				status = "failed";
-			};
-
-			/* Parallel bus endpoint */
-			parallel_from_sc2235: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&sc2235_to_parallel>;
-				bus-type = <5>;		/* Parallel */
-				bus-width = <8>;
-				data-shift = <2>;	/* lines 9:2 are used */
-				hsync-active = <1>;
-				vsync-active = <0>;
-				pclk-sample = <1>;
-				status = "okay";
-			};
-		};
-
-		port@3 {
-			reg = <3>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* CSI2 bus endpoint */
-			csi2rx0_from_ov13850: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&ov13850_to_csi2rx0>;
-				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
-				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
-				status = "failed";
-			};
-
-			/* CSI2 bus endpoint */
-			csi2rx0_from_ov4689: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&ov4689_to_csi2rx0>;
-				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
-				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
-				status = "okay";
-			};
-		};
-	};
-};
-
-&jpu {
-        status = "okay";
-};
-
-&vpu_enc {
-        status = "okay";
-};
-
-&vpu_dec {
-        status = "okay";
-};
-
-&gpu {
-	status = "okay";
-};
-
-&sfctemp {
-        status = "okay";
-};
-
-&usbdrd30 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&usb_pins>;
-	dr_mode = "host"; /*host or peripheral*/
-	status = "okay";
+	status = "disabled";
 };
 
 &mailbox_contrl0 {
@@ -598,14 +617,6 @@
 };
 
 &mailbox_client0 {
-	status = "okay";
-};
-
-&co_process {
-	status = "okay";
-};
-
-&xrp {
 	status = "okay";
 };
 
@@ -652,8 +663,6 @@
 
 &hdmi_output {
 	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&rgb_pad_pins>;
 
 	ports {
 		#address-cells = <1>;
@@ -676,8 +685,14 @@
 	};
 };
 
-&encoder {
+&tda988x_pin {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rgb_pad_pins>;
 	status = "disabled";
+};
+
+&encoder {
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -700,9 +715,24 @@
 };
 
 &mipi_dsi {
-	status = "disabled";
+	status = "okay";
 };
 
 &mipi_dphy {
+	status = "okay";
+};
+
+&co_process {
+	status = "okay";
+};
+
+&usbdrd30 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_pins>;
+	dr_mode = "host"; /*host or peripheral*/
 	status = "disabled";
+};
+
+&xrp {
+	status = "okay";
 };
