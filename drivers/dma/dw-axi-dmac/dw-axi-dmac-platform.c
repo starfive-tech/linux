@@ -198,11 +198,18 @@ static inline void axi_chan_disable(struct axi_dma_chan *chan)
 {
 	struct dma_multi *multi = &chan->chip->multi;
 	u32 val;
+	int ret;
+	u32 chan_active = BIT(chan->id) << DMAC_CHAN_EN_SHIFT;
 
 	val = axi_dma_ioread32(chan->chip, multi->en.ch_en);
 	val &= ~(BIT(chan->id) << multi->en.ch_en_shift);
 	val |=   BIT(chan->id) << multi->en.ch_en_we_shift;
 	axi_dma_iowrite32(chan->chip, multi->en.ch_en, val);
+
+	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
+					!(val & chan_active), 10, 100000); //10 ms
+	if (ret == -ETIMEDOUT)
+		pr_info("dma: failed to stop\n");
 }
 
 static inline void axi_chan_enable(struct axi_dma_chan *chan)
