@@ -42,7 +42,7 @@
  * val shifted sb steps to the left.
  */
 #define SSP_WRITE_BITS(reg, val, mask, sb) \
-	((reg) = (((reg) & ~(mask)) | (((val)<<(sb)) & (mask))))
+ ((reg) = (((reg) & ~(mask)) | (((val)<<(sb)) & (mask))))
 
 /*
  * This macro is also used to define some default values.
@@ -50,7 +50,7 @@
  * the result with mask.
  */
 #define GEN_MASK_BITS(val, mask, sb) \
-	(((val)<<(sb)) & (mask))
+ (((val)<<(sb)) & (mask))
 
 #define DRIVE_TX		0
 #define DO_NOT_DRIVE_TX		1
@@ -290,7 +290,7 @@
 #define SPI_POLLING_TIMEOUT 1000
 
 /*
- * The type of reading going on in this chip
+ * The type of reading going on on this chip
  */
 enum ssp_reading {
 	READING_NULL,
@@ -300,7 +300,7 @@ enum ssp_reading {
 };
 
 /*
- * The type of writing going on in this chip
+ * The type of writing going on on this chip
  */
 enum ssp_writing {
 	WRITING_NULL,
@@ -429,7 +429,7 @@ struct chip_data {
 	bool enable_dma;
 	enum ssp_reading read;
 	enum ssp_writing write;
-	void (*cs_control)(u32 command);
+	void (*cs_control) (u32 command);
 	int xfer_type;
 };
 
@@ -485,7 +485,6 @@ static void pl022_cs_control(struct pl022 *pl022, u32 command)
 static void giveback(struct pl022 *pl022)
 {
 	struct spi_transfer *last_transfer;
-
 	pl022->next_msg_cs_active = false;
 
 	last_transfer = list_last_entry(&pl022->cur_msg->transfers,
@@ -546,7 +545,7 @@ static int flush(struct pl022 *pl022)
 {
 	unsigned long limit = loops_per_jiffy << 1;
 
-	dev_dbg(&pl022->adev->dev, "%s\n", __func__);
+	dev_dbg(&pl022->adev->dev, "flush\n");
 	do {
 		while (readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RNE)
 			readw(SSP_DR(pl022->virtbase));
@@ -1198,7 +1197,7 @@ err_no_txchan:
 err_no_rxchan:
 	return err;
 }
-
+		
 static void terminate_dma(struct pl022 *pl022)
 {
 	struct dma_chan *rxchan = pl022->dma_rx_channel;
@@ -1582,6 +1581,7 @@ out:
 		message->status = -EIO;
 
 	giveback(pl022);
+	return;
 }
 
 static int pl022_transfer_one_message(struct spi_master *master,
@@ -1803,7 +1803,7 @@ static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
 		scr = SCR_MIN;
 	}
 
-	WARN(!best_freq, "pl022: Matching cpsdvsr and scr not found for %d Hz rate\n",
+	WARN(!best_freq, "pl022: Matching cpsdvsr and scr not found for %d Hz rate \n",
 			freq);
 
 	clk_freq->cpsdvsr = (u8) (best_cpsdvsr & 0xFF);
@@ -1910,8 +1910,8 @@ static int pl022_setup(struct spi_device *spi)
 	 * We can override with custom divisors, else we use the board
 	 * frequency setting
 	 */
-	if ((chip_info->clk_freq.cpsdvsr == 0)
-	    && (chip_info->clk_freq.scr == 0)) {
+	if ((0 == chip_info->clk_freq.cpsdvsr)
+	    && (0 == chip_info->clk_freq.scr)) {
 		status = calculate_effective_freq(pl022,
 						  spi->max_speed_hz,
 						  &clk_freq);
