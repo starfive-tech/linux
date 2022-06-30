@@ -13,7 +13,7 @@
 		#size-cells = <0>;
 
 		cpu@0 {
-			compatible = "starfive,dubhe0", "riscv";
+			compatible = "starfive,dubhe", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <128>;
 			d-cache-size = <65536>;
@@ -35,7 +35,7 @@
 		};
 
 		cpu@1 {
-			compatible = "starfive,dubhe0", "riscv";
+			compatible = "starfive,dubhe", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <128>;
 			d-cache-size = <65536>;
