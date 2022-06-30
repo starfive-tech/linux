@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 subdir-y += evb-overlay
-dtb-$(CONFIG_SOC_STARFIVE) += jh7110-evb.dtb			\
+dtb-$(CONFIG_SOC_STARFIVE) += jh7110-visionfive-v2.dtb		\
+				jh7110-evb.dtb			\
 				jh7110-evb-can-pdm-pwmdac.dtb	\
 				jh7110-evb-dvp-rgb2hdmi.dtb	\
 				jh7110-evb-pcie-i2s-sd.dtb	\
