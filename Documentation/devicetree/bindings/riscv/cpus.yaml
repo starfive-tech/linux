@@ -40,6 +40,7 @@ properties:
               - sifive,u5
               - sifive,u7
               - canaan,k210
+              - starfive,dubhe
           - const: riscv
       - const: riscv    # Simulator only
     description:
