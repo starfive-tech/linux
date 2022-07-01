@@ -1554,6 +1554,7 @@
 					"rst_noc_cpu","rst_noc_axicfg0","rst_noc_apb",
 					"rst_noc_gpu","rst_noc_vdec","rst_jtag2apb",
 					"rst_noc_disp","rst_noc_isp","rst_noc_stg","rst_noc_ddrc";
+			power-domains = <&pwrc JH7110_PD_VOUT>;
 		};
 
 		encoder: display-encoder {

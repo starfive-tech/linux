@@ -152,8 +152,6 @@ struct sf_dphy {
 
 static int sf_dphy_clkrst_get(struct device *dev, struct sf_dphy *dphy)
 {
-	int ret;
-
 	dphy->txesc_clk = devm_clk_get(dev, "dphy_txesc");
 	if (IS_ERR(dphy->txesc_clk)) {
 		dev_err(dev, "===txesc_clk get error\n");
@@ -165,11 +163,11 @@ static int sf_dphy_clkrst_get(struct device *dev, struct sf_dphy *dphy)
 		return PTR_ERR(dphy->sys_rst);
 	}
 
-	return ret;
+	return 0;
 }
 static int sf_dphy_clkrst_ena_deas(struct device *dev, struct sf_dphy *dphy)
 {
-	int ret;
+	int ret = 0;
 
 	ret = clk_prepare_enable(dphy->txesc_clk);
 	if (ret) {
@@ -187,7 +185,8 @@ static int sf_dphy_clkrst_ena_deas(struct device *dev, struct sf_dphy *dphy)
 
 static int sf_dphy_clkrst_disa_assert(struct device *dev, struct sf_dphy *dphy)
 {
-	int ret;
+	int ret = 0;
+
 	ret = reset_control_assert(dphy->sys_rst);
 	if (ret < 0) {
 		dev_err(dev, "failed to assert sys_rst\n");
