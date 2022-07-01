@@ -612,6 +612,7 @@ static int ov13850_read_reg(struct ov13850_dev *sensor, u16 reg, u8 *val)
 	return 0;
 }
 
+#ifdef UNUSED_CODE
 static int ov13850_read_reg16(struct ov13850_dev *sensor, u16 reg, u16 *val)
 {
 	u8 hi, lo;
@@ -627,6 +628,7 @@ static int ov13850_read_reg16(struct ov13850_dev *sensor, u16 reg, u16 *val)
 	*val = ((u16)hi << 8) | (u16)lo;
 	return 0;
 }
+#endif
 
 static int ov13850_write_reg16(struct ov13850_dev *sensor, u16 reg, u16 val)
 {
@@ -721,6 +723,7 @@ static int ov13850_set_stream_mipi(struct ov13850_dev *sensor, bool on)
 	return 0;
 }
 
+#ifdef UNUSED_CODE
 static int ov13850_get_sysclk(struct ov13850_dev *sensor)
 {
 	return 0;
@@ -789,6 +792,7 @@ static int ov13850_set_binning(struct ov13850_dev *sensor, bool enable)
 {
 	return 0;
 }
+#endif
 
 static const struct ov13850_mode_info *
 ov13850_find_mode(struct ov13850_dev *sensor, enum ov13850_frame_rate fr,
@@ -913,7 +917,6 @@ static int ov13850_set_mode_direct(struct ov13850_dev *sensor,
 static int ov13850_set_mode(struct ov13850_dev *sensor)
 {
 	const struct ov13850_mode_info *mode = sensor->current_mode;
-	const struct ov13850_mode_info *orig_mode = sensor->last_mode;
 	int ret = 0;
 
 	ret = ov13850_set_mode_direct(sensor, mode);
@@ -1025,7 +1028,9 @@ static int ov13850_set_power_mipi(struct ov13850_dev *sensor, bool on)
 static int ov13850_set_power(struct ov13850_dev *sensor, bool on)
 {
 	int ret = 0;
+#ifdef UNUSED_CODE
 	u16 chip_id;
+#endif
 
 	if (on) {
 		ret = ov13850_set_power_on(sensor);
@@ -1145,7 +1150,7 @@ find_mode:
 }
 
 static int ov13850_enum_mbus_code(struct v4l2_subdev *sd,
-				struct v4l2_subdev_state *state,
+				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_mbus_code_enum *code)
 {
 	if (code->pad != 0)
@@ -1159,7 +1164,7 @@ static int ov13850_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int ov13850_get_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_state *state,
+			struct v4l2_subdev_pad_config *cfg,
 			struct v4l2_subdev_format *format)
 {
 	struct ov13850_dev *sensor = to_ov13850_dev(sd);
@@ -1171,7 +1176,7 @@ static int ov13850_get_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&sensor->lock);
 
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		fmt = v4l2_subdev_get_try_format(&sensor->sd, state,
+		fmt = v4l2_subdev_get_try_format(&sensor->sd, cfg,
 						format->pad);
 	else
 		fmt = &sensor->fmt;
@@ -1217,7 +1222,7 @@ static int ov13850_try_fmt_internal(struct v4l2_subdev *sd,
 }
 
 static int ov13850_set_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_state *state,
+			struct v4l2_subdev_pad_config *cfg,
 			struct v4l2_subdev_format *format)
 {
 	struct ov13850_dev *sensor = to_ov13850_dev(sd);
@@ -1241,7 +1246,7 @@ static int ov13850_set_fmt(struct v4l2_subdev *sd,
 		goto out;
 
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		fmt = v4l2_subdev_get_try_format(sd, state, 0);
+		fmt = v4l2_subdev_get_try_format(sd, cfg, 0);
 	else
 		fmt = &sensor->fmt;
 
@@ -1289,11 +1294,13 @@ static int ov13850_set_framefmt(struct ov13850_dev *sensor,
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
 		fmt = 0x1;
+		break;
 	case MEDIA_BUS_FMT_SBGGR12_1X12:
 	case MEDIA_BUS_FMT_SGBRG12_1X12:
 	case MEDIA_BUS_FMT_SGRBG12_1X12:
 	case MEDIA_BUS_FMT_SRGGB12_1X12:
 		fmt = 0x2;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1329,7 +1336,6 @@ static int ov13850_set_ctrl_saturation(struct ov13850_dev *sensor, int value)
 
 static int ov13850_set_ctrl_white_balance(struct ov13850_dev *sensor, int awb)
 {
-	struct ov13850_ctrls *ctrls = &sensor->ctrls;
 	int ret = 0;
 
 	return ret;
@@ -1338,7 +1344,6 @@ static int ov13850_set_ctrl_white_balance(struct ov13850_dev *sensor, int awb)
 static int ov13850_set_ctrl_exposure(struct ov13850_dev *sensor,
 				enum v4l2_exposure_auto_type auto_exposure)
 {
-	struct ov13850_ctrls *ctrls = &sensor->ctrls;
 	int ret = 0;
 
 	return ret;
@@ -1519,7 +1524,7 @@ free_ctrls:
 }
 
 static int ov13850_enum_frame_size(struct v4l2_subdev *sd,
-				struct v4l2_subdev_state *state,
+				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_frame_size_enum *fse)
 {
 	if (fse->pad != 0)
@@ -1539,12 +1544,14 @@ static int ov13850_enum_frame_size(struct v4l2_subdev *sd,
 
 static int ov13850_enum_frame_interval(
 	struct v4l2_subdev *sd,
-	struct v4l2_subdev_state *state,
+	struct v4l2_subdev_pad_config *cfg,
 	struct v4l2_subdev_frame_interval_enum *fie)
 {
-	struct ov13850_dev *sensor = to_ov13850_dev(sd);
 	struct v4l2_fract tpf;
+#ifdef UNUSED_CODE
+	struct ov13850_dev *sensor = to_ov13850_dev(sd);
 	int ret;
+#endif
 
 	if (fie->pad != 0)
 		return -EINVAL;
@@ -1715,9 +1722,11 @@ static int ov13850_get_regulators(struct ov13850_dev *sensor)
 
 static int ov13850_check_chip_id(struct ov13850_dev *sensor)
 {
+#ifdef UNUSED_CODE
 	struct i2c_client *client = sensor->i2c_client;
-	int ret = 0;
 	u16 chip_id;
+#endif
+	int ret = 0;
 
 	ret = ov13850_set_power_on(sensor);
 	if (ret)
@@ -1738,9 +1747,9 @@ static int ov13850_check_chip_id(struct ov13850_dev *sensor)
 	}
 	dev_err(&client->dev, "%s: chip identifier, got 0x%x\n",
 		__func__, chip_id);
-#endif
 
 power_off:
+#endif
 	ov13850_set_power_off(sensor);
 	return ret;
 }
@@ -1753,7 +1762,6 @@ static int ov13850_probe(struct i2c_client *client)
 	struct v4l2_mbus_framefmt *fmt;
 	u32 rotation;
 	int ret;
-	u8 chip_id_high, chip_id_low;
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
@@ -1867,7 +1875,7 @@ static int ov13850_probe(struct i2c_client *client)
 	if (ret)
 		goto entity_cleanup;
 
-	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
+	ret = v4l2_async_register_subdev_sensor_common(&sensor->sd);
 	if (ret)
 		goto free_ctrls;
 
