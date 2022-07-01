@@ -51,7 +51,7 @@ enum PMU_HARD_EVENT {
  *	POWER_DOMAIN_GPUB
  * @enable: 1:enable 0:disable
  */
-void starfive_power_domain_set(u32 domain, bool enable);
+//void starfive_power_domain_set(u32 domain, bool enable);
 
 /*
  * @func: starfive_pmu_hw_encourage
