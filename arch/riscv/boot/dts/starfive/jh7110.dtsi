@@ -262,6 +262,7 @@
 			resets = <&rstgen RSTN_U0_DOM_VOUT_TOP_SRC>;
 			reset-names = "vout_src";
 			#clock-cells = <1>;
+			power-domains = <&pwrc JH7110_PD_VOUT>;
 			status = "okay";
 		};
 
@@ -283,6 +284,7 @@
 				 <&rstgen RSTN_U0_NOC_BUS_ISP_AXI_N>;
 			reset-names = "rst_isp_top_n", "rst_isp_top_axi",
 				      "rst_isp_noc_bus_n";
+			power-domains = <&pwrc JH7110_PD_ISP>;
 			status = "okay";
 		};
 

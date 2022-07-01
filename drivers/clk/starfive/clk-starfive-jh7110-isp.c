@@ -20,9 +20,7 @@
 #include <linux/reset.h>
 #include <linux/reset-controller.h>
 #include <dt-bindings/clock/starfive-jh7110-isp.h>
-#ifdef CONFIG_STARFIVE_PMU
-#include <soc/starfive/jh7110_pmu.h>
-#endif
+#include <linux/pm_runtime.h>
 #include "clk-starfive-jh7110.h"
 
 /* external clocks */
@@ -108,9 +106,13 @@ static int __init clk_starfive_jh7110_isp_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->isp_base))
 		return PTR_ERR(priv->isp_base);
 
-#ifdef CONFIG_STARFIVE_PMU
-	starfive_power_domain_set(POWER_DOMAIN_ISP, 1);
-#endif
+	pm_runtime_enable(&pdev->dev);
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to get pm runtime: %d\n", ret);
+		return ret;
+	}
+
 	clk_isp_noc_bus = devm_clk_get(priv->dev,
 			"u0_sft7110_noc_bus_clk_isp_axi");
 	if (!IS_ERR(clk_isp_noc_bus)) {
