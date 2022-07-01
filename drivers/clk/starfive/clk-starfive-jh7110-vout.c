@@ -17,9 +17,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
-#ifdef CONFIG_STARFIVE_PMU
-#include <soc/starfive/jh7110_pmu.h>
-#endif
+#include <linux/pm_runtime.h>
 #include <linux/reset.h>
 
 #include <dt-bindings/clock/starfive-jh7110-vout.h>
@@ -114,9 +112,13 @@ static int __init clk_starfive_jh7110_vout_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->vout_base))
 		return PTR_ERR(priv->vout_base);
 
-#ifdef CONFIG_STARFIVE_PMU
-	starfive_power_domain_set(POWER_DOMAIN_VOUT, 1);
-#endif
+	pm_runtime_enable(&pdev->dev);
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to get pm runtime: %d\n", ret);
+		return ret;
+	}
+
 	clk_vout_src = devm_clk_get(priv->dev, "vout_src");
 	if (!IS_ERR(clk_vout_src)) {
 		ret = clk_prepare_enable(clk_vout_src);
