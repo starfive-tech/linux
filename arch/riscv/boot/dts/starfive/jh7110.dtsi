@@ -10,6 +10,7 @@
 #include <dt-bindings/clock/starfive-jh7110-clkgen.h>
 #include <dt-bindings/clock/starfive-jh7110-vout.h>
 #include <dt-bindings/clock/starfive-jh7110-isp.h>
+#include <dt-bindings/power/jh7110-power.h>
 
 / {
 	compatible = "starfive,jh7110";
@@ -403,10 +404,11 @@
 			status = "okay";
 		};
 
-		pmu: pmu@17030000 {
+		pwrc: power-controller@17030000 {
 			compatible = "starfive,jh7110-pmu";
 			reg = <0x0 0x17030000 0x0 0x10000>;
 			interrupts = <111>;
+			#power-domain-cells = <1>;
 			status = "okay";
 		};
 
