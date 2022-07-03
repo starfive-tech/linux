@@ -240,7 +240,7 @@ config POWER_RESET_TORADEX_EC
 	  If unsure, say N.
 
 config POWER_RESET_TPS65086
-	bool "TPS65086 restart driver"
+	tristate "TPS65086 restart driver"
 	depends on MFD_TPS65086
 	help
 	  This driver adds support for resetting the TPS65086 PMIC on restart.
