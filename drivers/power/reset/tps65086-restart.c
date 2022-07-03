@@ -95,3 +95,4 @@ module_platform_driver(tps65086_restart_driver);
 
 MODULE_AUTHOR("Emil Renner Berthing <kernel@esmil.dk>");
 MODULE_DESCRIPTION("TPS65086 restart driver");
+MODULE_LICENSE("GPL v2");
