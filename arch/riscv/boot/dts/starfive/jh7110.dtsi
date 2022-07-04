@@ -404,6 +404,7 @@
 			clock-names = "sec_hclk","sec_ahb";
 			resets = <&rstgen RSTN_U0_SEC_TOP_HRESETN>;
 			reset-names = "sec_hre";
+			enable-side-channel-mitigation = "true";
 			status = "disabled";
 		};
 
