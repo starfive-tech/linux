@@ -117,7 +117,7 @@ static int __sbi_enter_domain_idle_state(struct cpuidle_device *dev,
 	/* Do runtime PM to manage a hierarchical CPU toplogy. */
 	rcu_irq_enter_irqson();
 	if (s2idle)
-		dev_pm_genpd_suspend(pd_dev);
+		pm_genpd_syscore_poweroff(pd_dev);
 	else
 		pm_runtime_put_sync_suspend(pd_dev);
 	rcu_irq_exit_irqson();
@@ -131,7 +131,7 @@ static int __sbi_enter_domain_idle_state(struct cpuidle_device *dev,
 
 	rcu_irq_enter_irqson();
 	if (s2idle)
-		dev_pm_genpd_resume(pd_dev);
+		pm_genpd_syscore_poweron(pd_dev);
 	else
 		pm_runtime_get_sync(pd_dev);
 	rcu_irq_exit_irqson();
