@@ -240,13 +240,20 @@ void __init riscv_fill_hwcap(void)
 		static_branch_enable(&cpu_hwcap_fpu);
 #endif
 
-#ifdef CONFIG_VECTOR
 	if (elf_hwcap & COMPAT_HWCAP_ISA_V) {
+#ifdef CONFIG_VECTOR
 		static_branch_enable(&cpu_hwcap_vector);
 		/* There are 32 vector registers with vlenb length. */
 		rvv_enable();
 		riscv_vsize = csr_read(CSR_VLENB) * 32;
 		rvv_disable();
-	}
+#else
+		/*
+		 * ISA string in device tree might have 'v' flag, but CONFIG_VECTOR
+		 * is disabled in kernel.
+		 * Clear V flag in elf_hwcap if CONFIG_VECTOR is disabled.
+		 */
+		elf_hwcap &= ~COMPAT_HWCAP_ISA_V;
 #endif
+	}
 }
