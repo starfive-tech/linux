@@ -120,4 +120,12 @@ struct jh71x0_clk_priv {
 
 const struct clk_ops *starfive_jh71x0_clk_ops(u32 max);
 
+#if IS_ENABLED(CONFIG_CLK_STARFIVE_JH7110_SYS)
+
+int jh7110_reset_controller_register(struct jh71x0_clk_priv *priv,
+				     const char *adev_name,
+				     u32 adev_id);
+
+#endif
+
 #endif

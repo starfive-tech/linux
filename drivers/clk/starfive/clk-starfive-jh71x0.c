@@ -5,6 +5,7 @@
  * Copyright (C) 2021-2022 Emil Renner Berthing <kernel@esmil.dk>
  */
 
+#include <linux/auxiliary_bus.h>
 #include <linux/clk-provider.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
@@ -331,3 +332,52 @@ const struct clk_ops *starfive_jh71x0_clk_ops(u32 max)
 	return &jh71x0_clk_inv_ops;
 }
 EXPORT_SYMBOL_GPL(starfive_jh71x0_clk_ops);
+
+#if IS_ENABLED(CONFIG_CLK_STARFIVE_JH7110_SYS)
+
+static void jh7110_reset_unregister_adev(void *_adev)
+{
+	struct auxiliary_device *adev = _adev;
+
+	auxiliary_device_delete(adev);
+}
+
+static void jh7110_reset_adev_release(struct device *dev)
+{
+	struct auxiliary_device *adev = to_auxiliary_dev(dev);
+
+	auxiliary_device_uninit(adev);
+}
+
+int jh7110_reset_controller_register(struct jh71x0_clk_priv *priv,
+				     const char *adev_name,
+				     u32 adev_id)
+{
+	struct auxiliary_device *adev;
+	int ret;
+
+	adev = devm_kzalloc(priv->dev, sizeof(*adev), GFP_KERNEL);
+	if (!adev)
+		return -ENOMEM;
+
+	adev->name = adev_name;
+	adev->dev.parent = priv->dev;
+	adev->dev.release = jh7110_reset_adev_release;
+	adev->id = adev_id;
+
+	ret = auxiliary_device_init(adev);
+	if (ret)
+		return ret;
+
+	ret = auxiliary_device_add(adev);
+	if (ret) {
+		auxiliary_device_uninit(adev);
+		return ret;
+	}
+
+	return devm_add_action_or_reset(priv->dev,
+					jh7110_reset_unregister_adev, adev);
+}
+EXPORT_SYMBOL_GPL(jh7110_reset_controller_register);
+
+#endif
