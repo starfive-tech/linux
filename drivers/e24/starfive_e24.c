@@ -281,22 +281,9 @@ static int e24_open(struct inode *inode, struct file *filp)
 {
 	struct e24_device *e24_dev = container_of(filp->private_data,
 					struct e24_device, miscdev);
-	int rc;
-
-	rc = pm_runtime_get_sync(e24_dev->dev);
-	if (rc < 0)
-		return rc;
 
 	spin_lock_init(&e24_dev->busy_list_lock);
 	filp->private_data = e24_dev;
-	return 0;
-}
-
-static int e24_close(struct inode *inode, struct file *filp)
-{
-	struct e24_device *e24_dev = filp->private_data;
-
-	pm_runtime_put_sync(e24_dev->dev);
 	return 0;
 }
 
@@ -979,7 +966,6 @@ static const struct file_operations e24_fops = {
 	.compat_ioctl = e24_ioctl,
 #endif
 	.open = e24_open,
-	.release = e24_close,
 	.write = mbox_e24_message_write,
 	.mmap = e24_mmap,
 };
@@ -1390,12 +1376,9 @@ long e24_init_v0(struct platform_device *pdev)
 		goto err_free_map;
 	}
 
-	pm_runtime_enable(e24_dev->dev);
-	if (!pm_runtime_enabled(e24_dev->dev)) {
-		ret = e24_boot_firmware(e24_dev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
+	ret = e24_boot_firmware(e24_dev->dev);
+	if (ret)
+		goto err_pm_disable;
 
 	nodeid = ida_simple_get(&e24_nodeid, 0, 0, GFP_KERNEL);
 	if (nodeid < 0) {
@@ -1420,7 +1403,7 @@ long e24_init_v0(struct platform_device *pdev)
 err_free_id:
 	ida_simple_remove(&e24_nodeid, nodeid);
 err_pm_disable:
-	pm_runtime_disable(e24_dev->dev);
+	e24_runtime_suspend(e24_dev->dev);
 err_free_map:
 	kfree(e24_dev->address_map.entry);
 err_free_pool:
@@ -1444,9 +1427,7 @@ int e24_deinit(struct platform_device *pdev)
 {
 	struct e24_device *e24_dev = platform_get_drvdata(pdev);
 
-	pm_runtime_disable(e24_dev->dev);
-	if (!pm_runtime_status_suspended(e24_dev->dev))
-		e24_runtime_suspend(e24_dev->dev);
+	e24_runtime_suspend(e24_dev->dev);
 
 	misc_deregister(&e24_dev->miscdev);
 	release_firmware(e24_dev->firmware);
@@ -1479,17 +1460,12 @@ static int e24_remove(struct platform_device *pdev)
 	return e24_deinit(pdev);
 }
 
-static const struct dev_pm_ops e24_pm_ops = {
-	SET_RUNTIME_PM_OPS(e24_runtime_suspend, e24_boot_firmware, NULL)
-};
-
 static struct platform_driver e24_driver = {
 	.probe = e24_probe,
 	.remove = e24_remove,
 	.driver = {
 		.name = "e24_boot",
 		.of_match_table = of_match_ptr(e24_of_match),
-		.pm = &e24_pm_ops,
 	},
 };
 
