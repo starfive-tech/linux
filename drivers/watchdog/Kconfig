@@ -2063,7 +2063,7 @@ config STARFIVE_WATCHDOG
 	depends on RISCV
 	select WATCHDOG_CORE
 	help
-	  Say Y here to support the starfive jh7110 soc watchdog.
+	  Say Y here to support the Starfive watchdog.
 
 #
 # ISA-based Watchdog Cards
