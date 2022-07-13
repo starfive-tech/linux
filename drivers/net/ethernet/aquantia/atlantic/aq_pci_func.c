@@ -380,7 +380,7 @@ static void aq_pci_shutdown(struct pci_dev *pdev)
 	}
 }
 
-static int aq_suspend_common(struct device *dev, bool deep)
+static int aq_suspend_common(struct device *dev)
 {
 	struct aq_nic_s *nic = pci_get_drvdata(to_pci_dev(dev));
 
@@ -393,17 +393,15 @@ static int aq_suspend_common(struct device *dev, bool deep)
 	if (netif_running(nic->ndev))
 		aq_nic_stop(nic);
 
-	if (deep) {
-		aq_nic_deinit(nic, !nic->aq_hw->aq_nic_cfg->wol);
-		aq_nic_set_power(nic);
-	}
+	aq_nic_deinit(nic, !nic->aq_hw->aq_nic_cfg->wol);
+	aq_nic_set_power(nic);
 
 	rtnl_unlock();
 
 	return 0;
 }
 
-static int atl_resume_common(struct device *dev, bool deep)
+static int atl_resume_common(struct device *dev)
 {
 	struct pci_dev *pdev = to_pci_dev(dev);
 	struct aq_nic_s *nic;
@@ -416,10 +414,8 @@ static int atl_resume_common(struct device *dev, bool deep)
 	pci_set_power_state(pdev, PCI_D0);
 	pci_restore_state(pdev);
 
-	if (deep) {
-		/* Reinitialize Nic/Vecs objects */
-		aq_nic_deinit(nic, !nic->aq_hw->aq_nic_cfg->wol);
-	}
+	/* Reinitialize Nic/Vecs objects */
+	aq_nic_deinit(nic, !nic->aq_hw->aq_nic_cfg->wol);
 
 	if (netif_running(nic->ndev)) {
 		ret = aq_nic_init(nic);
@@ -445,22 +441,22 @@ err_exit:
 
 static int aq_pm_freeze(struct device *dev)
 {
-	return aq_suspend_common(dev, true);
+	return aq_suspend_common(dev);
 }
 
 static int aq_pm_suspend_poweroff(struct device *dev)
 {
-	return aq_suspend_common(dev, true);
+	return aq_suspend_common(dev);
 }
 
 static int aq_pm_thaw(struct device *dev)
 {
-	return atl_resume_common(dev, true);
+	return atl_resume_common(dev);
 }
 
 static int aq_pm_resume_restore(struct device *dev)
 {
-	return atl_resume_common(dev, true);
+	return atl_resume_common(dev);
 }
 
 static const struct dev_pm_ops aq_pm_ops = {
