@@ -567,9 +567,9 @@ static int sys_m31_dphy_tx_configure(struct phy *phy, union phy_configure_opts *
 
 			sf_dphy_set_reg(dphy->topsys, 0x0, CFG_L0_SWAP_SEL_SHIFT, CFG_L0_SWAP_SEL_MASK);//Lane setting
 			sf_dphy_set_reg(dphy->topsys, 0x1, CFG_L1_SWAP_SEL_SHIFT, CFG_L1_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x4, CFG_L2_SWAP_SEL_SHIFT, CFG_L2_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x2, CFG_L3_SWAP_SEL_SHIFT, CFG_L3_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x3, CFG_L4_SWAP_SEL_SHIFT, CFG_L4_SWAP_SEL_MASK);
+			sf_dphy_set_reg(dphy->topsys, 0x2, CFG_L2_SWAP_SEL_SHIFT, CFG_L2_SWAP_SEL_MASK);
+			sf_dphy_set_reg(dphy->topsys, 0x3, CFG_L3_SWAP_SEL_SHIFT, CFG_L3_SWAP_SEL_MASK);
+			sf_dphy_set_reg(dphy->topsys, 0x4, CFG_L4_SWAP_SEL_SHIFT, CFG_L4_SWAP_SEL_MASK);
 			//PLL setting
 			sf_dphy_set_reg(dphy->topsys + 0x1c, 0x0, RG_CDTX_PLL_SSC_EN_SHIFT, RG_CDTX_PLL_SSC_EN_MASK);
 			sf_dphy_set_reg(dphy->topsys + 0x18, 0x1, RG_CDTX_PLL_LDO_STB_X2_EN_SHIFT, RG_CDTX_PLL_LDO_STB_X2_EN_MASK);
@@ -706,11 +706,11 @@ static int sf_dphy_probe(struct platform_device *pdev)
 	dev_info(dphy->dev, "control ECO\n");
 
 	//mipi_pmic setting
-	dphy->mipitx_1p8 = devm_regulator_get(&pdev->dev, "mipitx_1p8");
+	dphy->mipitx_1p8 = devm_regulator_get(&pdev->dev, "mipi_1p8");
 	if (IS_ERR(dphy->mipitx_1p8))
 		return PTR_ERR(dphy->mipitx_1p8);
 
-	dphy->mipitx_0p9 = devm_regulator_get(&pdev->dev, "mipitx_0p9");
+	dphy->mipitx_0p9 = devm_regulator_get(&pdev->dev, "mipi_0p9");
 	if (IS_ERR(dphy->mipitx_0p9))
 		return PTR_ERR(dphy->mipitx_0p9);
 
