@@ -35,6 +35,8 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/reset.h>
 #include <linux/platform_device.h>
+#include <linux/clk/clk-conf.h>
+#include <linux/pm_domain.h>
 
 /*
  * This macro is used to define some register default values.
@@ -2266,7 +2268,8 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 		goto err_spi_register;
 	}
 	dev_dbg(dev, "probe succeeded\n");
-
+	if (!platform_flag)
+		platform_info->autosuspend_delay = 100;
 	/* let runtime pm put suspend */
 	if (platform_info->autosuspend_delay > 0) {
 		dev_info(&adev->dev,
@@ -2276,7 +2279,10 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 			platform_info->autosuspend_delay);
 		pm_runtime_use_autosuspend(dev);
 	}
-	pm_runtime_put(dev);
+	if (platform_flag)
+		clk_disable_unprepare(pl022->clk);
+	else
+		pm_runtime_put(dev);
 
 	return 0;
 
@@ -2534,8 +2540,33 @@ static int starfive_of_pl022_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 	}
 
+	ret = of_clk_set_defaults(dev->of_node, false);
+	if (ret < 0)
+		goto err_probe;
+
+	ret = dev_pm_domain_attach(dev, true);
+	if (ret)
+		goto err_probe;
+
 	ret = pl022_probe(pcdev, &id);
 
+	struct pl022 *pl022 = amba_get_drvdata(pcdev);
+
+	pl022->host->dev.parent = &pdev->dev;
+	platform_set_drvdata(pdev, pl022);
+
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 100);
+	pm_runtime_use_autosuspend(&pdev->dev);
+
+	if (ret) {
+		pm_runtime_disable(dev);
+		pm_runtime_set_suspended(dev);
+		pm_runtime_put_noidle(dev);
+		dev_pm_domain_detach(dev, true);
+	}
+
+err_probe:
 	return ret;
 }
 
@@ -2566,6 +2597,7 @@ static int starfive_of_pl022_remove(struct platform_device *pdev)
 	size = resource_size(pdev->resource);
 	release_mem_region(pdev->resource->start, size);
 	tasklet_disable(&pl022->pump_transfers);
+	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
 
