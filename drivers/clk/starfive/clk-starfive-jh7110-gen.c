@@ -19,6 +19,7 @@
 
 #include <dt-bindings/clock/starfive-jh7110-clkgen.h>
 #include "clk-starfive-jh7110.h"
+#include "clk-starfive-jh7110-pll.h"
 
 static struct jh7110_clk * __init jh7110_clk_from(struct clk_hw *hw)
 {
@@ -319,7 +320,8 @@ const struct clk_ops *starfive_jh7110_clk_ops(u32 max)
 }
 EXPORT_SYMBOL_GPL(starfive_jh7110_clk_ops);
 
-static struct clk_hw *jh7110_clk_get(struct of_phandle_args *clkspec, void *data)
+static struct clk_hw *jh7110_clk_get(struct of_phandle_args *clkspec,
+						void *data)
 {
 	struct jh7110_clk_priv *priv = data;
 	unsigned int idx = clkspec->args[0];
@@ -327,8 +329,13 @@ static struct clk_hw *jh7110_clk_get(struct of_phandle_args *clkspec, void *data
 	if (idx < JH7110_PLL0_OUT)
 		return &priv->reg[idx].hw;
 
-	if (idx < JH7110_CLK_END)
+	if (idx < JH7110_CLK_END) {
+#ifdef CONFIG_CLK_STARFIVE_JH7110_PLL
+		if ((idx == JH7110_PLL0_OUT) || (idx == JH7110_PLL2_OUT))
+			return &priv->pll_priv[PLL_OF(idx)].hw;
+#endif
 		return priv->pll[PLL_OF(idx)];
+	}
 
 	return ERR_PTR(-EINVAL);
 }
@@ -346,6 +353,12 @@ static int __init clk_starfive_jh7110_probe(struct platform_device *pdev)
 
 	spin_lock_init(&priv->rmw_lock);
 	priv->dev = &pdev->dev;
+
+#ifdef CONFIG_CLK_STARFIVE_JH7110_PLL
+	ret = clk_starfive_jh7110_pll_init(pdev, priv->pll_priv);
+	if (ret)
+		return ret;
+#endif
 
 	ret = clk_starfive_jh7110_sys_init(pdev, priv);
 	if (ret)
