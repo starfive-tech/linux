@@ -36,6 +36,8 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/reset.h>
 #include <linux/platform_device.h>
+#include <linux/clk/clk-conf.h>
+#include <linux/pm_domain.h>
 
 /*
  * This macro is used to define some register default values.
@@ -2189,7 +2191,11 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 	master->num_chipselect = num_cs;
 	master->cleanup = pl022_cleanup;
 	master->setup = pl022_setup;
-	master->auto_runtime_pm = true;
+	/* If open CONFIG_PM, auto_runtime_pm should be false when of-platform.*/
+	if (platform_flag)
+		master->auto_runtime_pm = false;
+	else
+		master->auto_runtime_pm = true;
 	master->transfer_one_message = pl022_transfer_one_message;
 	master->unprepare_transfer_hardware = pl022_unprepare_transfer_hardware;
 	master->rt = platform_info->rt;
@@ -2315,7 +2321,10 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 	/* If that failed, use channels from platform_info */
 	if (status == 0)
 		platform_info->enable_dma = 1;
-	else if (platform_info->enable_dma) {
+	else if (platform_flag) {
+		platform_info->enable_dma = 0;
+		dev_info(&adev->dev, "work without dma!\n");
+	} else if (platform_info->enable_dma) {
 		status = pl022_dma_probe(pl022);
 		if (status != 0)
 			platform_info->enable_dma = 0;
@@ -2606,8 +2615,28 @@ static int starfive_of_pl022_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 	}
 
+	ret = of_clk_set_defaults(dev->of_node, false);
+	if (ret < 0)
+		goto err_probe;
+
+	ret = dev_pm_domain_attach(dev, true);
+	if (ret)
+		goto err_probe;
+
+	pm_runtime_get_noresume(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
 	ret = pl022_probe(pcdev, &id);
 
+	if (ret) {
+		pm_runtime_disable(dev);
+		pm_runtime_set_suspended(dev);
+		pm_runtime_put_noidle(dev);
+		dev_pm_domain_detach(dev, true);
+	}
+
+err_probe:
 	return ret;
 }
 
