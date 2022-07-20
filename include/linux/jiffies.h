@@ -20,7 +20,9 @@
  * OSF/1 kernel. The SHIFT_HZ define expresses the same value as the
  * nearest power of two in order to avoid hardware multiply operations.
  */
-#if HZ >= 12 && HZ < 24
+#if HZ >= 6 && HZ < 12
+# define SHIFT_HZ	3
+#elif HZ >= 12 && HZ < 24
 # define SHIFT_HZ	4
 #elif HZ >= 24 && HZ < 48
 # define SHIFT_HZ	5
