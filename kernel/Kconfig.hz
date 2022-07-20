@@ -16,6 +16,10 @@ choice
 	 environment leading to NR_CPUS * HZ number of timer interrupts
 	 per second.
 
+	config HZ_10
+		bool "10 HZ"
+	help
+	  10 Hz is for FPGA system that run on lower frequency.
 
 	config HZ_100
 		bool "100 HZ"
@@ -50,6 +54,7 @@ endchoice
 
 config HZ
 	int
+	default 10 if HZ_10
 	default 100 if HZ_100
 	default 250 if HZ_250
 	default 300 if HZ_300
