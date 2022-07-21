@@ -7,6 +7,7 @@
 	model = "StarFive Dubhe FPGA";
 
 	aliases {
+		ethernet0 = &gmac0;
 		serial0 = &uart0;
 	};
 
@@ -25,7 +26,30 @@
 	};
 
 	soc {
+
+		fpga_2p5mhz_clk: fpga_2p5mhz_clk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <2500000>;
+		};
+
+		fpga_50mhz_clk: fpga_50mhz_clk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <50000000>;
+		};
 	};
+};
+
+&gmac0 {
+	status = "okay";
+	phy-mode = "rgmii-id";
+	clocks = <&fpga_2p5mhz_clk>,
+		 <&fpga_2p5mhz_clk>,
+		 <&fpga_2p5mhz_clk>,
+		 <&fpga_50mhz_clk>,
+		 <&fpga_50mhz_clk>,
+		 <&fpga_2p5mhz_clk>;
 };
 
 &spi0 {
