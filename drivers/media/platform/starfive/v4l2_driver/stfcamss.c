@@ -54,41 +54,24 @@ static const struct reg_name mem_reg_name[] = {
 	{"syscrg"},
 };
 
-static char *stfcamss_clocks[] = {
-	"clk_apb_func",
-	"clk_pclk",
-	"clk_sys_clk",
-	"clk_wrapper_clk_c",
-	"clk_dvp_inv",
-	"clk_axiwr",
-	"clk_mipi_rx0_pxl",
-	"clk_pixel_clk_if0",
-	"clk_pixel_clk_if1",
-	"clk_pixel_clk_if2",
-	"clk_pixel_clk_if3",
-	"clk_m31dphy_cfgclk_in",
-	"clk_m31dphy_refclk_in",
-	"clk_m31dphy_txclkesc_lan0",
-	"clk_ispcore_2x",
-	"clk_isp_axi",
-	"clk_noc_bus_clk_isp_axi",
-};
-
-static char *stfcamss_resets[] = {
-	"rst_wrapper_p",
-	"rst_wrapper_c",
-	"rst_pclk",
-	"rst_sys_clk",
-	"rst_axird",
-	"rst_axiwr",
-	"rst_pixel_clk_if0",
-	"rst_pixel_clk_if1",
-	"rst_pixel_clk_if2",
-	"rst_pixel_clk_if3",
-	"rst_m31dphy_hw",
-	"rst_m31dphy_b09_always_on",
-	"rst_isp_top_n",
-	"rst_isp_top_axi",
+static struct clk_bulk_data stfcamss_clocks[] = {
+	{ .id = "clk_apb_func" },
+	{ .id = "clk_pclk" },
+	{ .id = "clk_sys_clk" },
+	{ .id = "clk_wrapper_clk_c" },
+	{ .id = "clk_dvp_inv" },
+	{ .id = "clk_axiwr" },
+	{ .id = "clk_mipi_rx0_pxl" },
+	{ .id = "clk_pixel_clk_if0" },
+	{ .id = "clk_pixel_clk_if1" },
+	{ .id = "clk_pixel_clk_if2" },
+	{ .id = "clk_pixel_clk_if3" },
+	{ .id = "clk_m31dphy_cfgclk_in" },
+	{ .id = "clk_m31dphy_refclk_in" },
+	{ .id = "clk_m31dphy_txclkesc_lan0" },
+	{ .id = "clk_ispcore_2x" },
+	{ .id = "clk_isp_axi" },
+	{ .id = "clk_noc_bus_clk_isp_axi" },
 };
 
 int stfcamss_get_mem_res(struct platform_device *pdev, struct stf_vin_dev *vin)
@@ -926,9 +909,6 @@ static int stfcamss_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct of_phandle_args args;
 	int ret = 0, num_subdevs;
-	struct stf_clocks *clock;
-	struct stf_resets *reset;
-	int i;
 
 	dev_info(dev, "stfcamss probe enter!\n");
 
@@ -1016,51 +996,24 @@ static int stfcamss_probe(struct platform_device *pdev)
 	}
 
 	stfcamss->nclks = ARRAY_SIZE(stfcamss_clocks);
-	stfcamss->sys_clk = devm_kzalloc(dev,
-			stfcamss->nclks * sizeof(*stfcamss->sys_clk),
-			GFP_KERNEL);
-	if (!stfcamss->sys_clk) {
-		ret = -ENOMEM;
-		goto err_cam;
+	stfcamss->sys_clk = stfcamss_clocks;
+
+	ret = devm_clk_bulk_get(dev, stfcamss->nclks, stfcamss->sys_clk);
+	if (ret) {
+		st_err(ST_CAMSS, "Failed to get clk controls\n");
+		return ret;
 	}
 
-	for (i = 0; i < stfcamss->nclks; i++) {
-		clock = &stfcamss->sys_clk[i];
-
-		clock->clk = devm_clk_get(dev, stfcamss_clocks[i]);
-		if (IS_ERR(clock->clk)) {
-			dev_err(dev, "failed to get %s clk", stfcamss_clocks[i]);
-			return PTR_ERR(clock->clk);
-		}
-
-		clock->name = stfcamss_clocks[i];
-	}
-
-	stfcamss->nrsts = ARRAY_SIZE(stfcamss_resets);
-	stfcamss->sys_rst = devm_kzalloc(dev,
-			stfcamss->nrsts * sizeof(*stfcamss->sys_rst),
-			GFP_KERNEL);
-	if (!stfcamss->sys_rst) {
-		ret = -ENOMEM;
-		goto err_cam;
-	}
-
-	for (i = 0; i < stfcamss->nrsts; i++) {
-		reset = &stfcamss->sys_rst[i];
-
-		reset->rstc = devm_reset_control_get_exclusive(dev, stfcamss_resets[i]);
-		if (IS_ERR(reset->rstc)) {
-			dev_err(dev, "failed to get %s reset", stfcamss_resets[i]);
-			return PTR_ERR(reset->rstc);
-		}
-
-		reset->name = stfcamss_resets[i];
+	stfcamss->resets = devm_reset_control_array_get_shared(dev);
+	if (IS_ERR(stfcamss->resets)) {
+		st_err(ST_CAMSS, "Failed to get stfcamss reset controls\n");
+		return PTR_ERR(stfcamss->resets);
 	}
 
 	ret = of_parse_phandle_with_fixed_args(dev->of_node,
 			"starfive,aon-syscon", 1, 0, &args);
 	if (ret < 0) {
-		dev_err(dev, "Failed to parse starfive,aon-syscon\n");
+		st_err(ST_CAMSS, "Failed to parse starfive,aon-syscon\n");
 		return -EINVAL;
 	}
 

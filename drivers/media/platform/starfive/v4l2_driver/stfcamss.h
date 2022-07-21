@@ -58,34 +58,6 @@ enum stf_clk_num {
 	STFCLK_NUM
 };
 
-enum stf_rst_num {
-	STFRST_WRAPPER_P = 0,
-	STFRST_WRAPPER_C,
-	STFRST_PCLK,
-	STFRST_SYS_CLK,
-	STFRST_AXIRD,
-	STFRST_AXIWR,
-	STFRST_PIXEL_CLK_IF0,
-	STFRST_PIXEL_CLK_IF1,
-	STFRST_PIXEL_CLK_IF2,
-	STFRST_PIXEL_CLK_IF3,
-	STFRST_M31DPHY_HW,
-	STFRST_M31DPHY_B09_ALWAYS_ON,
-	STFRST_ISP_TOP_N,
-	STFRST_ISP_TOP_AXI,
-	STFRST_NUM
-};
-
-struct stf_clocks {
-	struct clk *clk;
-	char *name;
-};
-
-struct stf_resets {
-	struct reset_control *rstc;
-	char *name;
-};
-
 struct stfcamss {
 	struct stf_vin_dev *vin;  // stfcamss phy res
 	struct v4l2_device v4l2_dev;
@@ -98,10 +70,9 @@ struct stfcamss {
 	struct stf_csiphy_dev *csiphy_dev;   // subdev
 	struct stf_isp_dev *isp_dev;   // subdev
 	struct v4l2_async_notifier notifier;
-	struct stf_clocks *sys_clk;
+	struct clk_bulk_data *sys_clk;
 	int nclks;
-	struct stf_resets *sys_rst;
-	int nrsts;
+	struct reset_control *resets;
 	struct regmap *stf_aon_syscon;
 	uint32_t aon_gp_reg;
 #ifdef CONFIG_DEBUG_FS
