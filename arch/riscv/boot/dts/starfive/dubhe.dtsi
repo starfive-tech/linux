@@ -124,6 +124,40 @@
 			status = "disabled";
 		};
 
+		stmmac_axi_setup: stmmac-axi-config {
+			snps,wr_osr_lmt = <0xf>;
+			snps,rd_osr_lmt = <0xf>;
+			snps,blen = <256 128 64 32 0 0 0>;
+		};
+
+		gmac0: gmac@10100000 {
+			compatible = "starfive,dubhe-dwmac","snps,dwmac-5.20";
+			reg = <0x0 0x10100000 0x0 0x10000>;
+			clock-names = "gtx",
+				"tx",
+				"ptp_ref",
+				"stmmaceth",
+				"pclk",
+				"gtxc";
+			interrupt-parent = <&plic0>;
+			interrupts = <8>, <11>, <12>;
+			interrupt-names = "macirq", "eth_wake_irq", "eth_lpi";
+			max-frame-size = <1500>;
+			snps,multicast-filter-bins = <64>;
+			snps,perfect-filter-entries = <8>;
+			rx-fifo-depth = <2048>;
+			tx-fifo-depth = <2048>;
+			snps,fixed-burst;
+			snps,no-pbl-x8;
+			snps,force_thresh_dma_mode;
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,tso;
+			snps,en-tx-lpi-clockgating;
+			snps,txpbl = <4>;
+			snps,rxpbl = <4>;
+			status = "disabled";
+		};
+
 		pmu {
 			compatible = "riscv,pmu";
 			riscv,event-to-mhpmevent = <0x00005 0x0000 0x1B>,
