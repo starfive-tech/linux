@@ -155,7 +155,6 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 
 	switch (format) {
 	case SNDRV_PCM_FORMAT_S16_LE:
-	case SNDRV_PCM_FORMAT_S24_LE:
 	case SNDRV_PCM_FORMAT_S32_LE:
 		break;
 	default:
@@ -375,20 +374,18 @@ static struct snd_soc_dai_driver sf_spdif_dai = {
 	.probe = sf_spdif_dai_probe,
 	.playback = {
 		.stream_name = "Playback",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SF_PCM_RATE_8000_22050,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE | \
-			   SNDRV_PCM_FMTBIT_S24_LE | \
 			   SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.capture =  {
 		.stream_name = "Capture",
-		.channels_min = 2,
+		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SF_PCM_RATE_8000_22050,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE | \
-			   SNDRV_PCM_FMTBIT_S24_LE | \
 			   SNDRV_PCM_FMTBIT_S32_LE,
 	},
 	.ops = &sf_spdif_dai_ops,
