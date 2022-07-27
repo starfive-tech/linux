@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 config PINCTRL_STARFIVE
-	bool "Pinctrl driver for the StarFive SoC"
+	bool "Pinctrl driver for StarFive SoC"
 	depends on OF
 	depends on RISCV || COMPILE_TEST
 	select GENERIC_PINCTRL_GROUPS
@@ -17,8 +17,8 @@ config PINCTRL_STARFIVE
 	  and interrupts on input changes.
 
 config PINCTRL_STARFIVE_JH7110
-	bool "Pinctrl and GPIO driver for the StarFive jh7110 SoC"
-	depends on SOC_STARFIVE || PINCTRL_STARFIVE
+	bool "Pinctrl and GPIO driver for StarFive JH7110 SoC"
+	depends on  PINCTRL_STARFIVE
+	depends on SOC_STARFIVE
 	help
-	  This selects the pinctrl driver for jh7100 starfive.
-
+	  This selects the pinctrl driver for JH7110 starfive.
