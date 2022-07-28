@@ -146,7 +146,17 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 	format = params_format(params);
 
 	switch (channels) {
+	case 1:
+		regmap_update_bits(spdif->regmap, SPDIF_CTRL,
+			SPDIF_CHANNEL_MODE, SPDIF_CHANNEL_MODE);
+		regmap_update_bits(spdif->regmap, SPDIF_CTRL,
+			SPDIF_DUPLICATE, SPDIF_DUPLICATE);
+		spdif->channels = false;
+		break;
 	case 2:
+		regmap_update_bits(spdif->regmap, SPDIF_CTRL,
+			SPDIF_CHANNEL_MODE, 0);
+		spdif->channels = true;
 		break;
 	default:
 		dev_err(dai->dev, "invalid channels number\n");
@@ -186,8 +196,9 @@ static int sf_spdif_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
+	mclk = clk_get_rate(spdif->mclk_inner);
 	/* (FCLK)4096000/128=32000 */
-	tsamplerate = (32000 + rate/2)/rate - 1;
+	tsamplerate = (mclk / 128 + rate / 2) / rate - 1;
 
 	if (tsamplerate < 3)
 		tsamplerate = 3;
