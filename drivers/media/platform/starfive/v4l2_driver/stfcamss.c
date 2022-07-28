@@ -74,6 +74,23 @@ static struct clk_bulk_data stfcamss_clocks[] = {
 	{ .id = "clk_noc_bus_clk_isp_axi" },
 };
 
+static char *stfcamss_resets[] = {
+	"rst_wrapper_p",
+	"rst_wrapper_c",
+	"rst_pclk",
+	"rst_sys_clk",
+	"rst_axird",
+	"rst_axiwr",
+	"rst_pixel_clk_if0",
+	"rst_pixel_clk_if1",
+	"rst_pixel_clk_if2",
+	"rst_pixel_clk_if3",
+	"rst_m31dphy_hw",
+	"rst_m31dphy_b09_always_on",
+	"rst_isp_top_n",
+	"rst_isp_top_axi",
+};
+
 int stfcamss_get_mem_res(struct platform_device *pdev, struct stf_vin_dev *vin)
 {
 	struct device *dev = &pdev->dev;
@@ -909,6 +926,8 @@ static int stfcamss_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct of_phandle_args args;
 	int ret = 0, num_subdevs;
+	struct stf_resets *reset;
+	int i;
 
 	dev_info(dev, "stfcamss probe enter!\n");
 
@@ -1004,10 +1023,25 @@ static int stfcamss_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	stfcamss->resets = devm_reset_control_array_get_shared(dev);
-	if (IS_ERR(stfcamss->resets)) {
-		st_err(ST_CAMSS, "Failed to get stfcamss reset controls\n");
-		return PTR_ERR(stfcamss->resets);
+	stfcamss->nrsts = ARRAY_SIZE(stfcamss_resets);
+	stfcamss->sys_rst = devm_kzalloc(dev,
+			stfcamss->nrsts * sizeof(*stfcamss->sys_rst),
+			GFP_KERNEL);
+	if (!stfcamss->sys_rst) {
+		ret = -ENOMEM;
+		goto err_cam;
+	}
+
+	for (i = 0; i < stfcamss->nrsts; i++) {
+		reset = &stfcamss->sys_rst[i];
+
+		reset->rstc = devm_reset_control_get_exclusive(dev, stfcamss_resets[i]);
+		if (IS_ERR(reset->rstc)) {
+			st_err(ST_CAMSS, "Failed to get %s reset", stfcamss_resets[i]);
+			return PTR_ERR(reset->rstc);
+		}
+
+		reset->name = stfcamss_resets[i];
 	}
 
 	ret = of_parse_phandle_with_fixed_args(dev->of_node,
