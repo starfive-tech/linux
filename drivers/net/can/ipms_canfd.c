@@ -578,7 +578,7 @@ static netdev_tx_t canfd_driver_start_xmit(struct sk_buff *skb, struct net_devic
 			id |= ttsen;
 		}
 
-		ctl = can_dlc2len(cf->len);
+		ctl = can_len2dlc(cf->len);
 
 		/* transmit can fd frame */
 		if (priv->can_or_canfd == IPMS_CAN_TYPE_CANFD) {
