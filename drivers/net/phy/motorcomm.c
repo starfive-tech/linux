@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * drivers/net/phy/motorcomm.c
- *
  * Driver for Motorcomm PHYs
  *
  * Author: yinghong.zhang<yinghong.zhang@motor-comm.com>
@@ -143,6 +141,9 @@
 #define YTPHY_REG_SPACE_UTP             0
 #define YTPHY_REG_SPACE_FIBER           2
 
+#define YTPHY_EXTREG_CHIP_CONFIG	0xa001
+#define YTPHY_EXTREG_RGMII_CONFIG1	0xa003
+
 enum ytphy_wol_feature_trigger_type_e {
 	YTPHY_WOL_FEATURE_PULSE_TRIGGER,
 	YTPHY_WOL_FEATURE_LEVEL_TRIGGER,
@@ -195,6 +196,36 @@ static int yt8521_hw_strap_polling(struct phy_device *phydev);
 static int yt8614_hw_strap_polling(struct phy_device *phydev);
 #define YT8521_PHY_MODE_CURR    yt8521_hw_strap_polling(phydev)
 #define YT8614_PHY_MODE_CURR    yt8614_hw_strap_polling(phydev)
+
+struct ytphy_reg_field {
+	const char	*name;
+	const u8	size;	/* Size of the bitfield, in bits */
+	const u8	off;	/* Offset from bit 0 */
+	const u8	dflt;	/* Default value */
+};
+
+static const struct ytphy_reg_field ytphy_rxtxd_grp[] = {
+	{ "rx_delay_sel", 4, 10, 0x0 },
+	{ "tx_delay_sel_fe", 4, 4, 0xf },
+	{ "tx_delay_sel", 4, 0, 0x1 }
+};
+
+static const struct ytphy_reg_field ytphy_rxden_grp[] = {
+	{ "rxc_dly_en", 1, 8, 0x1 }
+};
+
+static uint bitfield_mask(uint shift, uint width)
+{
+	return ((1 << width) - 1) << shift;
+}
+
+static uint bitfield_replace(uint reg_val, uint shift, uint width,
+				    uint bitfield_val)
+{
+	uint mask = bitfield_mask(shift, width);
+
+	return (reg_val & ~mask) | ((bitfield_val << shift) & mask);
+}
 
 static int ytphy_config_init(struct phy_device *phydev)
 {
@@ -603,7 +634,7 @@ static int ytphy_switch_reg_space(struct phy_device *phydev, int space)
 }
 
 static int ytphy_wol_feature_enable_cfg(struct phy_device *phydev,
-			struct ytphy_wol_feature_cfg wol_cfg)
+					struct ytphy_wol_feature_cfg wol_cfg)
 {
 	int ret = 0;
 	int val = 0;
@@ -649,7 +680,7 @@ static int ytphy_wol_feature_enable_cfg(struct phy_device *phydev,
 }
 
 static void ytphy_wol_feature_get(struct phy_device *phydev,
-				struct ethtool_wolinfo *wol)
+				  struct ethtool_wolinfo *wol)
 {
 	int val = 0;
 
@@ -667,7 +698,7 @@ static void ytphy_wol_feature_get(struct phy_device *phydev,
 }
 
 static int ytphy_wol_feature_set(struct phy_device *phydev,
-				struct ethtool_wolinfo *wol)
+				 struct ethtool_wolinfo *wol)
 {
 	int ret, curr_reg_space, val;
 	struct ytphy_wol_feature_cfg wol_cfg;
@@ -701,18 +732,18 @@ static int ytphy_wol_feature_set(struct phy_device *phydev,
 
 		/* Store the device address for the magic packet */
 		ret = ytphy_write_ext(phydev, YTPHY_WOL_FEATURE_MACADDR2_4_MAGIC_PACKET,
-			((p_attached_dev->dev_addr[0] << 8) |
-			p_attached_dev->dev_addr[1]));
+				      ((p_attached_dev->dev_addr[0] << 8) |
+				      p_attached_dev->dev_addr[1]));
 		if (ret < 0)
 			return ret;
 		ret = ytphy_write_ext(phydev, YTPHY_WOL_FEATURE_MACADDR1_4_MAGIC_PACKET,
-			((p_attached_dev->dev_addr[2] << 8) |
-			p_attached_dev->dev_addr[3]));
+				      ((p_attached_dev->dev_addr[2] << 8) |
+				       p_attached_dev->dev_addr[3]));
 		if (ret < 0)
 			return ret;
 		ret = ytphy_write_ext(phydev, YTPHY_WOL_FEATURE_MACADDR0_4_MAGIC_PACKET,
-			((p_attached_dev->dev_addr[4] << 8) |
-			p_attached_dev->dev_addr[5]));
+				      ((p_attached_dev->dev_addr[4] << 8) |
+				       p_attached_dev->dev_addr[5]));
 		if (ret < 0)
 			return ret;
 	} else {
@@ -754,6 +785,59 @@ static int yt8521_hw_strap_polling(struct phy_device *phydev)
 	}
 }
 
+static int ytphy_of_config(struct phy_device *phydev)
+{
+	const struct device_node *of_node;
+	const struct device *dev;
+	u32 val;
+	u32 cfg;
+	int ret;
+	int i = 0;
+
+	dev = &phydev->mdio.dev;
+	do {
+		of_node = dev->of_node;
+		dev = dev->parent;
+		if (i++ > 5) {
+			phydev_err(phydev, "Get of node timeout\n");
+			return -EINVAL;
+		}
+	} while (!of_node && dev);
+
+	of_node = of_node->child;
+	if (of_node) {
+		ret = of_property_read_u32(of_node, ytphy_rxden_grp[0].name, &cfg);
+		if (!ret) {
+			val = ytphy_read_ext(phydev, YTPHY_EXTREG_CHIP_CONFIG);
+
+			/*check the cfg overflow or not*/
+			cfg = (cfg > ((1 << ytphy_rxden_grp[0].size) - 1)) ?
+				((1 << ytphy_rxden_grp[0].size) - 1) : cfg;
+			val = bitfield_replace(val, ytphy_rxden_grp[0].off,
+				ytphy_rxden_grp[0].size, cfg);
+			ytphy_write_ext(phydev, YTPHY_EXTREG_CHIP_CONFIG, val);
+		}
+
+		val = ytphy_read_ext(phydev, YTPHY_EXTREG_RGMII_CONFIG1);
+		for (i = 0; i < ARRAY_SIZE(ytphy_rxtxd_grp); i++) {
+			ret = of_property_read_u32(of_node, ytphy_rxtxd_grp[i].name, &cfg);
+			if (!ret) {
+				cfg = (cfg != -1) ? cfg : ytphy_rxtxd_grp[i].dflt;
+
+				/*check the cfg overflow or not*/
+				cfg = (cfg > ((1 << ytphy_rxtxd_grp[i].size) - 1)) ?
+					((1 << ytphy_rxtxd_grp[i].size) - 1) : cfg;
+
+				val = bitfield_replace(val, ytphy_rxtxd_grp[i].off,
+						ytphy_rxtxd_grp[i].size, cfg);
+			}
+		}
+		return ytphy_write_ext(phydev, YTPHY_EXTREG_RGMII_CONFIG1, val);
+	}
+
+	phydev_err(phydev, "Get of node fail\n");
+	return -EINVAL;
+}
 
 static int yt8521_config_init(struct phy_device *phydev)
 {
@@ -792,6 +876,11 @@ static int yt8521_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
+	/*set delay config*/
+	ret = ytphy_of_config(phydev);
+	if (ret < 0)
+		return ret;
+
 	/* enable RXC clock when no wire plug */
 	val = ytphy_read_ext(phydev, 0xc);
 	if (val < 0)
@@ -802,8 +891,8 @@ static int yt8521_config_init(struct phy_device *phydev)
 		return ret;
 
 	netdev_info(phydev->attached_dev,
-		"%s done, phy addr: %d, strap mode = %d, polling mode = %d\n",
-		__func__, phydev->mdio.addr, hw_strap_mode,
+		    "%s done, phy addr: %d, strap mode = %d, polling mode = %d\n",
+		    __func__, phydev->mdio.addr, hw_strap_mode,
 		yt8521_hw_strap_polling(phydev));
 
 	return ret;
@@ -866,8 +955,8 @@ int yt8521_aneg_done(struct phy_device *phydev)
 				(BIT(YT8521_LINK_STATUS_BIT)));
 
 	netdev_info(phydev->attached_dev,
-		"%s, phy addr: %d, link_fiber: %d, link_utp: %d\n",
-		__func__, phydev->mdio.addr, link_fiber, link_utp);
+		    "%s, phy addr: %d, link_fiber: %d, link_utp: %d\n",
+		    __func__, phydev->mdio.addr, link_fiber, link_utp);
 
 	return !!(link_fiber | link_utp);
 }
@@ -922,10 +1011,11 @@ static int yt8521_read_status(struct phy_device *phydev)
 		if (link && yt8521_fiber_latch_val != yt8521_fiber_curr_val) {
 			link = 0;
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, fiber link down detect,\
-				latch = %04x, curr = %04x\n",
-				__func__, phydev->mdio.addr,
-				yt8521_fiber_latch_val, yt8521_fiber_curr_val);
+				    "%s, phy addr: %d, fiber link down detect,"
+				    "latch = %04x, curr = %04x\n",
+				    __func__, phydev->mdio.addr,
+				    yt8521_fiber_latch_val,
+				    yt8521_fiber_curr_val);
 		}
 
 		if (link) {
@@ -939,17 +1029,19 @@ static int yt8521_read_status(struct phy_device *phydev)
 	if (link_utp || link_fiber) {
 		if (phydev->link == 0)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link up, media: %s,\
-				mii reg 0x11 = 0x%x\n",
-				__func__, phydev->mdio.addr,
-				(link_utp && link_fiber) ? "UNKONWN MEDIA" :
-				(link_utp ? "UTP" : "Fiber"), (unsigned int)val);
+				    "%s, phy addr: %d, link up, media: %s,"
+				    "mii reg 0x11 = 0x%x\n",
+				    __func__, phydev->mdio.addr,
+				    (link_utp && link_fiber) ?
+				    "UNKONWN MEDIA" :
+				    (link_utp ? "UTP" : "Fiber"),
+				    (unsigned int)val);
 		phydev->link = 1;
 	} else {
 		if (phydev->link == 1)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link down\n",
-				__func__, phydev->mdio.addr);
+				    "%s, phy addr: %d, link down\n",
+				    __func__, phydev->mdio.addr);
 		phydev->link = 0;
 	}
 
@@ -1035,17 +1127,14 @@ static int yt8531S_config_init(struct phy_device *phydev)
 
 static int yt8531_config_init(struct phy_device *phydev)
 {
-	int ret = 0;
+	int ret;
 
-#if (YTPHY8531A_XTAL_INIT)
-	ret = yt8531a_xtal_init(phydev);
+	ret = 0;
+
+	/*set delay config*/
+	ret = ytphy_of_config(phydev);
 	if (ret < 0)
 		return ret;
-#endif
-	ret = ytphy_config_init(phydev);
-	if (ret < 0)
-		return ret;
-
 	return 0;
 }
 
@@ -1125,7 +1214,7 @@ static int yt8618_config_init(struct phy_device *phydev)
 		return ret;
 
 #if (YTPHY_861X_ABC_VER)
-	if ((port == 2) || (port == 5)) {
+	if (port == 2 || port == 5) {
 		ret = ytphy_write_ext(phydev, 0x57, 0x2929);
 		if (ret < 0)
 			return ret;
@@ -1160,7 +1249,7 @@ static int yt8618_config_init(struct phy_device *phydev)
 	ytphy_write_ext(phydev, 0xa000, 0);
 
 	netdev_info(phydev->attached_dev, "%s done, phy addr: %d\n",
-			__func__, phydev->mdio.addr);
+		    __func__, phydev->mdio.addr);
 	return ret;
 }
 
@@ -1288,8 +1377,8 @@ static int yt8614_config_init(struct phy_device *phydev)
 	/* back up to utp*/
 	ytphy_write_ext(phydev, 0xa000, 0);
 	netdev_info(phydev->attached_dev,
-		"%s done, phy addr: %d, chip mode: %d\n",
-		__func__, phydev->mdio.addr, hw_strap_mode);
+		    "%s done, phy addr: %d, chip mode: %d\n",
+		    __func__, phydev->mdio.addr, hw_strap_mode);
 
 	return ret;
 }
@@ -1337,10 +1426,10 @@ static int yt8614_read_status(struct phy_device *phydev)
 		if (link) {
 			if (phydev->link == 0)
 				netdev_info(phydev->attached_dev,
-					"%s, phy addr: %d, link up,\
-					UTP, reg 0x11 = 0x%x\n",
-					__func__, phydev->mdio.addr,
-					(unsigned int)val);
+					    "%s, phy addr: %d, link up,"
+					    "UTP, reg 0x11 = 0x%x\n",
+					    __func__, phydev->mdio.addr,
+					    (unsigned int)val);
 			link_utp = 1;
 			// here is same as 8521 and re-use the function;
 			yt8521_adjust_status(phydev, val, 1);
@@ -1368,20 +1457,20 @@ static int yt8614_read_status(struct phy_device *phydev)
 		if (link && yt8614_fiber_latch_val != yt8614_fiber_curr_val) {
 			link = 0;
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, fiber link down detect,\
-				latch = %04x, curr = %04x\n",
-				__func__, phydev->mdio.addr,
-				yt8614_fiber_latch_val,
-				yt8614_fiber_curr_val);
+				    "%s, phy addr: %d, fiber link down detect,"
+				    "latch = %04x, curr = %04x\n",
+				    __func__, phydev->mdio.addr,
+				    yt8614_fiber_latch_val,
+				    yt8614_fiber_curr_val);
 		}
 
 		if (link) {
 			if (phydev->link == 0)
 				netdev_info(phydev->attached_dev,
-					"%s, phy addr: %d, link up, Fiber,\
-					reg 0x11 = 0x%x\n",
-					__func__, phydev->mdio.addr,
-					(unsigned int)val);
+					    "%s, phy addr: %d, link up, Fiber,"
+					    "reg 0x11 = 0x%x\n",
+					    __func__, phydev->mdio.addr,
+					    (unsigned int)val);
 			link_fiber = 1;
 			yt8521_adjust_status(phydev, val, 0);
 		} else {
@@ -1392,16 +1481,17 @@ static int yt8614_read_status(struct phy_device *phydev)
 	if (link_utp || link_fiber) {
 		if (phydev->link == 0)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link up, media %s\n",
-				__func__, phydev->mdio.addr,
-				(link_utp && link_fiber) ? "both UTP and Fiber" :
-				(link_utp ? "UTP" : "Fiber"));
+				    "%s, phy addr: %d, link up, media %s\n",
+				    __func__, phydev->mdio.addr,
+				    (link_utp && link_fiber) ?
+				    "both UTP and Fiber" :
+				    (link_utp ? "UTP" : "Fiber"));
 		phydev->link = 1;
 	} else {
 		if (phydev->link == 1)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link down\n",
-				__func__, phydev->mdio.addr);
+				    "%s, phy addr: %d, link down\n",
+				    __func__, phydev->mdio.addr);
 		phydev->link = 0;
 	}
 
@@ -1738,8 +1828,8 @@ static int yt8821_config_init(struct phy_device *phydev)
 		return ret;
 
 	netdev_info(phydev->attached_dev,
-		"%s done, phy addr: %d, strap mode = %d\n",
-		__func__, phydev->mdio.addr, hw_strap_mode);
+		    "%s done, phy addr: %d, strap mode = %d\n",
+		    __func__, phydev->mdio.addr, hw_strap_mode);
 
 	return ret;
 }
@@ -1810,10 +1900,10 @@ static int yt8821_read_status(struct phy_device *phydev)
 		if (link) {
 			if (link_utp == 0)
 				netdev_info(phydev->attached_dev,
-					"%s, phy addr: %d, link up, UTP,\
-					reg 0x11 = 0x%x\n",
-					__func__, phydev->mdio.addr,
-					(unsigned int)val);
+					    "%s, phy addr: %d, link up, UTP,"
+					    "reg 0x11 = 0x%x\n",
+					    __func__, phydev->mdio.addr,
+					    (unsigned int)val);
 			link_utp = 1;
 			/* speed(2500), duplex */
 			yt8821_adjust_status(phydev, val, 1);
@@ -1844,19 +1934,20 @@ static int yt8821_read_status(struct phy_device *phydev)
 		if (link && yt8521_fiber_latch_val != yt8521_fiber_curr_val) {
 			link = 0;
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, fiber link down detect,\
-				latch = %04x, curr = %04x\n",
-				__func__, phydev->mdio.addr,
-				yt8521_fiber_latch_val, yt8521_fiber_curr_val);
+				    "%s, phy addr: %d, fiber link down detect,"
+				    "latch = %04x, curr = %04x\n",
+				    __func__, phydev->mdio.addr,
+				    yt8521_fiber_latch_val,
+				    yt8521_fiber_curr_val);
 		}
 
 		if (link) {
 			if (link_fiber == 0)
 				netdev_info(phydev->attached_dev,
-					"%s, phy addr: %d, link up, Fiber,\
-					reg 0x11 = 0x%x\n",
-					__func__, phydev->mdio.addr,
-					(unsigned int)val);
+					    "%s, phy addr: %d, link up, Fiber,"
+					    "reg 0x11 = 0x%x\n",
+					    __func__, phydev->mdio.addr,
+					    (unsigned int)val);
 			link_fiber = 1;
 			yt8821_adjust_status(phydev, val, 0);
 		} else {
@@ -1867,17 +1958,19 @@ static int yt8821_read_status(struct phy_device *phydev)
 	if (link_utp || link_fiber) {
 		if (phydev->link == 0)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link up, media %s,\
-				reg 0x11 = 0x%x\n",
-				__func__, phydev->mdio.addr,
-				(link_utp && link_fiber) ? "both UTP and Fiber" :
-				(link_utp ? "UTP" : "Fiber"), (unsigned int)val);
+				    "%s, phy addr: %d, link up, media %s,"
+				    "reg 0x11 = 0x%x\n",
+				    __func__, phydev->mdio.addr,
+				    (link_utp && link_fiber) ?
+				    "both UTP and Fiber" :
+				    (link_utp ? "UTP" : "Fiber"),
+				    (unsigned int)val);
 		phydev->link = 1;
 	} else {
 		if (phydev->link == 1)
 			netdev_info(phydev->attached_dev,
-				"%s, phy addr: %d, link down\n",
-				__func__, phydev->mdio.addr);
+				    "%s, phy addr: %d, link down\n",
+				    __func__, phydev->mdio.addr);
 		phydev->link = 0;
 	}
 
