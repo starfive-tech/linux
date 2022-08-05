@@ -84,7 +84,6 @@
 			#interrupt-cells = <1>;
 			compatible = "riscv,plic0";
 			reg = <0x0 0xc000000 0x0 0x4000000>;
-			riscv,max-priority = <15>;
 			riscv,ndev = <25>;
 			interrupt-controller;
 			interrupts-extended = <&cpu0_intc 11>,
