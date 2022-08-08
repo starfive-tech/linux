@@ -90,6 +90,8 @@ properties:
         - snps,dwmac-5.10a
         - snps,dwxgmac
         - snps,dwxgmac-2.10
+        - starfive,jh7100-gmac
+        - starfive,jh7110-gmac
 
   reg:
     minItems: 1
