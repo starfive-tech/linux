@@ -16710,6 +16710,16 @@ S:	Maintained
 F:	Documentation/devicetree/bindings/sound/st,sti-asoc-card.txt
 F:	sound/soc/sti/
 
+STARFIVE JH7110 SOC BOARDS
+M:	Jianlong Huang <jianlong.huang@starfivetech.com>
+S:	Maintained
+F:	Documentation/devicetree/bindings/riscv/starfive-jh7110.yaml
+
+STARFIVE JH7110 EVB AC108 DEVICE SUPPORT
+M:	Curry Zhang <curry.zhang@starfivetech.com>
+S:	Maintained
+F:	arch/riscv/boot/dts/starfive/jh7110-evb-i2s-ac108.dts
+
 STI CEC DRIVER
 M:	Benjamin Gaignard <benjamin.gaignard@linaro.org>
 S:	Maintained
