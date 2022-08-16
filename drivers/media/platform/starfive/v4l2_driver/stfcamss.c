@@ -453,6 +453,7 @@ static int stfcamss_register_subdevices(struct stfcamss *stfcamss)
 		goto err_link;
 	}
 
+#ifndef	STF_CAMSS_SKIP_ITI
 	ret = media_create_pad_link(
 		&isp_dev->subdev.entity,
 		STF_ISP_PAD_SRC_ITIW,
@@ -484,6 +485,7 @@ static int stfcamss_register_subdevices(struct stfcamss *stfcamss)
 			ret);
 		goto err_link;
 	}
+#endif
 
 	ret = media_create_pad_link(
 		&isp_dev->subdev.entity,
