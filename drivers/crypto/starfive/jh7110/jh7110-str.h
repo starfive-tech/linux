@@ -20,7 +20,6 @@
 #define JH7110_AES_IV_LEN			AES_BLOCK_SIZE
 #define JH7110_AES_CTR_LEN			AES_BLOCK_SIZE
 
-
 struct jh7110_rsa_key {
 	u8					*n;
 	u8					*e;
@@ -61,6 +60,9 @@ struct jh7110_sec_ctx {
 	struct jh7110_rsa_key			rsa_key;
 	size_t					sha_len_total;
 	u8					*buffer;
+	struct crypto_akcipher			*soft_tfm;
+	struct crypto_shash			*fallback;
+	bool					fallback_available;
 };
 
 struct jh7110_sec_dev {
