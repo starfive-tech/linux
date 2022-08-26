@@ -207,9 +207,7 @@ static inline void axi_chan_disable(struct axi_dma_chan *chan)
 	axi_dma_iowrite32(chan->chip, multi->en.ch_en, val);
 
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 10, 100000); //10 ms
-	if (ret == -ETIMEDOUT)
-		pr_info("dma: failed to stop\n");
+					!(val & chan_active), 10, 100000);
 }
 
 static inline void axi_chan_enable(struct axi_dma_chan *chan)
@@ -1071,7 +1069,7 @@ static void axi_chan_tasklet(struct tasklet_struct *t)
 	int ret;
 
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 10, 1000);
+					!(val & chan_active), 10, 10000);
 	if (ret == -ETIMEDOUT)
 		dev_warn(chan2dev(chan),
 			 "irq %s failed to stop\n", axi_chan_name(chan));
@@ -1336,6 +1334,19 @@ static int axi_dma_resume(struct axi_dma_chip *chip)
 
 	return 0;
 }
+
+void axi_dma_cyclic_stop(struct dma_chan *dchan)
+{
+	struct axi_dma_chan *chan = dchan_to_axi_dma_chan(dchan);
+	unsigned long flags;
+
+	spin_lock_irqsave(&chan->vc.lock, flags);
+
+	axi_chan_disable(chan);
+	
+	spin_unlock_irqrestore(&chan->vc.lock, flags);
+}
+EXPORT_SYMBOL(axi_dma_cyclic_stop);
 
 static int __maybe_unused axi_dma_runtime_suspend(struct device *dev)
 {
