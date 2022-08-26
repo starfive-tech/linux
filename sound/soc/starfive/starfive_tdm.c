@@ -11,6 +11,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/regmap.h>
+#include <linux/dma/starfive-dma.h>
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
 #include <sound/pcm_params.h>
@@ -48,7 +49,6 @@ static void sf_tdm_start(struct sf_tdm_dev *dev, struct snd_pcm_substream *subst
 static void sf_tdm_stop(struct sf_tdm_dev *dev, struct snd_pcm_substream *substream)
 {
 	unsigned int val;
-	unsigned int bcr;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		val = sf_tdm_readl(dev, TDM_PCMTXCR);
@@ -59,9 +59,6 @@ static void sf_tdm_stop(struct sf_tdm_dev *dev, struct snd_pcm_substream *substr
 		val &= ~PCMRXCR_RXEN;
 		sf_tdm_writel(dev, TDM_PCMRXCR, val);
 	}
-
-	bcr = sf_tdm_readl(dev, TDM_PCMGBCR);
-	sf_tdm_writel(dev, TDM_PCMGBCR, bcr & PCMGBCR_MASK);
 }
 
 static int sf_tdm_syncdiv(struct sf_tdm_dev *dev)
@@ -268,6 +265,7 @@ static int sf_tdm_hw_params(struct snd_pcm_substream *substream,
 static int sf_tdm_trigger(struct snd_pcm_substream *substream,
 		int cmd, struct snd_soc_dai *dai)
 {
+	struct dma_chan *chan = snd_dmaengine_pcm_get_chan(substream);
 	struct sf_tdm_dev *dev = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
@@ -283,6 +281,7 @@ static int sf_tdm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		dev->active--;
+		axi_dma_cyclic_stop(chan);
 		sf_tdm_stop(dev, substream);
 		break;
 	default:
@@ -356,6 +355,25 @@ static struct snd_soc_dai_driver sf_tdm_dai = {
 	.ops = &sf_tdm_dai_ops,
 	.probe = sf_tdm_dai_probe,
 	.symmetric_rates = 1,
+};
+
+static const struct snd_pcm_hardware jh71xx_pcm_hardware = {
+	.info			= (SNDRV_PCM_INFO_MMAP		|
+				   SNDRV_PCM_INFO_MMAP_VALID	|
+				   SNDRV_PCM_INFO_INTERLEAVED	|
+				   SNDRV_PCM_INFO_BLOCK_TRANSFER),
+	.buffer_bytes_max	= 192512,
+	.period_bytes_min	= 4096,
+	.period_bytes_max	= 32768,
+	.periods_min		= 1,
+	.periods_max		= 48,
+	.fifo_size		= 16,
+};
+
+static const struct snd_dmaengine_pcm_config jh71xx_dmaengine_pcm_config = {
+	.pcm_hardware = &jh71xx_pcm_hardware,
+	.prepare_slave_config = snd_dmaengine_pcm_prepare_slave_config,
+	.prealloc_buffer_size = 192512,
 };
 
 static void tdm_init_params(struct sf_tdm_dev *dev)
@@ -534,7 +552,9 @@ static int sf_tdm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL,	0);
+	ret = devm_snd_dmaengine_pcm_register(&pdev->dev,
+					&jh71xx_dmaengine_pcm_config,
+					SND_DMAENGINE_PCM_FLAG_COMPAT);
 	if (ret) {
 		dev_err(&pdev->dev, "could not register pcm: %d\n", ret);
 		return ret;
@@ -565,5 +585,5 @@ static struct platform_driver sf_tdm_driver = {
 module_platform_driver(sf_tdm_driver);
 
 MODULE_AUTHOR("Walker Chen <walker.chen@starfivetech.com>");
-MODULE_DESCRIPTION("starfive TDM Controller Driver");
+MODULE_DESCRIPTION("Starfive TDM Controller Driver");
 MODULE_LICENSE("GPL v2");
