@@ -111,6 +111,7 @@
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&plic>;
+		dma-noncoherent;
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
