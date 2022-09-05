@@ -130,12 +130,6 @@ static int starfive_drm_bind(struct device *dev)
 
 	drm_dev->dev_private = private;
 
-	/*
-	ret = starfive_drm_init_iommu(drm_dev);
-	if (ret)
-		goto err_free;
-	*/
-
 	ret = drmm_mode_config_init(drm_dev);
 	if (ret)
 		goto err_free;
@@ -234,7 +228,6 @@ static struct platform_driver starfive_drm_platform_driver = {
 	.driver	= {
 		.name		= "starfive-drm",
 		.of_match_table	= starfive_drm_dt_ids,
-		//.pm     = &starfive_drm_pm_ops,
 	},
 };
 
