@@ -14,6 +14,7 @@
 struct starfive_drm_private {
 	struct drm_fb_helper fbdev_helper;
 	struct drm_gem_object *fbdev_bo;
+	/* Protects mm. */
 	struct mutex mm_lock;
 	struct drm_mm mm;
 };
