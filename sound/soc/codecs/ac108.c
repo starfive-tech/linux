@@ -162,7 +162,10 @@ static const struct pll_div ac108_pll_div_list[] = {
 #define AC108_RATES			(SNDRV_PCM_RATE_8000_96000 &		\
 					~(SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_64000 | \
 					SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000))
-#define AC108_FORMATS		SNDRV_PCM_FMTBIT_S32_LE
+#define AC108_FORMATS			(SNDRV_PCM_FMTBIT_S16_LE | \
+					/*SNDRV_PCM_FMTBIT_S20_3LE |   \
+					SNDRV_PCM_FMTBIT_S24_LE |*/  \
+					SNDRV_PCM_FMTBIT_S32_LE)
 
 static const DECLARE_TLV_DB_SCALE(tlv_adc_pga_gain, 0, 100, 0);
 static const DECLARE_TLV_DB_SCALE(tlv_ch_digital_vol, -11925, 75, 0);
