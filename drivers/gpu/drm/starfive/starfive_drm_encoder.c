@@ -62,13 +62,13 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 	encoderp->encoder.possible_crtcs = crtcs;
 
 	ret = drm_encoder_init(drm_dev, &encoderp->encoder,
-			&starfive_encoder_funcs,
-			encoderp->encoder_type, NULL);
+			       &starfive_encoder_funcs,
+			       encoderp->encoder_type, NULL);
 	if (ret)
 		return dev_err_probe(dev, ret, "error initializing encoder\n");
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
-			&tmp_panel, &tmp_bridge);
+					  &tmp_panel, &tmp_bridge);
 	if (ret) {
 		dev_err_probe(dev, ret, "endpoint returns %d\n", ret);
 		goto err_bridge;

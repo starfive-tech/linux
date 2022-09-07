@@ -32,7 +32,7 @@
 
 static struct drm_framebuffer *
 starfive_drm_mode_fb_create(struct drm_device *dev, struct drm_file *file,
-		const struct drm_mode_fb_cmd2 *mode_cmd)
+			    const struct drm_mode_fb_cmd2 *mode_cmd)
 {
 	return drm_gem_fb_create(dev, file, mode_cmd);
 }

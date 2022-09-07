@@ -29,7 +29,7 @@ starfive_head_atom_get_encoder(struct starfive_crtc *sf_crtc)
 
 	/* We only ever have a single encoder */
 	drm_for_each_encoder_mask(encoder, sf_crtc->crtc.dev,
-			sf_crtc->crtc.state->encoder_mask)
+				  sf_crtc->crtc.state->encoder_mask)
 		break;
 
 	return encoder;
@@ -111,7 +111,7 @@ static void starfive_crtc_destroy(struct drm_crtc *crtc)
 }
 
 static void starfive_crtc_destroy_state(struct drm_crtc *crtc,
-				struct drm_crtc_state *state)
+					struct drm_crtc_state *state)
 {
 	struct starfive_crtc_state *s = to_starfive_crtc_state(state);
 
@@ -204,7 +204,7 @@ static void starfive_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	//starfive_flush_dcache(crtcp->dma_addr, 1920*1080*2);
 	DRM_DEBUG_DRIVER("ddr_format_change [%d], dma_addr_change [%d]\n",
-			crtcp->ddr_format_change, crtcp->dma_addr_change);
+			 crtcp->ddr_format_change, crtcp->dma_addr_change);
 	if (crtcp->ddr_format_change || crtcp->dma_addr_change) {
 		ddrfmt_to_ppfmt(crtcp);
 		starfive_pp_update(crtcp);
@@ -285,7 +285,7 @@ static int starfive_crtc_create(struct drm_device *drm_dev,
 	}
 
 	drm_crtc_init_with_planes(drm_dev, crtc, starfive_crtc->planes, NULL,
-			crtc_funcs, NULL);
+				  crtc_funcs, NULL);
 	drm_crtc_helper_add(crtc, crtc_helper_funcs);
 	port = of_get_child_by_name(starfive_crtc->dev->of_node, "port");
 	if (!port) {
@@ -363,7 +363,7 @@ static int starfive_parse_dt(struct device *dev, struct starfive_crtc *sf_crtc)
 		}
 		if (of_property_read_u32(child, "src-width", &sf_crtc->pp[pp_num].src.width)) {
 			dev_err(dev, "Missing src-width property in the DT. w %d\n",
-					sf_crtc->pp[pp_num].src.width);
+				sf_crtc->pp[pp_num].src.width);
 			ret = -EINVAL;
 		}
 		if (of_property_read_u32(child, "src-height", &sf_crtc->pp[pp_num].src.height)) {
@@ -447,7 +447,7 @@ static int starfive_crtc_bind(struct device *dev, struct device *master, void *d
 		return dev_err_probe(dev, ret, "error requesting irq %d\n", crtcp->lcdc_irq);
 
 	ret = devm_request_irq(&pdev->dev, crtcp->vpp1_irq, vpp1_isr_handler, 0,
-				"sf_vpp1", crtcp);
+			       "sf_vpp1", crtcp);
 	if (ret)
 		return dev_err_probe(dev, ret, "error requesting irq %d\n", crtcp->vpp1_irq);
 

@@ -40,7 +40,7 @@ static void starfive_lcdc_rstwrite32(struct starfive_crtc *sf_crtc, u32 reg, u32
 }
 
 static void lcdc_mode_cfg(struct starfive_crtc *sf_crtc, uint32_t workMode, int dotEdge,
-			int syncEdge, int r2yBypass, int srcSel, int intSrc, int intFreq)
+			  int syncEdge, int r2yBypass, int srcSel, int intSrc, int intFreq)
 {
 	u32 lcdcEn = 0x1;
 	u32 cfg = lcdcEn |
@@ -91,9 +91,9 @@ static void lcdc_timing_cfg(struct starfive_crtc *sf_crtc,
 	vfp = lower_margin;
 
 	dev_dbg(sf_crtc->dev, "%s: h-sync = %d, h-bp = %d, h-fp = %d", __func__,
-			hsync_len, left_margin, right_margin);
+		hsync_len, left_margin, right_margin);
 	dev_dbg(sf_crtc->dev, "%s: v-sync = %d, v-bp = %d, v-fp = %d", __func__,
-			vsync_len, upper_margin, lower_margin);
+		vsync_len, upper_margin, lower_margin);
 
 	htiming = hbk | hfp << LCDC_RGB_HFP;
 	vtiming = vbk | vfp << LCDC_RGB_VFP;
@@ -151,8 +151,8 @@ static void lcdc_win_cfgA(struct starfive_crtc *sf_crtc, struct drm_crtc_state *
 
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_A + winNum * 0xC, cfg);
 	dev_dbg(sf_crtc->dev,
-			"LCDC Win%d H-Size: %d, V-Size: %d, layEn: %d, Src: %d, AddrMode: %d\n",
-			winNum, hsize, vsize, layEn, srcSel_v, addrMode);
+		"LCDC Win%d H-Size: %d, V-Size: %d, layEn: %d, Src: %d, AddrMode: %d\n",
+		winNum, hsize, vsize, layEn, srcSel_v, addrMode);
 }
 
 static void lcdc_win_cfgB(struct starfive_crtc *sf_crtc,
@@ -174,8 +174,8 @@ static void lcdc_win_cfgB(struct starfive_crtc *sf_crtc,
 
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0_CFG_B + winNum * 0xC, cfg);
 	dev_dbg(sf_crtc->dev,
-			"LCDC Win%d Xpos: %d, Ypos: %d, win_format: 0x%x, ARGB Order: 0x%x\n",
-			winNum, xpos, ypos, win_format, argbOrd);
+		"LCDC Win%d Xpos: %d, Ypos: %d, win_format: 0x%x, ARGB Order: 0x%x\n",
+		winNum, xpos, ypos, win_format, argbOrd);
 }
 
 //? Color key
@@ -282,7 +282,7 @@ static void lcdc_win02Addr_cfg(struct starfive_crtc *sf_crtc, int addr0, int add
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR0 + sf_crtc->winNum * 0x8, addr0);
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_WIN0STARTADDR1 + sf_crtc->winNum * 0x8, addr1);
 	dev_dbg(sf_crtc->dev, "LCDC Win%d Start Addr0: 0x%8x, Addr1: 0x%8x\n",
-			sf_crtc->winNum, addr0, addr1);
+		sf_crtc->winNum, addr0, addr1);
 }
 
 void starfive_set_win_addr(struct starfive_crtc *sf_crtc, int addr)

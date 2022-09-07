@@ -87,7 +87,7 @@ void starfive_drm_gem_free_object(struct drm_gem_object *obj)
 		drm_prime_gem_destroy(obj, starfive_gem->sg);
 	else
 		dma_free_attrs(drm_dev->dev, obj->size, starfive_gem->kvaddr,
-				starfive_gem->dma_addr, starfive_gem->dma_attrs);
+			       starfive_gem->dma_addr, starfive_gem->dma_attrs);
 
 	/* release file pointer to gem object. */
 	drm_gem_object_release(obj);
@@ -139,7 +139,7 @@ static int starfive_drm_gem_alloc_dma(struct starfive_drm_gem_obj *starfive_obj,
 }
 
 static int starfive_drm_gem_alloc_buf(struct starfive_drm_gem_obj *starfive_obj,
-				bool alloc_kmap)
+				      bool alloc_kmap)
 {
 	return starfive_drm_gem_alloc_dma(starfive_obj, alloc_kmap);
 }
@@ -152,7 +152,7 @@ static void starfive_drm_gem_release_object(struct starfive_drm_gem_obj *starfiv
 
 static struct starfive_drm_gem_obj *
 starfive_drm_gem_create_object(struct drm_device *drm, unsigned int size,
-				bool alloc_kmap)
+			       bool alloc_kmap)
 {
 	struct starfive_drm_gem_obj *starfive_obj;
 	int ret;
@@ -224,7 +224,8 @@ int starfive_drm_gem_dumb_create(struct drm_file *file_priv,
 	args->size = args->pitch * args->height;
 
 	starfive_gem = starfive_drm_gem_create_with_handle(file_priv, dev,
-					args->size, &args->handle);
+							   args->size,
+							   &args->handle);
 
 	return PTR_ERR_OR_ZERO(starfive_gem);
 }
