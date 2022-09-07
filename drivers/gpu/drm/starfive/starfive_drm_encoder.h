@@ -12,6 +12,7 @@ struct starfive_encoder {
 	bool			is_enabled;
 	int			encoder_type;
 };
+
 #define to_starfive_encoder(x) container_of(x, struct starfive_encoder, encoder)
 
 #endif /* _STARFIVE_DRM_CRTC_H */

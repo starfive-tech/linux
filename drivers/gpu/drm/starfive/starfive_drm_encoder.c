@@ -26,7 +26,6 @@ static const struct drm_encoder_funcs starfive_encoder_funcs = {
 	.destroy = starfive_encoder_destroy,
 };
 
-
 static int starfive_encoder_bind(struct device *dev, struct device *master, void *data)
 {
 	struct drm_device *drm_dev = data;
@@ -89,7 +88,6 @@ static int starfive_encoder_bind(struct device *dev, struct device *master, void
 err_bridge:
 	drm_encoder_cleanup(&encoderp->encoder);
 	return ret;
-
 }
 
 static void starfive_encoder_unbind(struct device *dev, struct device *master, void *data)
