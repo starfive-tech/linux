@@ -57,7 +57,7 @@ struct starfive_crtc {
 
 	struct pp_mode	*pp;
 
-	int 		winNum;
+	int		winNum;
 	int		pp_conn_lcdc;
 	unsigned int	ddr_format;
 	bool		ddr_format_change;
@@ -78,6 +78,7 @@ struct starfive_crtc {
 	bool		dma_addr_change;
 	size_t		size;
 };
+
 #define to_starfive_crtc(x) container_of(x, struct starfive_crtc, crtc)
 
 void starfive_crtc_hw_config_simple(struct starfive_crtc *starfive_crtc);

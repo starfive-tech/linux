@@ -268,9 +268,9 @@ static const struct drm_crtc_helper_funcs starfive_crtc_helper_funcs = {
 };
 
 static int starfive_crtc_create(struct drm_device *drm_dev,
-			        struct starfive_crtc *starfive_crtc,
-			        const struct drm_crtc_funcs *crtc_funcs,
-			        const struct drm_crtc_helper_funcs *crtc_helper_funcs)
+				struct starfive_crtc *starfive_crtc,
+				const struct drm_crtc_funcs *crtc_funcs,
+				const struct drm_crtc_helper_funcs *crtc_helper_funcs)
 {
 	struct drm_crtc *crtc = &starfive_crtc->crtc;
 	struct device *dev = drm_dev->dev;
