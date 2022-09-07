@@ -46,7 +46,7 @@ enum WIN_FMT {
 #define LCDC_RGB_DCLK		0x0020
 #define LCDC_M_CS_CTRL		0x0024
 #define LCDC_DeltaRGB_CFG	0x0028
-#define LCDC_BACKGROUD		0x002C
+#define LCDC_BACKGROUND		0x002C
 #define LCDC_WIN0_CFG_A		0x0030
 #define LCDC_WIN0_CFG_B		0x0034
 #define LCDC_WIN0_CFG_C		0x0038
@@ -99,7 +99,7 @@ enum WIN_FMT {
 #define LCDC_RGB_HPW			0
 #define LCDC_RGB_VPW			8
 #define LCDC_RGB_UNIT			16
-//for BACKGROUD
+//for BACKGROUND
 #define LCDC_BG_HSIZE			0
 #define LCDC_BG_VSIZE			12
 //for WINx_CFG_A/B/C

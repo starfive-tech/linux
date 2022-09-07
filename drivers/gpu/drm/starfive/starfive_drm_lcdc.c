@@ -115,7 +115,7 @@ static void lcdc_desize_cfg(struct starfive_crtc *sf_crtc, struct drm_crtc_state
 	int vsize = state->adjusted_mode.crtc_vdisplay - 1;
 	u32 sizecfg = hsize | vsize << LCDC_BG_VSIZE;
 
-	sf_fb_lcdcwrite32(sf_crtc, LCDC_BACKGROUD, sizecfg);
+	sf_fb_lcdcwrite32(sf_crtc, LCDC_BACKGROUND, sizecfg);
 	dev_dbg(sf_crtc->dev, "LCDC Dest H-Size: %d, V-Size: %d\n", hsize, vsize);
 }
 
