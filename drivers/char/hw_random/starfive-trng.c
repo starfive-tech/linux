@@ -369,7 +369,7 @@ err_disable_hclk:
 }
 
 static const struct of_device_id trng_dt_ids[] = {
-	{ .compatible = "starfive,trng" },
+	{ .compatible = "starfive,jh7110-trng" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, trng_dt_ids);
