@@ -79,10 +79,10 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 	pin_size = STARFIVE_PINS_SIZE;
 
 	for_each_child_of_node(np, child) {
-		list = of_get_property(child, "sf,pins", &psize);
+		list = of_get_property(child, "starfive,pins", &psize);
 		if (!list) {
 			dev_err(sfp->dev,
-				"no sf,pins and pins property in node %pOF\n", np);
+				"no starfive,pins and pins property in node %pOF\n", np);
 			return -EINVAL;
 		}
 		size += psize;
@@ -90,7 +90,7 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 
 	if (!size || size % pin_size) {
 		dev_err(sfp->dev,
-			"Invalid sf,pins or pins property in node %pOF\n", np);
+			"Invalid starfive,pins or pins property in node %pOF\n", np);
 		return -EINVAL;
 	}
 
@@ -139,10 +139,11 @@ static int starfive_dt_node_to_map(struct pinctrl_dev *pctldev,
 		map[nmaps].data.mux.group = grpname;
 		nmaps += 1;
 
-		list = of_get_property(child, "sf,pins", &psize);
+
+		list = of_get_property(child, "starfive,pins", &psize);
 		if (!list) {
 			dev_err(sfp->dev,
-				"no sf,pins and pins property in node %pOF\n", np);
+				"no starfive,pins and pins property in node %pOF\n", np);
 			goto put_child;
 		}
 		child_num_pins = psize / pin_size;
