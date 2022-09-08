@@ -611,11 +611,6 @@ endif
 
 endif
 
-# Enable -Werror for all built object files
-ifneq ($(W),1)
-$(foreach _o,$(addprefix CFLAGS_,$($(PVRSRV_MODNAME)-y)),$(eval $(_o) += -Werror))
-endif
-
 $(PVRSRV_MODNAME)-y += \
  generated/$(PVR_ARCH)/devicememhistory_bridge/client_devicememhistory_direct_bridge.o
 
