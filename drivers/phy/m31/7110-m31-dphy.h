@@ -1,10 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
-<<<<<<< HEAD
- * Copyright (C) 2022 StarFive Technology Co., Ltd. 
-=======
  * Copyright (C) 2022 StarFive Technology Co., Ltd.
->>>>>>> bac79bb19299... riscv:linux:vout:mipi
  */
 
 #ifndef __7110_M31_DPHY_H__
