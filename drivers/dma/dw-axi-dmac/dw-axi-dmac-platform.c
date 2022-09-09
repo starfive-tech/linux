@@ -474,7 +474,7 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 
 	/*flush all the desc */
 #ifdef CONFIG_SOC_STARFIVE_VIC7100
-	if (chan->chip->multi.need_flush = true) {
+	if (chan->chip->multi.need_flush == true) {
 		int count = atomic_read(&chan->descs_allocated);
 		int i;
 
@@ -598,8 +598,6 @@ static void dw_axi_dma_set_hw_channel(struct axi_dma_chan *chan, bool set)
 			(chan->id * DMA_APB_HS_SEL_BIT_SIZE));
 	reg_value |= (val << (chan->id * DMA_APB_HS_SEL_BIT_SIZE));
 	lo_hi_writeq(reg_value, chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-
-	return;
 }
 
 /*
@@ -1313,13 +1311,10 @@ static int axi_dma_resume(struct axi_dma_chip *chip)
 void axi_dma_cyclic_stop(struct dma_chan *dchan)
 {
 	struct axi_dma_chan *chan = dchan_to_axi_dma_chan(dchan);
-
 	unsigned long flags;
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
-
 	axi_chan_disable(chan);
-	
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
 
 }

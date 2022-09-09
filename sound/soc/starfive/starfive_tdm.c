@@ -117,10 +117,40 @@ static void sf_tdm_config(struct sf_tdm_dev *dev, struct snd_pcm_substream *subs
 #define sf_tdm_suspend	NULL
 #define sf_tdm_resume	NULL
 
+/* 
+ * To stop dma first, we must implement this function, because it is
+ * called before stopping the stream. 
+ */
+static int sf_pcm_trigger(struct snd_soc_component *component,
+			      struct snd_pcm_substream *substream, int cmd)
+{
+	int ret = 0;
+	struct dma_chan *chan = snd_dmaengine_pcm_get_chan(substream);
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		break;
+
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		axi_dma_cyclic_stop(chan);
+		break;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
 static const struct snd_soc_component_driver sf_tdm_component = {
 	.name		= "jh7110-tdm",
 	.suspend	= sf_tdm_suspend,
 	.resume		= sf_tdm_resume,
+	.trigger	= sf_pcm_trigger,
 };
 
 static int sf_tdm_hw_params(struct snd_pcm_substream *substream,
@@ -282,6 +312,7 @@ static int sf_tdm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		dev->active--;
 		axi_dma_cyclic_stop(chan);
+		mdelay(100);
 		sf_tdm_stop(dev, substream);
 		break;
 	default:
