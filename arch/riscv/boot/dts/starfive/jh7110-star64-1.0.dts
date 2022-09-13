@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2022 StarFive Technology Co., Ltd.
+ * Copyright (C) 2022 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110-star64.dtsi"
+
+/ {
+	model = "Star64";
+	compatible = "pine64,star64", "starfive,jh7110";
+};
+
+/*
+TODO: Star64 1.0 ethernet
+&gmac0 {
+	phy0: ethernet-phy@0 {
+		rgmii_sw_dr_2 = <0x0>;
+		rgmii_sw_dr = <0x3>;
+		rgmii_sw_dr_rxc = <0x6>;
+		rxc_dly_en = <1>;
+		tx_delay_sel_fe = <5>;
+		tx_delay_sel = <12>;
+		rx_delay_sel = <1>;
+	};
+};
+ 
+&gmac1 {
+	phy1: ethernet-phy@1 {
+		rgmii_sw_dr_2 = <0x0>;
+		rgmii_sw_dr = <0x3>;
+		rgmii_sw_dr_rxc = <0x6>;
+		tx_delay_sel_fe = <5>;
+		tx_delay_sel = <9>;
+		rxc_dly_en = <0>;
+	};
+};
+*/

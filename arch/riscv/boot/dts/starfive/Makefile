@@ -28,3 +28,6 @@ dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-evb.dtb			\
 			       jh7110-evb-i2s-ac108.dtb		\
 			       jh7110-evb-usbdevice.dtb		\
 			       jh7110-evb-uart1-rgb2hdmi.dtb
+
+dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-star64.dtb \
+			       jh7110-star64-1.0.dtb
