@@ -3105,7 +3105,7 @@ static struct vendor_data vendor_pl080 = {
 };
 #ifdef CONFIG_SOC_STARFIVE
 static const struct of_device_id jh7110_dma_ids[] = {
-	{ .compatible = "starfive,pl080", .data = &vendor_pl080},
+	{ .compatible = "starfive,jh7110-pl080", .data = &vendor_pl080},
 	{},
 };
 MODULE_DEVICE_TABLE(of, jh7110_dma_ids);
