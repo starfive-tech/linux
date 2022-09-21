@@ -1463,16 +1463,14 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 	struct stmmac_rx_buffer *buf = &rx_q->buf_pool[i];
 
 	if (!buf->page) {
-		buf->page = page_pool_alloc_pages(rx_q->page_pool,
-						  GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
+		buf->page = page_pool_dev_alloc_pages(rx_q->page_pool);
 		if (!buf->page)
 			return -ENOMEM;
 		buf->page_offset = stmmac_rx_offset(priv);
 	}
 
 	if (priv->sph && !buf->sec_page) {
-		buf->sec_page = page_pool_alloc_pages(rx_q->page_pool,
-						      GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
+		buf->sec_page = page_pool_dev_alloc_pages(rx_q->page_pool);
 		if (!buf->sec_page)
 			return -ENOMEM;
 
@@ -4488,15 +4486,13 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv, u32 queue)
 			p = rx_q->dma_rx + entry;
 
 		if (!buf->page) {
-			buf->page = page_pool_alloc_pages(rx_q->page_pool,
-							  GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
+			buf->page = page_pool_dev_alloc_pages(rx_q->page_pool);
 			if (!buf->page)
 				break;
 		}
 
 		if (priv->sph && !buf->sec_page) {
-			buf->sec_page = page_pool_alloc_pages(rx_q->page_pool,
-							      GFP_ATOMIC | __GFP_NOWARN | GFP_DMA32);
+			buf->sec_page = page_pool_dev_alloc_pages(rx_q->page_pool);
 			if (!buf->sec_page)
 				break;
 
