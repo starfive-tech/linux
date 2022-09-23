@@ -23,6 +23,8 @@
 #define DMAC_MAX_MASTERS	2
 #define DMAC_MAX_BLK_SIZE	0x200000
 
+#define TIMEOUT_US		200000
+
 struct dma_ch_en {
 	u8 ch_en;
 	u8 ch_en_shift;
@@ -46,6 +48,7 @@ struct dma_multi {
 	bool ch_enreg_2;
 	struct dma_ch_cfg cfg;
 	struct dma_ch_en en;
+	bool need_flush;
 };
 
 struct dw_axi_dma_hcfg {
@@ -74,12 +77,10 @@ struct axi_dma_chan {
 	struct axi_dma_desc		*desc;
 	struct dma_slave_config		config;
 	enum dma_transfer_direction	direction;
-	bool				fixed_burst_trans_len;
+	bool 				fixed_burst_trans_len;
 	bool				cyclic;
-	bool				is_err;
 	/* these other elements are all protected by vc.lock */
 	bool				is_paused;
-	struct tasklet_struct		dma_tasklet;
 };
 
 struct dw_axi_dma {
@@ -130,11 +131,11 @@ struct axi_dma_hw_desc {
 struct axi_dma_desc {
 	struct axi_dma_hw_desc	*hw_desc;
 
-	struct virt_dma_desc		vd;
-	struct axi_dma_chan		*chan;
-	u32				completed_blocks;
-	u32				length;
-	u32				period_len;
+	struct virt_dma_desc	vd;
+	struct axi_dma_chan	*chan;
+	u32			completed_blocks;
+	u32			length;
+	u32			period_len;
 };
 
 static inline struct device *dchan2dev(struct dma_chan *dchan)
@@ -161,6 +162,7 @@ static inline struct axi_dma_chan *dchan_to_axi_dma_chan(struct dma_chan *dchan)
 {
 	return vc_to_axi_dma_chan(to_virt_chan(dchan));
 }
+
 
 #define COMMON_REG_LEN		0x100
 #define CHAN_REG_LEN		0x100

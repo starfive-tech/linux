@@ -203,11 +203,11 @@ static inline void axi_chan_disable(struct axi_dma_chan *chan)
 
 	val = axi_dma_ioread32(chan->chip, multi->en.ch_en);
 	val &= ~(BIT(chan->id) << multi->en.ch_en_shift);
-	val |=   BIT(chan->id) << multi->en.ch_en_we_shift;
+	val |= BIT(chan->id) << multi->en.ch_en_we_shift;
 	axi_dma_iowrite32(chan->chip, multi->en.ch_en, val);
 
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 10, 100000);
+				!(val & chan_active), 10, 100000);
 }
 
 static inline void axi_chan_enable(struct axi_dma_chan *chan)
@@ -306,8 +306,8 @@ static void axi_desc_put(struct axi_dma_desc *desc)
 	kfree(desc);
 	atomic_sub(descs_put, &chan->descs_allocated);
 	dev_vdbg(chan2dev(chan), "%s: %d descs put, %d still allocated\n",
-		 axi_chan_name(chan), descs_put,
-		 atomic_read(&chan->descs_allocated));
+		axi_chan_name(chan), descs_put,
+		atomic_read(&chan->descs_allocated));
 }
 
 static void vchan_desc_put(struct virt_dma_desc *vdesc)
@@ -317,7 +317,7 @@ static void vchan_desc_put(struct virt_dma_desc *vdesc)
 
 static enum dma_status
 dma_chan_tx_status(struct dma_chan *dchan, dma_cookie_t cookie,
-		   struct dma_tx_state *txstate)
+		  struct dma_tx_state *txstate)
 {
 	struct axi_dma_chan *chan = dchan_to_axi_dma_chan(dchan);
 	struct virt_dma_desc *vdesc;
@@ -397,8 +397,8 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	if (unlikely(axi_chan_is_hw_enable(chan))) {
 		dev_err(chan2dev(chan), "%s is non-idle!\n",
 			axi_chan_name(chan));
-		axi_chan_disable(chan);
-		//return;
+
+		return;
 	}
 
 	axi_dma_enable(chan->chip);
@@ -472,6 +472,17 @@ static void axi_chan_block_xfer_start(struct axi_dma_chan *chan,
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	axi_chan_irq_set(chan, irq_mask);
 
+	/*flush all the desc */
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+	if (chan->chip->multi.need_flush == true) {
+		int count = atomic_read(&chan->descs_allocated);
+		int i;
+
+		for (i = 0; i < count; i++) {
+			starfive_flush_dcache(first->hw_desc[i].llp,
+				sizeof(*first->hw_desc[i].lli));
+	}
+#endif
 	axi_chan_enable(chan);
 }
 
@@ -486,7 +497,7 @@ static void axi_chan_start_first_queued(struct axi_dma_chan *chan)
 
 	desc = vd_to_axi_desc(vd);
 	dev_vdbg(chan2dev(chan), "%s: started %u\n", axi_chan_name(chan),
-		 vd->tx.cookie);
+		vd->tx.cookie);
 	axi_chan_block_xfer_start(chan, desc);
 }
 
@@ -587,8 +598,6 @@ static void dw_axi_dma_set_hw_channel(struct axi_dma_chan *chan, bool set)
 			(chan->id * DMA_APB_HS_SEL_BIT_SIZE));
 	reg_value |= (val << (chan->id * DMA_APB_HS_SEL_BIT_SIZE));
 	lo_hi_writeq(reg_value, chip->apb_regs + DMAC_APB_HW_HS_SEL_0);
-
-	return;
 }
 
 /*
@@ -1059,64 +1068,31 @@ static void axi_chan_list_dump_lli(struct axi_dma_chan *chan,
 		axi_chan_dump_lli(chan, &desc_head->hw_desc[i]);
 }
 
-static void axi_chan_tasklet(struct tasklet_struct *t)
+static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
 {
-	struct axi_dma_chan *chan = from_tasklet(chan, t, dma_tasklet);
 	struct virt_dma_desc *vd;
-	u32 chan_active = BIT(chan->id) << DMAC_CHAN_EN_SHIFT;
 	unsigned long flags;
-	u32 val;
-	int ret;
-
-	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 10, 10000);
-	if (ret == -ETIMEDOUT)
-		dev_warn(chan2dev(chan),
-			 "irq %s failed to stop\n", axi_chan_name(chan));
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
+
+	axi_chan_disable(chan);
 
 	/* The bad descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
-	if (!vd) {
-		dev_warn(chan2dev(chan),
-			 "%s vd is null\n", axi_chan_name(chan));
-		spin_unlock_irqrestore(&chan->vc.lock, flags);
-		return;
-	}
+	/* Remove the completed descriptor from issued list */
+	list_del(&vd->node);
 
-	if (chan->cyclic) {
-		vchan_cyclic_callback(vd);
-		axi_chan_enable(chan);
-	} else {
-		/* Remove the completed descriptor from issued list */
-		list_del(&vd->node);
+	/* WARN about bad descriptor */
+	dev_err(chan2dev(chan),
+		"Bad descriptor submitted for %s, cookie: %d, irq: 0x%08x\n",
+		axi_chan_name(chan), vd->tx.cookie, status);
+	axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
 
-		/* WARN about bad descriptor */
-		dev_err(chan2dev(chan),
-			"Bad descriptor submitted for %s, cookie: %d\n",
-			axi_chan_name(chan), vd->tx.cookie);
-		axi_chan_list_dump_lli(chan, vd_to_axi_desc(vd));
+	vchan_cookie_complete(vd);
 
-		vchan_cookie_complete(vd);
+	/* Try to restart the controller */
+	axi_chan_start_first_queued(chan);
 
-		/* Try to restart the controller */
-		axi_chan_start_first_queued(chan);
-	}
-
-	spin_unlock_irqrestore(&chan->vc.lock, flags);
-}
-
-static noinline void axi_chan_handle_err(struct axi_dma_chan *chan, u32 status)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&chan->vc.lock, flags);
-
-	if (unlikely(axi_chan_is_hw_enable(chan)))
-		axi_chan_disable(chan);
-
-	tasklet_schedule(&chan->dma_tasklet);
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
 }
 
@@ -1140,12 +1116,6 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 
 	/* The completed descriptor currently is in the head of vc list */
 	vd = vchan_next_desc(&chan->vc);
-	if (!vd) {
-		dev_err(chan2dev(chan),
-			"%s vd is null\n", axi_chan_name(chan));
-		spin_unlock_irqrestore(&chan->vc.lock, flags);
-		return;
-	}
 
 	if (chan->cyclic) {
 		desc = vd_to_axi_desc(vd);
@@ -1156,6 +1126,9 @@ static void axi_chan_block_xfer_complete(struct axi_dma_chan *chan)
 				if (hw_desc->llp == llp) {
 					axi_chan_irq_clear(chan, hw_desc->lli->status_lo);
 					hw_desc->lli->ctl_hi |= CH_CTL_H_LLI_VALID;
+					#ifdef CONFIG_SOC_STARFIVE_VIC7100
+					starfive_flush_dcache(hw_desc->llp, sizeof(*hw_desc->lli));
+					#endif
 					desc->completed_blocks = i;
 
 					if (((hw_desc->len * (i + 1)) % desc->period_len) == 0)
@@ -1196,7 +1169,7 @@ static irqreturn_t dw_axi_dma_interrupt(int irq, void *dev_id)
 		axi_chan_irq_clear(chan, status);
 
 		dev_vdbg(chip->dev, "%s %u IRQ status: 0x%08x\n",
-			 axi_chan_name(chan), i, status);
+			axi_chan_name(chan), i, status);
 
 		if (status & DWAXIDMAC_IRQ_ALL_ERR)
 			axi_chan_handle_err(chan, status);
@@ -1222,7 +1195,7 @@ static int dma_chan_terminate_all(struct dma_chan *dchan)
 	axi_chan_disable(chan);
 
 	ret = readl_poll_timeout_atomic(chan->chip->regs + DMAC_CHEN, val,
-					!(val & chan_active), 1000, 10000);
+					!(val & chan_active), 1000, TIMEOUT_US);
 	if (ret == -ETIMEDOUT)
 		dev_warn(dchan2dev(dchan),
 			 "%s failed to stop\n", axi_chan_name(chan));
@@ -1341,10 +1314,9 @@ void axi_dma_cyclic_stop(struct dma_chan *dchan)
 	unsigned long flags;
 
 	spin_lock_irqsave(&chan->vc.lock, flags);
-
 	axi_chan_disable(chan);
-	
 	spin_unlock_irqrestore(&chan->vc.lock, flags);
+
 }
 EXPORT_SYMBOL(axi_dma_cyclic_stop);
 
@@ -1450,13 +1422,18 @@ static int parse_device_properties(struct axi_dma_chip *chip)
 		chip->dw->hdata->axi_rw_burst_len = tmp;
 	}
 
+
 	/* get number of handshak interface and configure multi reg */
 	ret = device_property_read_u32(dev, "snps,num-hs-if", &tmp);
 	if (!ret)
 		chip->dw->hdata->nr_hs_if = tmp;
 
-	if (chip->dw->hdata->nr_channels > 8)
+	if (chip->dw->hdata->nr_channels > 8) {
+#ifdef CONFIG_SOC_STARFIVE_VIC7100
+		chip->multi.need_flush = true;
+#endif
 		chip->multi.ch_enreg_2 = true;
+	}
 
 	if (chip->dw->hdata->nr_channels > 8 || chip->dw->hdata->nr_hs_if > 16)
 		chip->multi.ch_cfg_2 = true;
@@ -1554,8 +1531,6 @@ static int dw_probe(struct platform_device *pdev)
 
 		chan->vc.desc_free = vchan_desc_put;
 		vchan_init(&chan->vc, &dw->dma);
-
-		tasklet_setup(&chan->dma_tasklet, axi_chan_tasklet);
 	}
 
 	/* Set capabilities */
@@ -1649,7 +1624,6 @@ static int dw_remove(struct platform_device *pdev)
 	for (i = 0; i < dw->hdata->nr_channels; i++) {
 		axi_chan_disable(&chip->dw->chan[i]);
 		axi_chan_irq_disable(&chip->dw->chan[i], DWAXIDMAC_IRQ_ALL);
-		tasklet_kill(&chan->dma_tasklet);
 	}
 	axi_dma_disable(chip);
 
@@ -1661,7 +1635,7 @@ static int dw_remove(struct platform_device *pdev)
 	of_dma_controller_free(chip->dev->of_node);
 
 	list_for_each_entry_safe(chan, _chan, &dw->dma.channels,
-				 vc.chan.device_node) {
+			vc.chan.device_node) {
 		list_del(&chan->vc.chan.device_node);
 		tasklet_kill(&chan->vc.task);
 	}
