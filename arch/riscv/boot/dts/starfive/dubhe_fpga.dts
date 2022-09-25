@@ -66,12 +66,23 @@
 &gmac0 {
 	status = "okay";
 	phy-mode = "rgmii-id";
+	phy-handle = <&ethernet_phy0>;
 	clocks = <&fpga_2p5mhz_clk>,
 		 <&fpga_2p5mhz_clk>,
 		 <&fpga_2p5mhz_clk>,
 		 <&fpga_50mhz_clk>,
 		 <&fpga_50mhz_clk>,
 		 <&fpga_2p5mhz_clk>;
+
+	mdio0 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		ethernet_phy0: ethernet-phy@0 {
+			reg = <0>;
+			max-speed = <10>;
+		};
+	};
 };
 
 &spi0 {
