@@ -678,7 +678,6 @@ static void load_ssp_default_config(struct pl022 *pl022)
  */
 static void readwriter(struct pl022 *pl022)
 {
-
 	/*
 	 * The FIFO depth is different between primecell variants.
 	 * I believe filling in too much in the FIFO might cause
@@ -2189,7 +2188,8 @@ static int pl022_platform_probe(struct platform_device *pdev, const struct amba_
 	master->num_chipselect = num_cs;
 	master->cleanup = pl022_cleanup;
 	master->setup = pl022_setup;
-	master->auto_runtime_pm = false;
+	/* If open CONFIG_PM, auto_runtime_pm should be false when of-platform.*/
+	master->auto_runtime_pm = true;
 	master->transfer_one_message = pl022_transfer_one_message;
 	master->unprepare_transfer_hardware = pl022_unprepare_transfer_hardware;
 	master->rt = platform_info->rt;
@@ -2540,6 +2540,7 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 	}
 	dev_dbg(dev, "probe succeeded\n");
 
+	platform_info->autosuspend_delay = 100;
 	/* let runtime pm put suspend */
 	if (platform_info->autosuspend_delay > 0) {
 		dev_info(&adev->dev,
@@ -2549,6 +2550,7 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 			platform_info->autosuspend_delay);
 		pm_runtime_use_autosuspend(dev);
 	}
+
 	pm_runtime_put(dev);
 
 	return 0;
@@ -2615,7 +2617,8 @@ static int pl022_suspend(struct device *dev)
 
 	pinctrl_pm_select_sleep_state(dev);
 
-	dev_dbg(dev, "suspended\n");
+	dev_dbg(dev, "starfive spi suspended\n");
+
 	return 0;
 }
 
@@ -2631,7 +2634,7 @@ static int pl022_resume(struct device *dev)
 	/* Start the queue running */
 	ret = spi_master_resume(pl022->master);
 	if (!ret)
-		dev_dbg(dev, "resumed\n");
+		dev_dbg(dev, "starfive spi resumed\n");
 
 	return ret;
 }
@@ -2645,6 +2648,8 @@ static int pl022_runtime_suspend(struct device *dev)
 	clk_disable_unprepare(pl022->clk);
 	pinctrl_pm_select_idle_state(dev);
 
+	dev_dbg(dev, "starfive spi runtime suspend");
+
 	return 0;
 }
 
@@ -2655,6 +2660,7 @@ static int pl022_runtime_resume(struct device *dev)
 	pinctrl_pm_select_default_state(dev);
 	clk_prepare_enable(pl022->clk);
 
+	dev_dbg(dev, "stafive spi runtime resume");
 	return 0;
 }
 #endif
@@ -2794,11 +2800,11 @@ static int starfive_of_pl022_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_probe;
 
-	pm_runtime_get_noresume(dev);
-	pm_runtime_set_active(dev);
-	pm_runtime_enable(dev);
-
 	ret = pl022_platform_probe(pdev, &id);
+
+	pm_runtime_enable(dev);
+	pm_runtime_set_autosuspend_delay(dev, 100);
+	pm_runtime_use_autosuspend(dev);
 
 	if (ret) {
 		pm_runtime_disable(dev);
