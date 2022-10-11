@@ -27,6 +27,7 @@
 #include <sound/dmaengine_pcm.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/dma/starfive-dma.h>
 #include "starfive_i2s.h"
 
 static inline void i2s_write_reg(void __iomem *io_base, int reg, u32 val)
@@ -327,6 +328,7 @@ static int dw_i2s_prepare(struct snd_pcm_substream *substream,
 static int dw_i2s_trigger(struct snd_pcm_substream *substream,
 		int cmd, struct snd_soc_dai *dai)
 {
+	struct dma_chan *chan = snd_dmaengine_pcm_get_chan(substream);
 	struct dw_i2s_dev *dev = snd_soc_dai_get_drvdata(dai);
 	int ret = 0;
 
@@ -342,6 +344,7 @@ static int dw_i2s_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		dev->active--;
+		axi_dma_cyclic_stop(chan);
 		i2s_stop(dev, substream);
 		break;
 	default:
