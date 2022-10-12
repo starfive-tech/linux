@@ -29,11 +29,11 @@ static void sf_fb_syswrite32(struct starfive_crtc *sf_crtc, u32 reg, u32 val)
 	iowrite32(val, sf_crtc->base_syscfg + reg);
 }
 
-static u32 sf_fb_vppread32(struct starfive_crtc *sf_crtc, int ppNum, u32 reg)
+static u32 sf_fb_vppread32(struct starfive_crtc *sf_crtc, int pp_num, u32 reg)
 {
 	void __iomem *base_vpp;
 
-	switch (ppNum) {
+	switch (pp_num) {
 	case 0:
 		base_vpp = sf_crtc->base_vpp0;
 		break;
@@ -51,11 +51,11 @@ static u32 sf_fb_vppread32(struct starfive_crtc *sf_crtc, int ppNum, u32 reg)
 	return ioread32(base_vpp + reg);
 }
 
-static void sf_fb_vppwrite32(struct starfive_crtc *sf_crtc, int ppNum, u32 reg, u32 val)
+static void sf_fb_vppwrite32(struct starfive_crtc *sf_crtc, int pp_num, u32 reg, u32 val)
 {
 	void __iomem *base_vpp;
 
-	switch (ppNum) {
+	switch (pp_num) {
 	case 0:
 		base_vpp = sf_crtc->base_vpp0;
 		break;
@@ -83,180 +83,181 @@ void mapconv_pp0_sel(struct starfive_crtc *sf_crtc, int sel)
 }
 
 static void pp_output_cfg(struct starfive_crtc *sf_crtc,
-			  int ppNum, int outSel, int progInter, int desformat, int ptMode)
+			  int pp_num, int out_sel, int prog_inter, int desformat,
+			  int pt_mode)
 {
-	int cfg = outSel | progInter << PP_INTERLACE |
+	int cfg = out_sel | prog_inter << PP_INTERLACE |
 		desformat << PP_DES_FORMAT |
-		ptMode << PP_POINTER_MODE;
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xffff8f0U;
+		pt_mode << PP_POINTER_MODE;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL1) & 0xffff8f0U;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL1, cfg | preCfg);
-	dev_dbg(sf_crtc->dev, "PP%d outSel: %d, outFormat: 0x%x, Out Interlace: %d, ptMode: %d\n",
-		ppNum, outSel, desformat, progInter, ptMode);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL1, cfg | pre_cfg);
+	dev_dbg(sf_crtc->dev, "PP%d out_sel: %d, outFormat: 0x%x, Out Interlace: %d, pt_mode: %d\n",
+		pp_num, out_sel, desformat, prog_inter, pt_mode);
 }
 
-static void pp_srcfmt_cfg(struct starfive_crtc *sf_crtc, int ppNum, int srcformat,
-			  int yuv420Inter, int yuv422_mode, int yuv420_mode, int argbOrd)
+static void pp_srcfmt_cfg(struct starfive_crtc *sf_crtc, int pp_num, int srcformat,
+			  int yuv420_inter, int yuv422_mode, int yuv420_mode, int argb_ord)
 {
 	int cfg = srcformat << PP_SRC_FORMAT_N |
-		yuv420Inter << PP_420_ITLC |
+		yuv420_inter << PP_420_ITLC |
 		yuv422_mode << PP_SRC_422_YUV_POS |
 		yuv420_mode << PP_SRC_420_YUV_POS |
-		argbOrd << PP_SRC_ARGB_ORDER;
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0x83ffff0fU;
+		argb_ord << PP_SRC_ARGB_ORDER;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL1) & 0x83ffff0fU;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL1, cfg | preCfg);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL1, cfg | pre_cfg);
 	dev_dbg(sf_crtc->dev, "PP%d Src Format: 0x%x, YUV420 Interlace: %d, YUV422: %d, YUV420: %d, ARGB Order: %d\n",
-		ppNum, srcformat, yuv420Inter, yuv422_mode, yuv420_mode, argbOrd);
+		pp_num, srcformat, yuv420_inter, yuv422_mode, yuv420_mode, argb_ord);
 }
 
 static void pp_r2yscal_bypass(struct starfive_crtc *sf_crtc,
-			      int ppNum, int r2yByp, int scalByp, int y2rByp)
+			      int pp_num, int r2y_byp, int scal_byp, int y2r_byp)
 {
-	int bypass = (r2yByp | scalByp << 1 | y2rByp << 2) << PP_R2Y_BPS;
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xffff8fffU;
+	int bypass = (r2y_byp | scal_byp << 1 | y2r_byp << 2) << PP_R2Y_BPS;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL1) & 0xffff8fffU;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL1, bypass | preCfg);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL1, bypass | pre_cfg);
 	dev_dbg(sf_crtc->dev, "PP%d Bypass R2Y: %d, Y2R: %d, MainSacle: %d\n",
-		ppNum, r2yByp, y2rByp, scalByp);
+		pp_num, r2y_byp, y2r_byp, scal_byp);
 }
 
-static void pp_argb_alpha(struct starfive_crtc *sf_crtc, int ppNum, int alpha)
+static void pp_argb_alpha(struct starfive_crtc *sf_crtc, int pp_num, int alpha)
 {
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL1) & 0xff00ffffU;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL1) & 0xff00ffffU;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL1, alpha << PP_ARGB_ALPHA | preCfg);
-	dev_dbg(sf_crtc->dev, "PP%d Alpha: 0x%4x\n", ppNum, alpha);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL1, alpha << PP_ARGB_ALPHA | pre_cfg);
+	dev_dbg(sf_crtc->dev, "PP%d Alpha: 0x%4x\n", pp_num, alpha);
 }
 
 //rgbNum: 1-3
 static void pp_r2y_coeff(struct starfive_crtc *sf_crtc,
-			 int ppNum, int coefNum, int rcoef, int gcoef, int bcoef, int off)
+			 int pp_num, int coef_num, int rcoef, int gcoef, int bcoef, int off)
 {
 	int rgcoeff = rcoef | gcoef << PP_COEF_G1;
 	int bcoefoff = bcoef | off << PP_OFFSET_1;
-	u32 addr1 = (coefNum - 1) * 0x8 + PP_R2Y_COEF1;
-	u32 addr2 = (coefNum - 1) * 0x8 + PP_R2Y_COEF2;
+	u32 addr1 = (coef_num - 1) * 0x8 + PP_R2Y_COEF1;
+	u32 addr2 = (coef_num - 1) * 0x8 + PP_R2Y_COEF2;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, addr1, rgcoeff);
-	sf_fb_vppwrite32(sf_crtc, ppNum, addr2, bcoefoff);
-	dev_dbg(sf_crtc->dev, "PP%d coefNum: %d, rCoef: 0x%4x, gCoef: 0x%4x, bCoef: 0x%4x, off: 0x%4x\n",
-		ppNum, coefNum, rcoef, gcoef, bcoef, off);
+	sf_fb_vppwrite32(sf_crtc, pp_num, addr1, rgcoeff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, addr2, bcoefoff);
+	dev_dbg(sf_crtc->dev, "PP%d coef_num: %d, rCoef: 0x%4x, gCoef: 0x%4x, bCoef: 0x%4x, off: 0x%4x\n",
+		pp_num, coef_num, rcoef, gcoef, bcoef, off);
 }
 
 static void pp_output_fmt_cfg(struct starfive_crtc *sf_crtc,
-			      int ppNum, int yuv420Inter, int yuv422_mode)
+			      int pp_num, int yuv420_inter, int yuv422_mode)
 {
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL2) & 0xfffffffeU;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL2) & 0xfffffffeU;
 
-	preCfg = preCfg |
-		yuv420Inter << PP_DES_420_ORDER |
+	pre_cfg = pre_cfg |
+		yuv420_inter << PP_DES_420_ORDER |
 		yuv422_mode << PP_DES_422_ORDER;
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL2, preCfg);
-	dev_dbg(sf_crtc->dev, "PP%d Lock Transfer: %d\n", ppNum, yuv422_mode);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL2, pre_cfg);
+	dev_dbg(sf_crtc->dev, "PP%d Lock Transfer: %d\n", pp_num, yuv422_mode);
 }
 
-static void pp_lockTrans_cfg(struct starfive_crtc *sf_crtc, int ppNum, int lockTrans)
+static void pp_lock_trans_cfg(struct starfive_crtc *sf_crtc, int pp_num, int lock_trans)
 {
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL2) & 0xfffffffeU;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL2) & 0xfffffffeU;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL2, lockTrans | preCfg);
-	dev_dbg(sf_crtc->dev, "PP%d Lock Transfer: %d\n", ppNum, lockTrans);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL2, lock_trans | pre_cfg);
+	dev_dbg(sf_crtc->dev, "PP%d Lock Transfer: %d\n", pp_num, lock_trans);
 }
 
-static void pp_int_interval_cfg(struct starfive_crtc *sf_crtc, int ppNum, int interval)
+static void pp_int_interval_cfg(struct starfive_crtc *sf_crtc, int pp_num, int interval)
 {
-	int preCfg = sf_fb_vppread32(sf_crtc, ppNum, PP_CTRL2) & 0xffff00ffU;
+	int pre_cfg = sf_fb_vppread32(sf_crtc, pp_num, PP_CTRL2) & 0xffff00ffU;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_CTRL2, interval << PP_INT_INTERVAL | preCfg);
-	dev_dbg(sf_crtc->dev, "PP%d Frame Interrupt interval: %d Frames\n", ppNum, interval);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_CTRL2, interval << PP_INT_INTERVAL | pre_cfg);
+	dev_dbg(sf_crtc->dev, "PP%d Frame Interrupt interval: %d Frames\n", pp_num, interval);
 }
 
-static void pp_srcSize_cfg(struct starfive_crtc *sf_crtc, int ppNum, int hsize, int vsize)
+static void pp_src_size_cfg(struct starfive_crtc *sf_crtc, int pp_num, int hsize, int vsize)
 {
 	int size = hsize | vsize << PP_SRC_VSIZE;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_SIZE, size);
-	dev_dbg(sf_crtc->dev, "PP%d HSize: %d, VSize: %d\n", ppNum, hsize, vsize);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_SIZE, size);
+	dev_dbg(sf_crtc->dev, "PP%d HSize: %d, VSize: %d\n", pp_num, hsize, vsize);
 }
 
 //0-no drop, 1-1/2, 2-1/4, down to 1/32
-static void pp_drop_cfg(struct starfive_crtc *sf_crtc, int ppNum, int hdrop, int vdrop)
+static void pp_drop_cfg(struct starfive_crtc *sf_crtc, int pp_num, int hdrop, int vdrop)
 {
 	int drop = hdrop | vdrop << PP_DROP_VRATION;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DROP_CTRL, drop);
-	dev_dbg(sf_crtc->dev, "PP%d HDrop: %d, VDrop: %d\n", ppNum, hdrop, vdrop);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DROP_CTRL, drop);
+	dev_dbg(sf_crtc->dev, "PP%d HDrop: %d, VDrop: %d\n", pp_num, hdrop, vdrop);
 }
 
-static void pp_desSize_cfg(struct starfive_crtc *sf_crtc, int ppNum, int hsize, int vsize)
+static void pp_des_size_cfg(struct starfive_crtc *sf_crtc, int pp_num, int hsize, int vsize)
 {
 	int size = hsize | vsize << PP_DES_VSIZE;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_SIZE, size);
-	dev_dbg(sf_crtc->dev, "PP%d HSize: %d, VSize: %d\n", ppNum, hsize, vsize);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_SIZE, size);
+	dev_dbg(sf_crtc->dev, "PP%d HSize: %d, VSize: %d\n", pp_num, hsize, vsize);
 }
 
-static void pp_desAddr_cfg(struct starfive_crtc *sf_crtc,
-			   int ppNum, int yaddr, int uaddr, int vaddr)
+static void pp_des_addr_cfg(struct starfive_crtc *sf_crtc,
+			    int pp_num, int yaddr, int uaddr, int vaddr)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_Y_SA, yaddr);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_U_SA, uaddr);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_V_SA, vaddr);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_Y_SA, yaddr);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_U_SA, uaddr);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_V_SA, vaddr);
 	dev_dbg(sf_crtc->dev, "PP%d des-Addr Y: 0x%8x, U: 0x%8x, V: 0x%8x\n",
-		ppNum, yaddr, uaddr, vaddr);
+		pp_num, yaddr, uaddr, vaddr);
 }
 
-static void pp_desOffset_cfg(struct starfive_crtc *sf_crtc,
-			     int ppNum, int yoff, int uoff, int voff)
+static void pp_des_offset_cfg(struct starfive_crtc *sf_crtc,
+			      int pp_num, int yoff, int uoff, int voff)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_Y_OFS, yoff);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_U_OFS, uoff);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_DES_V_OFS, voff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_Y_OFS, yoff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_U_OFS, uoff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_DES_V_OFS, voff);
 	dev_dbg(sf_crtc->dev, "PP%d des-Offset Y: 0x%4x, U: 0x%4x, V: 0x%4x\n",
-		ppNum, yoff, uoff, voff);
+		pp_num, yoff, uoff, voff);
 }
 
-void pp_intcfg(struct starfive_crtc *sf_crtc, int ppNum, int intMask)
+void pp_intcfg(struct starfive_crtc *sf_crtc, int pp_num, int int_mask)
 {
 	int intcfg = ~(0x1<<0);
 
-	if (intMask)
+	if (int_mask)
 		intcfg = 0xf;
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, intcfg);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_INT_MASK, intcfg);
 }
 
 //next source frame Y/RGB start address, ?
-void pp_srcAddr_next(struct starfive_crtc *sf_crtc, int ppNum, int ysa, int usa, int vsa)
+void pp_src_addr_next(struct starfive_crtc *sf_crtc, int pp_num, int ysa, int usa, int vsa)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_Y_SA_NXT, ysa);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_U_SA_NXT, usa);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_V_SA_NXT, vsa);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_Y_SA_NXT, ysa);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_U_SA_NXT, usa);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_V_SA_NXT, vsa);
 	dev_dbg(sf_crtc->dev,
 		"PP%d next Y startAddr: 0x%8x, U startAddr: 0x%8x, V startAddr: 0x%8x\n",
-		ppNum, ysa, usa, vsa);
+		pp_num, ysa, usa, vsa);
 }
 
-void pp_srcOffset_cfg(struct starfive_crtc *sf_crtc, int ppNum, int yoff, int uoff, int voff)
+void pp_src_offset_cfg(struct starfive_crtc *sf_crtc, int pp_num, int yoff, int uoff, int voff)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_Y_OFS, yoff);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_U_OFS, uoff);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SRC_V_OFS, voff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_Y_OFS, yoff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_U_OFS, uoff);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SRC_V_OFS, voff);
 	dev_dbg(sf_crtc->dev, "PP%d src-Offset Y: 0x%4x, U: 0x%4x, V: 0x%4x\n",
-		ppNum, yoff, uoff, voff);
+		pp_num, yoff, uoff, voff);
 }
 
-void pp_nxtAddr_load(struct starfive_crtc *sf_crtc, int ppNum, int nxtPar, int nxtPos)
+void pp_nxt_addr_load(struct starfive_crtc *sf_crtc, int pp_num, int nxt_par, int nxt_pos)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_LOAD_NXT_PAR, nxtPar | nxtPos);
-	dev_dbg(sf_crtc->dev, "PP%d next addrPointer: %d, %d set Regs\n", ppNum, nxtPar, nxtPos);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_LOAD_NXT_PAR, nxt_par | nxt_pos);
+	dev_dbg(sf_crtc->dev, "PP%d next addrPointer: %d, %d set Regs\n", pp_num, nxt_par, nxt_pos);
 }
 
-void pp_run(struct starfive_crtc *sf_crtc, int ppNum, int start)
+void pp_run(struct starfive_crtc *sf_crtc, int pp_num, int start)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_SWITCH, start);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_SWITCH, start);
 	//if (start)
-	//	dev_dbg(sf_crtc->dev, "Now start the PP%d\n\n", ppNum);
+	//	dev_dbg(sf_crtc->dev, "Now start the PP%d\n\n", pp_num);
 }
 
 void pp1_enable_intr(struct starfive_crtc *sf_crtc)
@@ -264,68 +265,68 @@ void pp1_enable_intr(struct starfive_crtc *sf_crtc)
 	sf_fb_vppwrite32(sf_crtc, 1, PP_INT_MASK, 0x0);
 }
 
-void pp_enable_intr(struct starfive_crtc *sf_crtc, int ppNum)
+void pp_enable_intr(struct starfive_crtc *sf_crtc, int pp_num)
 {
 	u32 cfg = 0xfffe;
 
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, cfg);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_INT_MASK, cfg);
 }
 
-void pp_disable_intr(struct starfive_crtc *sf_crtc, int ppNum)
+void pp_disable_intr(struct starfive_crtc *sf_crtc, int pp_num)
 {
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_MASK, 0xf);
-	sf_fb_vppwrite32(sf_crtc, ppNum, PP_INT_CLR, 0xf);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_INT_MASK, 0xf);
+	sf_fb_vppwrite32(sf_crtc, pp_num, PP_INT_CLR, 0xf);
 }
 
-static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *src)
+static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int pp_num, struct pp_video_mode *src)
 {
 	switch (src->format) {
 	case COLOR_YUV422_YVYU:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_YVYU, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV422, 0x0, COLOR_YUV422_YVYU, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_VYUY:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_VYUY, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV422, 0x0, COLOR_YUV422_VYUY, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_YUYV:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_YUYV, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV422, 0x0, COLOR_YUV422_YUYV, 0x0, 0x0);
 		break;
 	case COLOR_YUV422_UYVY:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV422, 0x0, COLOR_YUV422_UYVY, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV422, 0x0, COLOR_YUV422_UYVY, 0x0, 0x0);
 		break;
 	case COLOR_YUV420P:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420P, 0x0, 0, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV420P, 0x0, 0, 0x0, 0x0);
 		break;
 	case COLOR_YUV420_NV21:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV420I, 0x1, 0,
 			      COLOR_YUV420_NV21 - COLOR_YUV420_NV21, 0x0);
 		break;
 	case COLOR_YUV420_NV12:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_YUV420I, 0x1, 0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_YUV420I, 0x1, 0,
 			      COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0x0);
 		break;
 	case COLOR_RGB888_ARGB:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
 			      0x0, COLOR_RGB888_ARGB - COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_ABGR:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
 			      0x0, COLOR_RGB888_ABGR-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_RGBA:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
 			      0x0, COLOR_RGB888_RGBA-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_BGRA:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_GRB888, 0x0, 0x0,
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
 			      0x0, COLOR_RGB888_BGRA-COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB565:
-		pp_srcfmt_cfg(sf_crtc, ppNum, PP_SRC_RGB565, 0x0, 0x0, 0x0, 0x0);
+		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_RGB565, 0x0, 0x0, 0x0, 0x0);
 		break;
 	}
 }
 
-static void pp_dstfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_video_mode *dst)
+static void pp_dstfmt_set(struct starfive_crtc *sf_crtc, int pp_num, struct pp_video_mode *dst)
 {
 	unsigned int outsel = 1;
 
@@ -334,178 +335,181 @@ static void pp_dstfmt_set(struct starfive_crtc *sf_crtc, int ppNum, struct pp_vi
 
 	switch (dst->format) {
 	case COLOR_YUV422_YVYU:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV422, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
 		break;
 	case COLOR_YUV422_VYUY:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_VYUY);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV422, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, COLOR_YUV422_UYVY - COLOR_YUV422_VYUY);
 		break;
 	case COLOR_YUV422_YUYV:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YUYV);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV422, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YUYV);
 		break;
 	case COLOR_YUV422_UYVY:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV422, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV422, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, COLOR_YUV422_UYVY - COLOR_YUV422_YVYU);
 		break;
 	case COLOR_YUV420P:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420P, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV420P, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, 0);
 		break;
 	case COLOR_YUV420_NV21:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420I, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, COLOR_YUV420_NV21 - COLOR_YUV420_NV21, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV420I, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, COLOR_YUV420_NV21 - COLOR_YUV420_NV21, 0);
 		break;
 	case COLOR_YUV420_NV12:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_YUV420I, 0x0);///0x2, 0x0);
-		//pp_output_fmt_cfg(ppNum, COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_YUV420I, 0x0);///0x2, 0x0);
+		//pp_output_fmt_cfg(pp_num, COLOR_YUV420_NV12 - COLOR_YUV420_NV21, 0);
 		break;
 	case COLOR_RGB888_ARGB:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_ARGB888, 0x0);
-		//pp_output_fmt_cfg(ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_ARGB888, 0x0);
+		//pp_output_fmt_cfg(pp_num, 0, 0);
 		break;
 	case COLOR_RGB888_ABGR:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_ABGR888, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_ABGR888, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, 0);
 		break;
 	case COLOR_RGB888_RGBA:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_RGBA888, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_RGBA888, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, 0);
 		break;
 	case COLOR_RGB888_BGRA:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_BGRA888, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_BGRA888, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, 0);
 		break;
 	case COLOR_RGB565:
-		pp_output_cfg(sf_crtc, ppNum, outsel, 0x0, PP_DST_RGB565, 0x0);
-		pp_output_fmt_cfg(sf_crtc, ppNum, 0, 0);
+		pp_output_cfg(sf_crtc, pp_num, outsel, 0x0, PP_DST_RGB565, 0x0);
+		pp_output_fmt_cfg(sf_crtc, pp_num, 0, 0);
 		break;
 	}
 }
 
-static void pp_format_set(struct starfive_crtc *sf_crtc, int ppNum,
+static void pp_format_set(struct starfive_crtc *sf_crtc, int pp_num,
 			  struct pp_video_mode *src, struct pp_video_mode *dst)
 {
 	/* 1:bypass, 0:not bypass */
 	unsigned int scale_byp = 1;
 
-	pp_srcfmt_set(sf_crtc, ppNum, src);
-	pp_dstfmt_set(sf_crtc, ppNum, dst);
+	pp_srcfmt_set(sf_crtc, pp_num, src);
+	pp_dstfmt_set(sf_crtc, pp_num, dst);
 
 	if (src->height != dst->height || src->width != dst->width)
 		scale_byp = 0;
 
 	if (src->format >= COLOR_RGB888_ARGB && dst->format <= COLOR_YUV420_NV12) {
 		/* rgb -> yuv-420 */
-		pp_r2yscal_bypass(sf_crtc, ppNum, NOT_BYPASS, scale_byp, BYPASS);
-		pp_r2y_coeff(sf_crtc, ppNum, 1, R2Y_COEF_R1, R2Y_COEF_G1, R2Y_COEF_B1, R2Y_OFFSET1);
-		pp_r2y_coeff(sf_crtc, ppNum, 2, R2Y_COEF_R2, R2Y_COEF_G2, R2Y_COEF_B2, R2Y_OFFSET2);
-		pp_r2y_coeff(sf_crtc, ppNum, 3, R2Y_COEF_R3, R2Y_COEF_G3, R2Y_COEF_B3, R2Y_OFFSET3);
+		pp_r2yscal_bypass(sf_crtc, pp_num, NOT_BYPASS, scale_byp, BYPASS);
+		pp_r2y_coeff(sf_crtc, pp_num, 1, R2Y_COEF_R1, R2Y_COEF_G1,
+			     R2Y_COEF_B1, R2Y_OFFSET1);
+		pp_r2y_coeff(sf_crtc, pp_num, 2, R2Y_COEF_R2, R2Y_COEF_G2,
+			     R2Y_COEF_B2, R2Y_OFFSET2);
+		pp_r2y_coeff(sf_crtc, pp_num, 3, R2Y_COEF_R3, R2Y_COEF_G3,
+			     R2Y_COEF_B3, R2Y_OFFSET3);
 	} else if (src->format <= COLOR_YUV420_NV12 && dst->format >= COLOR_RGB888_ARGB) {
 		/* yuv-420 -> rgb */
-		pp_r2yscal_bypass(sf_crtc, ppNum, BYPASS, scale_byp, NOT_BYPASS);
+		pp_r2yscal_bypass(sf_crtc, pp_num, BYPASS, scale_byp, NOT_BYPASS);
 	} else if (src->format <= COLOR_YUV422_YVYU && dst->format <= COLOR_YUV420_NV12) {
 		/* yuv422 -> yuv420 */
-		pp_r2yscal_bypass(sf_crtc, ppNum, BYPASS, scale_byp, BYPASS);
+		pp_r2yscal_bypass(sf_crtc, pp_num, BYPASS, scale_byp, BYPASS);
 	} else {
 		/* rgb565->argb888 */
-		pp_r2yscal_bypass(sf_crtc, ppNum, BYPASS, scale_byp, BYPASS);
+		pp_r2yscal_bypass(sf_crtc, pp_num, BYPASS, scale_byp, BYPASS);
 	} //else if ((src->format >= COLOR_RGB888_ARGB) && (dst->format >= COLOR_RGB888_ARGB)) {
 		/* rgb -> rgb */
-		// pp_r2yscal_bypass(ppNum, BYPASS, scale_byp, BYPASS);
+		// pp_r2yscal_bypass(pp_num, BYPASS, scale_byp, BYPASS);
 	//}
-	pp_argb_alpha(sf_crtc, ppNum, 0xff);
+	pp_argb_alpha(sf_crtc, pp_num, 0xff);
 
 	if (dst->addr)
-		pp_lockTrans_cfg(sf_crtc, ppNum, SYS_BUS_OUTPUT);
+		pp_lock_trans_cfg(sf_crtc, pp_num, SYS_BUS_OUTPUT);
 	else
-		pp_lockTrans_cfg(sf_crtc, ppNum, FIFO_OUTPUT);
+		pp_lock_trans_cfg(sf_crtc, pp_num, FIFO_OUTPUT);
 
-	pp_int_interval_cfg(sf_crtc, ppNum, 0x1);
+	pp_int_interval_cfg(sf_crtc, pp_num, 0x1);
 }
 
-static void pp_size_set(struct starfive_crtc *sf_crtc, int ppNum,
+static void pp_size_set(struct starfive_crtc *sf_crtc, int pp_num,
 			struct pp_video_mode *src, struct pp_video_mode *dst)
 {
-	u32 srcAddr, dstaddr;
+	u32 src_addr, dstaddr;
 	unsigned int size, y_rgb_ofst, uofst;
 	unsigned int v_uvofst = 0, next_y_rgb_addr = 0, next_u_addr = 0, next_v_addr = 0;
 	unsigned int i = 0;
 
-	pp_srcSize_cfg(sf_crtc, ppNum, src->width - 1, src->height - 1);
-	pp_drop_cfg(sf_crtc, ppNum, 0x0, 0x0);///0:no drop
-	pp_desSize_cfg(sf_crtc, ppNum, dst->width - 1, dst->height - 1);
+	pp_src_size_cfg(sf_crtc, pp_num, src->width - 1, src->height - 1);
+	pp_drop_cfg(sf_crtc, pp_num, 0x0, 0x0);///0:no drop
+	pp_des_size_cfg(sf_crtc, pp_num, dst->width - 1, dst->height - 1);
 
-	srcAddr = src->addr + (i<<30); //PP_SRC_BASE_ADDR + (i<<30);
+	src_addr = src->addr + (i<<30); //PP_SRC_BASE_ADDR + (i<<30);
 	size = src->width * src->height;
 
 	if (src->format >= COLOR_RGB888_ARGB) {
-		next_y_rgb_addr = srcAddr;
+		next_y_rgb_addr = src_addr;
 		next_u_addr = 0;
 		next_v_addr = 0;
 
 		y_rgb_ofst = 0;
 		uofst = 0;
 		v_uvofst = 0;
-		//pp_srcAddr_next(ppNum, srcAddr, 0, 0);
-		//pp_srcOffset_cfg(ppNum, 0x0, 0x0, 0x0);
+		//pp_src_addr_next(pp_num, src_addr, 0, 0);
+		//pp_src_offset_cfg(pp_num, 0x0, 0x0, 0x0);
 	} else {
 		if (src->format == COLOR_YUV420_NV21) {    //ok
-			next_y_rgb_addr = srcAddr;
-			next_u_addr = srcAddr+size+1;
-			next_v_addr = srcAddr+size;
+			next_y_rgb_addr = src_addr;
+			next_u_addr = src_addr+size+1;
+			next_v_addr = src_addr+size;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = size;
 		} else if (src->format == COLOR_YUV420_NV12) {
-			next_y_rgb_addr = srcAddr;
-			next_u_addr = srcAddr+size;
-			next_v_addr = srcAddr+size+1;
+			next_y_rgb_addr = src_addr;
+			next_u_addr = src_addr+size;
+			next_v_addr = src_addr+size+1;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = size;
 		} else if (src->format == COLOR_YUV420P) {
-			next_y_rgb_addr = srcAddr;
-			next_u_addr = srcAddr+size;
-			next_v_addr = srcAddr+size*5/4;
+			next_y_rgb_addr = src_addr;
+			next_u_addr = src_addr+size;
+			next_v_addr = src_addr+size*5/4;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_YVYU) {   //ok
-			next_y_rgb_addr = srcAddr;
-			next_u_addr = srcAddr+1;
-			next_v_addr = srcAddr+3;
+			next_y_rgb_addr = src_addr;
+			next_u_addr = src_addr+1;
+			next_v_addr = src_addr+3;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_VYUY) {   //ok
-			next_y_rgb_addr = srcAddr+1;
-			next_u_addr = srcAddr+2;
-			next_v_addr = srcAddr;
+			next_y_rgb_addr = src_addr+1;
+			next_u_addr = src_addr+2;
+			next_v_addr = src_addr;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_YUYV) {   //ok
-			next_y_rgb_addr = srcAddr;
-			next_u_addr = srcAddr+1;
-			next_v_addr = srcAddr+2;
+			next_y_rgb_addr = src_addr;
+			next_u_addr = src_addr+1;
+			next_v_addr = src_addr+2;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_UYVY) {  //ok
-			next_y_rgb_addr = srcAddr+1;
-			next_u_addr = srcAddr;
-			next_v_addr = srcAddr+2;
+			next_y_rgb_addr = src_addr+1;
+			next_u_addr = src_addr;
+			next_v_addr = src_addr+2;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		}
 	}
-	pp_srcAddr_next(sf_crtc, ppNum, next_y_rgb_addr, next_u_addr, next_v_addr);
-	pp_srcOffset_cfg(sf_crtc, ppNum, y_rgb_ofst, uofst, v_uvofst);
+	pp_src_addr_next(sf_crtc, pp_num, next_y_rgb_addr, next_u_addr, next_v_addr);
+	pp_src_offset_cfg(sf_crtc, pp_num, y_rgb_ofst, uofst, v_uvofst);
 	/* source addr not change */
-	pp_nxtAddr_load(sf_crtc, ppNum, 0x1, (i & 0x1));
+	pp_nxt_addr_load(sf_crtc, pp_num, 0x1, (i & 0x1));
 
 	if (dst->addr) {
 		dstaddr = dst->addr;
@@ -571,17 +575,17 @@ static void pp_size_set(struct starfive_crtc *sf_crtc, int ppNum,
 				v_uvofst = 0;
 			}
 		}
-		pp_desAddr_cfg(sf_crtc, ppNum, next_y_rgb_addr, next_u_addr, next_v_addr);
-		pp_desOffset_cfg(sf_crtc, ppNum, y_rgb_ofst, uofst, v_uvofst);
+		pp_des_addr_cfg(sf_crtc, pp_num, next_y_rgb_addr, next_u_addr, next_v_addr);
+		pp_des_offset_cfg(sf_crtc, pp_num, y_rgb_ofst, uofst, v_uvofst);
 	}
 }
 
-static void pp_config(struct starfive_crtc *sf_crtc, int ppNum,
+static void pp_config(struct starfive_crtc *sf_crtc, int pp_num,
 		      struct pp_video_mode *src, struct pp_video_mode *dst)
 {
-	//pp_disable_intr(sf_dev, ppNum);
-	pp_format_set(sf_crtc, ppNum, src, dst);
-	pp_size_set(sf_crtc, ppNum, src, dst);
+	//pp_disable_intr(sf_dev, pp_num);
+	pp_format_set(sf_crtc, pp_num, src, dst);
+	pp_size_set(sf_crtc, pp_num, src, dst);
 }
 
 irqreturn_t vpp1_isr_handler(int this_irq, void *dev_id)

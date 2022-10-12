@@ -26,9 +26,9 @@ enum lcdc_win_num {
 
 enum WIN_FMT {
 	WIN_FMT_RGB565 = 4,
-	WIN_FMT_xRGB1555,
-	WIN_FMT_xRGB4444,
-	WIN_FMT_xRGB8888,
+	WIN_FMT_XRGB1555,
+	WIN_FMT_XRGB4444,
+	WIN_FMT_XRGB8888,
 };
 
 #define LCDC_STOP	0
@@ -149,11 +149,11 @@ irqreturn_t lcdc_isr_handler(int this_irq, void *dev_id);
 void lcdc_int_cfg(struct starfive_crtc *sf_crtc, int mask);
 void lcdc_config(struct starfive_crtc *sf_crtc,
 		 struct drm_crtc_state *old_state,
-		 int winNum);
+		 int win_num);
 int lcdc_win_sel(struct starfive_crtc *sf_crtc, enum lcdc_in_mode sel);
 void lcdc_dsi_sel(struct starfive_crtc *sf_crtc);
 void lcdc_run(struct starfive_crtc *sf_crtc,
-	      uint32_t winMode, uint32_t lcdTrig);
+	      uint32_t win_mode, uint32_t lcd_trig);
 void starfive_set_win_addr(struct starfive_crtc *sf_crtc, int addr);
 int starfive_lcdc_enable(struct starfive_crtc *sf_crtc);
 

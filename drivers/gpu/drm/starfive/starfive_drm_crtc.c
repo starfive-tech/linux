@@ -40,7 +40,7 @@ static int ddrfmt_to_ppfmt(struct starfive_crtc *sf_crtc)
 	int ddrfmt = sf_crtc->ddr_format;
 	int ret = 0;
 
-	sf_crtc->lcdcfmt = WIN_FMT_xRGB8888; //lcdc default used
+	sf_crtc->lcdcfmt = WIN_FMT_XRGB8888; //lcdc default used
 	sf_crtc->pp_conn_lcdc = 1;//default config
 	switch (ddrfmt) {
 	case DRM_FORMAT_UYVY:
@@ -84,11 +84,11 @@ static int ddrfmt_to_ppfmt(struct starfive_crtc *sf_crtc)
 		//sf_crtc->pp_conn_lcdc = -1;
 		break;
 	case DRM_FORMAT_XRGB1555:
-		sf_crtc->lcdcfmt = WIN_FMT_xRGB1555;
+		sf_crtc->lcdcfmt = WIN_FMT_XRGB1555;
 		sf_crtc->pp_conn_lcdc = -1;//this format no need pp, lcdc can direct read ddr buff;
 		break;
 	case DRM_FORMAT_XRGB4444:
-		sf_crtc->lcdcfmt = WIN_FMT_xRGB4444;
+		sf_crtc->lcdcfmt = WIN_FMT_XRGB4444;
 		sf_crtc->pp_conn_lcdc = -1;//this format no need pp, lcdc can direct read ddr buff;
 		break;
 

@@ -57,7 +57,7 @@ struct starfive_crtc {
 
 	struct pp_mode	*pp;
 
-	int		winNum;
+	int		win_num;
 	int		pp_conn_lcdc;
 	unsigned int	ddr_format;
 	bool		ddr_format_change;

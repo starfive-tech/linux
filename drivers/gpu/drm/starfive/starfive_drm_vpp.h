@@ -183,15 +183,15 @@ struct pp_mode {
 #define clk_ppi_tx_esc_clk_ctrl_REG		0x40
 
 void mapconv_pp0_sel(struct starfive_crtc *sf_crtc, int sel);
-void pp_srcAddr_next(struct starfive_crtc *sf_crtc, int ppNum, int ysa, int usa, int vsa);
-void pp_srcOffset_cfg(struct starfive_crtc *sf_crtc, int ppNum, int yoff, int uoff, int voff);
-void pp_nxtAddr_load(struct starfive_crtc *sf_crtc, int ppNum, int nxtPar, int nxtPos);
-void pp_intcfg(struct starfive_crtc *sf_crtc, int ppNum, int intMask);
+void pp_src_addr_next(struct starfive_crtc *sf_crtc, int pp_num, int ysa, int usa, int vsa);
+void pp_src_offset_cfg(struct starfive_crtc *sf_crtc, int pp_num, int yoff, int uoff, int voff);
+void pp_nxt_addr_load(struct starfive_crtc *sf_crtc, int pp_num, int nxt_par, int nxt_pos);
+void pp_intcfg(struct starfive_crtc *sf_crtc, int pp_num, int int_mask);
 irqreturn_t vpp1_isr_handler(int this_irq, void *dev_id);
 void pp1_enable_intr(struct starfive_crtc *sf_crtc);
-void pp_enable_intr(struct starfive_crtc *sf_crtc, int ppNum);
-void pp_disable_intr(struct starfive_crtc *sf_crtc, int ppNum);
-void pp_run(struct starfive_crtc *sf_crtc, int ppNum, int start);
+void pp_enable_intr(struct starfive_crtc *sf_crtc, int pp_num);
+void pp_disable_intr(struct starfive_crtc *sf_crtc, int pp_num);
+void pp_run(struct starfive_crtc *sf_crtc, int pp_num, int start);
 int starfive_pp_enable(struct starfive_crtc *sf_crtc);
 int starfive_pp_get_2lcdc_id(struct starfive_crtc *sf_crtc);
 int starfive_pp_update(struct starfive_crtc *sf_crtc);
