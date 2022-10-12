@@ -220,7 +220,7 @@ static void pp_des_offset_cfg(struct starfive_crtc *sf_crtc,
 
 void pp_intcfg(struct starfive_crtc *sf_crtc, int pp_num, int int_mask)
 {
-	int intcfg = ~(0x1<<0);
+	int intcfg = ~(0x1 << 0);
 
 	if (int_mask)
 		intcfg = 0xf;
@@ -310,15 +310,15 @@ static void pp_srcfmt_set(struct starfive_crtc *sf_crtc, int pp_num, struct pp_v
 		break;
 	case COLOR_RGB888_ABGR:
 		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
-			      0x0, COLOR_RGB888_ABGR-COLOR_RGB888_ARGB);
+			      0x0, COLOR_RGB888_ABGR - COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_RGBA:
 		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
-			      0x0, COLOR_RGB888_RGBA-COLOR_RGB888_ARGB);
+			      0x0, COLOR_RGB888_RGBA - COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB888_BGRA:
 		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_GRB888, 0x0, 0x0,
-			      0x0, COLOR_RGB888_BGRA-COLOR_RGB888_ARGB);
+			      0x0, COLOR_RGB888_BGRA - COLOR_RGB888_ARGB);
 		break;
 	case COLOR_RGB565:
 		pp_srcfmt_cfg(sf_crtc, pp_num, PP_SRC_RGB565, 0x0, 0x0, 0x0, 0x0);
@@ -441,7 +441,7 @@ static void pp_size_set(struct starfive_crtc *sf_crtc, int pp_num,
 	pp_drop_cfg(sf_crtc, pp_num, 0x0, 0x0);///0:no drop
 	pp_des_size_cfg(sf_crtc, pp_num, dst->width - 1, dst->height - 1);
 
-	src_addr = src->addr + (i<<30); //PP_SRC_BASE_ADDR + (i<<30);
+	src_addr = src->addr + (i << 30); //PP_SRC_BASE_ADDR + (i << 30);
 	size = src->width * src->height;
 
 	if (src->format >= COLOR_RGB888_ARGB) {
@@ -457,50 +457,50 @@ static void pp_size_set(struct starfive_crtc *sf_crtc, int pp_num,
 	} else {
 		if (src->format == COLOR_YUV420_NV21) {    //ok
 			next_y_rgb_addr = src_addr;
-			next_u_addr = src_addr+size+1;
-			next_v_addr = src_addr+size;
+			next_u_addr = src_addr + size + 1;
+			next_v_addr = src_addr + size;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = size;
 		} else if (src->format == COLOR_YUV420_NV12) {
 			next_y_rgb_addr = src_addr;
-			next_u_addr = src_addr+size;
-			next_v_addr = src_addr+size+1;
+			next_u_addr = src_addr + size;
+			next_v_addr = src_addr + size + 1;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = size;
 		} else if (src->format == COLOR_YUV420P) {
 			next_y_rgb_addr = src_addr;
-			next_u_addr = src_addr+size;
-			next_v_addr = src_addr+size*5/4;
+			next_u_addr = src_addr + size;
+			next_v_addr = src_addr + size * 5 / 4;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_YVYU) {   //ok
 			next_y_rgb_addr = src_addr;
-			next_u_addr = src_addr+1;
-			next_v_addr = src_addr+3;
+			next_u_addr = src_addr + 1;
+			next_v_addr = src_addr + 3;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_VYUY) {   //ok
-			next_y_rgb_addr = src_addr+1;
-			next_u_addr = src_addr+2;
+			next_y_rgb_addr = src_addr + 1;
+			next_u_addr = src_addr + 2;
 			next_v_addr = src_addr;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_YUYV) {   //ok
 			next_y_rgb_addr = src_addr;
-			next_u_addr = src_addr+1;
-			next_v_addr = src_addr+2;
+			next_u_addr = src_addr + 1;
+			next_v_addr = src_addr + 2;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
 		} else if (src->format == COLOR_YUV422_UYVY) {  //ok
-			next_y_rgb_addr = src_addr+1;
+			next_y_rgb_addr = src_addr + 1;
 			next_u_addr = src_addr;
-			next_v_addr = src_addr+2;
+			next_v_addr = src_addr + 2;
 			y_rgb_ofst = 0;
 			uofst = 0;
 			v_uvofst = 0;
@@ -513,7 +513,7 @@ static void pp_size_set(struct starfive_crtc *sf_crtc, int pp_num,
 
 	if (dst->addr) {
 		dstaddr = dst->addr;
-		size = dst->height*dst->width;
+		size = dst->height * dst->width;
 		if (dst->format >= COLOR_RGB888_ARGB) {
 			next_y_rgb_addr = dstaddr;
 			next_u_addr = 0;
@@ -525,51 +525,51 @@ static void pp_size_set(struct starfive_crtc *sf_crtc, int pp_num,
 			if (dst->format == COLOR_YUV420_NV21) {
 				/* yyyyvuvuvu */
 				next_y_rgb_addr = dstaddr;
-				next_u_addr = dstaddr+size;
-				next_v_addr = 0;//dstaddr+size;
+				next_u_addr = dstaddr + size;
+				next_v_addr = 0;//dstaddr + size;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV420_NV12) {
 				/* yyyyuvuvuv */
 				next_y_rgb_addr = dstaddr;
-				next_u_addr = dstaddr+size;
-				next_v_addr = dstaddr+size+1;
+				next_u_addr = dstaddr + size;
+				next_v_addr = dstaddr + size + 1;
 				y_rgb_ofst = 0;
 				uofst = size;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV420P) {
 				next_y_rgb_addr = dstaddr;
-				next_u_addr = dstaddr+size;
-				next_v_addr = dstaddr+size*5/4;
+				next_u_addr = dstaddr + size;
+				next_v_addr = dstaddr + size * 5 / 4;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV422_YVYU) {
 				next_y_rgb_addr = dstaddr;
-				next_u_addr = dstaddr+1;
-				next_v_addr = dstaddr+3;
+				next_u_addr = dstaddr + 1;
+				next_v_addr = dstaddr + 3;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV422_VYUY) {
-				next_y_rgb_addr = dstaddr+1;
-				next_u_addr = dstaddr+2;
+				next_y_rgb_addr = dstaddr + 1;
+				next_u_addr = dstaddr + 2;
 				next_v_addr = dstaddr;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV422_YUYV) {
 				next_y_rgb_addr = dstaddr;
-				next_u_addr = dstaddr+1;
-				next_v_addr = dstaddr+2;
+				next_u_addr = dstaddr + 1;
+				next_v_addr = dstaddr + 2;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;
 			} else if (dst->format == COLOR_YUV422_UYVY) {
-				next_y_rgb_addr = dstaddr+1;
+				next_y_rgb_addr = dstaddr + 1;
 				next_u_addr = dstaddr;
-				next_v_addr = dstaddr+2;
+				next_v_addr = dstaddr + 2;
 				y_rgb_ofst = 0;
 				uofst = 0;
 				v_uvofst = 0;

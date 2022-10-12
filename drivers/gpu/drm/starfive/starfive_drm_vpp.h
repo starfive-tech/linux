@@ -23,13 +23,13 @@
 #define R2Y_COEF_G1	150
 #define R2Y_COEF_B1	29
 #define R2Y_OFFSET1	0
-#define R2Y_COEF_R2	(0x400|43)
-#define R2Y_COEF_G2	(0x400|85)
+#define R2Y_COEF_R2	(0x400 | 43)
+#define R2Y_COEF_G2	(0x400 | 85)
 #define R2Y_COEF_B2	128
 #define R2Y_OFFSET2	128
 #define R2Y_COEF_R3	128
-#define R2Y_COEF_G3	(0x400|107)
-#define R2Y_COEF_B3	(0x400|21)
+#define R2Y_COEF_G3	(0x400 | 107)
+#define R2Y_COEF_B3	(0x400 | 21)
 #define R2Y_OFFSET3	128
 
 //sys registers

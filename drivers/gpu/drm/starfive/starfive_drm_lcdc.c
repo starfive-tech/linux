@@ -341,7 +341,7 @@ void lcdc_dsi_sel(struct starfive_crtc *sf_crtc)
 
 	sf_fb_lcdcwrite32(sf_crtc, LCDC_GCTRL, cfg);
 	temp = starfive_lcdc_rstread32(sf_crtc, SRST_ASSERT0);
-	temp &= ~(0x1<<BIT_RST_DSI_DPI_PIX);
+	temp &= ~(0x1 << BIT_RST_DSI_DPI_PIX);
 	starfive_lcdc_rstwrite32(sf_crtc, SRST_ASSERT0, temp);
 }
 
