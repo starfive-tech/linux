@@ -102,7 +102,6 @@ static int ddrfmt_to_ppfmt(struct starfive_crtc *sf_crtc)
 
 void starfive_crtc_hw_config_simple(struct starfive_crtc *starfive_crtc)
 {
-
 }
 
 static void starfive_crtc_destroy(struct drm_crtc *crtc)

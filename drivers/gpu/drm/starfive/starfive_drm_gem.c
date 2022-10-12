@@ -172,7 +172,6 @@ starfive_drm_gem_create_object(struct drm_device *drm, unsigned int size,
 err_free_obj:
 	starfive_drm_gem_release_object(starfive_obj);
 	return ERR_PTR(ret);
-
 }
 
 static struct starfive_drm_gem_obj *
@@ -326,7 +325,6 @@ int starfive_drm_gem_prime_vmap(struct drm_gem_object *obj, struct iosys_map *ma
 
 	return 0;
 }
-
 
 void starfive_drm_gem_prime_vunmap(struct drm_gem_object *obj, struct iosys_map *map)
 {

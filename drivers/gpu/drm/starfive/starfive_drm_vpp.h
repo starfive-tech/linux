@@ -70,7 +70,6 @@ enum PP_DST_FORMAT {
 	PP_DST_BGRA888,
 };
 
-
 struct pp_video_mode {
 	enum COLOR_FORMAT format;
 	unsigned int height;

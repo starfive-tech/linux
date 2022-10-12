@@ -19,6 +19,7 @@ struct starfive_drm_gem_obj {
 	struct sg_table		*sg;
 	struct page		**pages;
 };
+
 #define to_starfive_gem_obj(x)	container_of(x, struct starfive_drm_gem_obj, base)
 
 void starfive_drm_gem_free_object(struct drm_gem_object *obj);
