@@ -39,7 +39,7 @@ static void starfive_lcdc_rstwrite32(struct starfive_crtc *sf_crtc, u32 reg, u32
 	iowrite32(val, sf_crtc->base_rst + reg);
 }
 
-static void lcdc_mode_cfg(struct starfive_crtc *sf_crtc, uint32_t work_mode, int dot_edge,
+static void lcdc_mode_cfg(struct starfive_crtc *sf_crtc, u32 work_mode, int dot_edge,
 			  int sync_edge, int r2y_bypass, int src_sel, int int_src, int int_freq)
 {
 	u32 lcdc_en = 0x1;
@@ -386,7 +386,7 @@ void lcdc_config(struct starfive_crtc *sf_crtc, struct drm_crtc_state *state, in
 	lcdc_panel_cfg(sf_crtc, 0x3, 0x4, 0x0, 0x0, 0x0, 0x1);  //rgb888sel?
 }
 
-void lcdc_run(struct starfive_crtc *sf_crtc, uint32_t win_mode, uint32_t lcd_trig)
+void lcdc_run(struct starfive_crtc *sf_crtc, u32 win_mode, u32 lcd_trig)
 {
 	u32 runcfg = win_mode << LCDC_EN_CFG_MODE | lcd_trig;
 

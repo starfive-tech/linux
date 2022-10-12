@@ -153,7 +153,7 @@ void lcdc_config(struct starfive_crtc *sf_crtc,
 int lcdc_win_sel(struct starfive_crtc *sf_crtc, enum lcdc_in_mode sel);
 void lcdc_dsi_sel(struct starfive_crtc *sf_crtc);
 void lcdc_run(struct starfive_crtc *sf_crtc,
-	      uint32_t win_mode, uint32_t lcd_trig);
+	      u32 win_mode, u32 lcd_trig);
 void starfive_set_win_addr(struct starfive_crtc *sf_crtc, int addr);
 int starfive_lcdc_enable(struct starfive_crtc *sf_crtc);
 
