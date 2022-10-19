@@ -1040,7 +1040,7 @@ static int stfcamss_probe(struct platform_device *pdev)
 	for (i = 0; i < stfcamss->nrsts; i++) {
 		reset = &stfcamss->sys_rst[i];
 
-		reset->rstc = devm_reset_control_get_exclusive(dev, stfcamss_resets[i]);
+		reset->rstc = devm_reset_control_get_shared(dev, stfcamss_resets[i]);
 		if (IS_ERR(reset->rstc)) {
 			st_err(ST_CAMSS, "Failed to get %s reset", stfcamss_resets[i]);
 			return PTR_ERR(reset->rstc);
