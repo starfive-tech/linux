@@ -14,6 +14,7 @@ struct starfive_dwmac {
 	struct clk *clk_gtx;
 	struct clk *clk_gtxc;
 	struct reset_control *stmmac_ahb_rst;
+	struct clk *clk_rmii_rtx;
 };
 
 static void starfive_eth_fix_mac_speed(void *priv, unsigned int speed)
@@ -40,6 +41,10 @@ static void starfive_eth_fix_mac_speed(void *priv, unsigned int speed)
 	err = clk_set_rate(dwmac->clk_gtx, rate);
 	if (err < 0)
 		dev_err(dwmac->dev, "failed to set tx rate %lu\n", rate);
+
+	err = clk_set_rate(dwmac->clk_rmii_rtx, rate);
+	if (err < 0)
+		dev_err(dwmac->dev, "failed to set rtx rate %lu\n", rate);
 }
 
 static const struct of_device_id starfive_eth_plat_match[] = {
@@ -98,6 +103,12 @@ static int starfive_eth_plat_probe(struct platform_device *pdev)
 	dwmac->clk_gtxc = devm_clk_get(&pdev->dev, "gtxc");
 	if (IS_ERR(dwmac->clk_gtxc)) {
 		err = PTR_ERR(dwmac->clk_gtxc);
+		goto disable_gtx;
+	}
+
+	dwmac->clk_rmii_rtx = devm_clk_get(&pdev->dev, "rmii_rtx");
+	if (IS_ERR(dwmac->clk_rmii_rtx)) {
+		err = PTR_ERR(dwmac->clk_rmii_rtx);
 		goto disable_gtx;
 	}
 
