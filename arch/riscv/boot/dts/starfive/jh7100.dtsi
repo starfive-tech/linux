@@ -218,7 +218,7 @@
 			interrupt-names = "macirq", "eth_wake_irq";
 			max-frame-size = <9000>;
 			phy-mode = "rgmii-txid";
-			snps,multicast-filter-bins = <256>;
+			snps,multicast-filter-bins = <32>;
 			snps,perfect-filter-entries = <128>;
 			rx-fifo-depth = <32768>;
 			tx-fifo-depth = <16384>;
