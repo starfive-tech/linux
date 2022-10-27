@@ -96,7 +96,7 @@ struct module;
 struct clocksource {
 	u64			(*read)(struct clocksource *cs);
 	u64			mask;
-	u32			mult;
+	u64			mult;
 	u32			shift;
 	u64			max_idle_ns;
 	u32			maxadj;
@@ -221,7 +221,7 @@ extern u64 clocksource_stop_suspend_timing(struct clocksource *cs, u64 now);
 extern u64
 clocks_calc_max_nsecs(u32 mult, u32 shift, u32 maxadj, u64 mask, u64 *max_cycles);
 extern void
-clocks_calc_mult_shift(u32 *mult, u32 *shift, u32 from, u32 to, u32 minsec);
+clocks_calc_mult_shift(u64 *mult, u32 *shift, u32 from, u32 to, u32 minsec);
 
 /*
  * Don't call __clocksource_register_scale directly, use
