@@ -48,19 +48,13 @@ endif
 endif
 
 # ISA string setting
-riscv-march-cflags-$(CONFIG_ARCH_RV32I)		:= rv32ima
-riscv-march-cflags-$(CONFIG_ARCH_RV64I)		:= rv64ima
-riscv-march-$(CONFIG_FPU)			:= $(riscv-march-y)fd
-riscv-march-cflags-$(CONFIG_RISCV_ISA_C)	:= $(riscv-march-cflags-y)c
-
-riscv-march-aflags-$(CONFIG_ARCH_RV32I)		:= rv32ima
-riscv-march-aflags-$(CONFIG_ARCH_RV64I)		:= rv64ima
-riscv-march-aflags-$(CONFIG_FPU)		:= $(riscv-march-aflags-y)fd
-riscv-march-aflags-$(CONFIG_RISCV_ISA_C)	:= $(riscv-march-aflags-y)c
-riscv-march-aflags-$(CONFIG_VECTOR)		:= $(riscv-march-aflags-y)v
-
-KBUILD_CFLAGS += -march=$(riscv-march-cflags-y)
-KBUILD_AFLAGS += -march=$(riscv-march-aflags-y)
+riscv-march-$(CONFIG_ARCH_RV32I)	:= rv32ima
+riscv-march-$(CONFIG_ARCH_RV64I)	:= rv64ima
+riscv-march-$(CONFIG_FPU)		:= $(riscv-march-y)fd
+riscv-march-$(CONFIG_RISCV_ISA_C)	:= $(riscv-march-y)c
+riscv-march-$(CONFIG_VECTOR)		:= $(riscv-march-y)v
+KBUILD_CFLAGS += -march=$(subst fd,,$(riscv-march-y))
+KBUILD_AFLAGS += -march=$(riscv-march-y)
 
 KBUILD_CFLAGS += -mno-save-restore
 KBUILD_CFLAGS += -DCONFIG_PAGE_OFFSET=$(CONFIG_PAGE_OFFSET)
