@@ -44,7 +44,7 @@
  * factors.
  */
 void
-clocks_calc_mult_shift(u32 *mult, u32 *shift, u32 from, u32 to, u32 maxsec)
+clocks_calc_mult_shift(u64 *mult, u32 *shift, u32 from, u32 to, u32 maxsec)
 {
 	u64 tmp;
 	u32 sft, sftacc= 32;

@@ -104,7 +104,7 @@ struct clock_event_device {
 	ktime_t			next_event;
 	u64			max_delta_ns;
 	u64			min_delta_ns;
-	u32			mult;
+	u64			mult;
 	u32			shift;
 	enum clock_event_state	state_use_accessors;
 	unsigned int		features;

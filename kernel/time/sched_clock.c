@@ -164,7 +164,8 @@ void __init
 sched_clock_register(u64 (*read)(void), int bits, unsigned long rate)
 {
 	u64 res, wrap, new_mask, new_epoch, cyc, ns;
-	u32 new_mult, new_shift;
+	u64 new_mult;
+	u32 new_shift;
 	unsigned long r, flags;
 	char r_unit;
 	struct clock_read_data rd;
