@@ -197,7 +197,7 @@ print_tickdevice(struct seq_file *m, struct tick_device *td, int cpu)
 		   (unsigned long long) dev->max_delta_ns);
 	SEQ_printf(m, " min_delta_ns:   %llu\n",
 		   (unsigned long long) dev->min_delta_ns);
-	SEQ_printf(m, " mult:           %u\n", dev->mult);
+	SEQ_printf(m, " mult:           %llu\n", dev->mult);
 	SEQ_printf(m, " shift:          %u\n", dev->shift);
 	SEQ_printf(m, " mode:           %d\n", clockevent_get_state(dev));
 	SEQ_printf(m, " next_event:     %Ld nsecs\n",
