@@ -60,14 +60,44 @@ static void disable(void *hw_arg)
 {
 	struct e24_hw_arg *mail_arg = hw_arg;
 
-	reset_control_assert(mail_arg->rst_core);
+	clk_disable_unprepare(mail_arg->clk_core);
+	clk_disable_unprepare(mail_arg->clk_dbg);
+	clk_disable_unprepare(mail_arg->clk_rtc);
+
 	pr_debug("e24 disable ...\n");
+
 }
 
 static int enable(void *hw_arg)
 {
 	struct e24_hw_arg *mail_arg = hw_arg;
 	int ret = 0;
+
+	ret = clk_prepare_enable(mail_arg->clk_core);
+	if (ret)
+		return -EAGAIN;
+
+	ret = clk_prepare_enable(mail_arg->clk_dbg);
+	if (ret) {
+		clk_disable_unprepare(mail_arg->clk_core);
+		return -EAGAIN;
+	}
+
+	ret = clk_prepare_enable(mail_arg->clk_rtc);
+	if (ret) {
+		clk_disable_unprepare(mail_arg->clk_core);
+		clk_disable_unprepare(mail_arg->clk_dbg);
+		return -EAGAIN;
+	}
+
+	pr_debug("e24_enable clk ...\n");
+	return 0;
+}
+
+
+static int init(void *hw_arg)
+{
+	struct e24_hw_arg *mail_arg = hw_arg;
 
 	mail_arg->reg_syscon = syscon_regmap_lookup_by_phandle(
 					mail_arg->e24->dev->of_node,
@@ -101,28 +131,13 @@ static int enable(void *hw_arg)
 		return -ENOMEM;
 	}
 
-	ret = clk_prepare_enable(mail_arg->clk_core);
-	if (ret)
-		return -EAGAIN;
+	enable(hw_arg);
 
-	ret = clk_prepare_enable(mail_arg->clk_dbg);
-	if (ret) {
-		clk_disable_unprepare(mail_arg->clk_core);
-		return -EAGAIN;
-	}
-
-	ret = clk_prepare_enable(mail_arg->clk_rtc);
-	if (ret) {
-		clk_disable_unprepare(mail_arg->clk_core);
-		clk_disable_unprepare(mail_arg->clk_dbg);
-		return -EAGAIN;
-	}
-
-	pr_debug("e24 enable clk ...\n");
 	return 0;
 }
 
 static struct e24_hw_ops e24_hw_ops = {
+	.init = init,
 	.enable = enable,
 	.reset = reset,
 	.halt = halt,

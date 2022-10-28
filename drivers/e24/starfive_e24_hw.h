@@ -26,6 +26,10 @@
  */
 struct e24_hw_ops {
 	/*
+	 * Gets the clock for E24.
+	 */
+	int (*init)(void *hw_arg);
+	/*
 	 * Enable power/clock, but keep the core stalled.
 	 */
 	int (*enable)(void *hw_arg);

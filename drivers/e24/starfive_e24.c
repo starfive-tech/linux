@@ -277,13 +277,53 @@ static const struct vm_operations_struct e24_vm_ops = {
 	.close = e24_vm_close,
 };
 
+static long e24_synchronize(struct e24_device *dev)
+{
+
+	struct e24_comm *queue = dev->queue;
+	struct e24_dsp_cmd __iomem *cmd = queue->comm;
+	u32 flags;
+	unsigned long deadline = jiffies + 10 * HZ;
+
+	do {
+		flags = __raw_readl(&cmd->flags);
+		/* memory barrier */
+		rmb();
+		if (flags == 0x104)
+			return 0;
+
+		schedule();
+	} while (time_before(jiffies, deadline));
+
+	return -1;
+}
+
 static int e24_open(struct inode *inode, struct file *filp)
 {
 	struct e24_device *e24_dev = container_of(filp->private_data,
 					struct e24_device, miscdev);
+	int rc = 0;
+
+	rc = pm_runtime_get_sync(e24_dev->dev);
+	if (rc < 0)
+		return rc;
 
 	spin_lock_init(&e24_dev->busy_list_lock);
 	filp->private_data = e24_dev;
+	mdelay(1);
+
+	return 0;
+}
+
+int e24_release(struct inode *inode, struct file *filp)
+{
+	struct e24_device *e24_dev = (struct e24_device *)filp->private_data;
+	int rc = 0;
+
+	rc = pm_runtime_put_sync(e24_dev->dev);
+	if (rc < 0)
+		return rc;
+
 	return 0;
 }
 
@@ -600,6 +640,7 @@ static long e24_unmap_request(struct file *filp, struct e24_ioctl_request *rq)
 
 	if (rq->ioctl_data.in_data_size > E24_DSP_CMD_INLINE_DATA_SIZE)
 		__e24_unshare_block(filp, &rq->in_data_mapping, E24_FLAG_READ);
+
 	if (rq->ioctl_data.out_data_size > E24_DSP_CMD_INLINE_DATA_SIZE) {
 		ret = __e24_unshare_block(filp, &rq->out_data_mapping,
 					 E24_FLAG_WRITE);
@@ -966,6 +1007,7 @@ static const struct file_operations e24_fops = {
 	.compat_ioctl = e24_ioctl,
 #endif
 	.open = e24_open,
+	.release = e24_release,
 	.write = mbox_e24_message_write,
 	.mmap = e24_mmap,
 };
@@ -1065,6 +1107,12 @@ empty:
 
 typedef long e24_init_function(struct platform_device *pdev);
 
+static inline void e24_init(struct e24_device *e24_hw)
+{
+	if (e24_hw->hw_ops->init)
+		e24_hw->hw_ops->init(e24_hw->hw_arg);
+}
+
 static inline void e24_release_e24(struct e24_device *e24_hw)
 {
 	if (e24_hw->hw_ops->reset)
@@ -1101,15 +1149,6 @@ static inline void e24_sendirq_e24(struct e24_device *e24_hw)
 {
 	if (e24_hw->hw_ops->send_irq)
 		e24_hw->hw_ops->send_irq(e24_hw->hw_arg);
-}
-
-int e24_runtime_suspend(struct device *dev)
-{
-	struct e24_device *e24_dev = dev_get_drvdata(dev);
-
-	e24_halt_e24(e24_dev);
-	e24_disable_e24(e24_dev);
-	return 0;
 }
 
 irqreturn_t e24_irq_handler(int irq, struct e24_device *e24_hw)
@@ -1285,33 +1324,42 @@ static int e24_load_firmware(struct e24_device *e24_dev)
 static int e24_boot_firmware(struct device *dev)
 {
 	int ret;
-
 	struct e24_device *e24_dev = dev_get_drvdata(dev);
-
-	ret = e24_enable_e24(e24_dev);
-
-	if (ret < 0)
-		return ret;
-
-	e24_halt_e24(e24_dev);
 
 	if (e24_dev->firmware_name) {
 		ret = request_firmware(&e24_dev->firmware, e24_dev->firmware_name, e24_dev->dev);
 
-	if (ret < 0)
-		return ret;
+		if (ret < 0)
+			return ret;
 
-	ret = e24_load_firmware(e24_dev);
-
-	if (ret < 0)
-		release_firmware(e24_dev->firmware);
+		ret = e24_load_firmware(e24_dev);
+		if (ret < 0) {
+			release_firmware(e24_dev->firmware);
+			return ret;
+		}
 
 	}
 
+	release_firmware(e24_dev->firmware);
+	ret = e24_enable_e24(e24_dev);
+	if (ret < 0)
+		return ret;
+
 	e24_reset_e24(e24_dev);
 	e24_release_e24(e24_dev);
+	e24_synchronize(e24_dev);
 
 	return ret;
+}
+
+int e24_runtime_suspend(struct device *dev)
+{
+	struct e24_device *e24_dev = dev_get_drvdata(dev);
+
+	e24_halt_e24(e24_dev);
+	e24_disable_e24(e24_dev);
+
+	return 0;
 }
 
 long e24_init_v0(struct platform_device *pdev)
@@ -1376,15 +1424,20 @@ long e24_init_v0(struct platform_device *pdev)
 		goto err_free_map;
 	}
 
-	ret = e24_boot_firmware(e24_dev->dev);
-	if (ret)
-		goto err_pm_disable;
-
+	e24_init(e24_dev);
+	pm_runtime_set_active(e24_dev->dev);
+	pm_runtime_enable(e24_dev->dev);
+	if (!pm_runtime_enabled(e24_dev->dev)) {
+		ret = e24_boot_firmware(e24_dev->dev);
+		if (ret)
+			goto err_pm_disable;
+	}
 	nodeid = ida_simple_get(&e24_nodeid, 0, 0, GFP_KERNEL);
 	if (nodeid < 0) {
 		ret = nodeid;
 		goto err_pm_disable;
 	}
+
 	e24_dev->nodeid = nodeid;
 	sprintf(nodename, "eboot%u", nodeid);
 
@@ -1402,8 +1455,9 @@ long e24_init_v0(struct platform_device *pdev)
 	return PTR_ERR(e24_dev);
 err_free_id:
 	ida_simple_remove(&e24_nodeid, nodeid);
+
 err_pm_disable:
-	e24_runtime_suspend(e24_dev->dev);
+	pm_runtime_disable(e24_dev->dev);
 err_free_map:
 	kfree(e24_dev->address_map.entry);
 err_free_pool:
@@ -1427,10 +1481,11 @@ int e24_deinit(struct platform_device *pdev)
 {
 	struct e24_device *e24_dev = platform_get_drvdata(pdev);
 
-	e24_runtime_suspend(e24_dev->dev);
+	pm_runtime_disable(&pdev->dev);
+	if (!pm_runtime_status_suspended(e24_dev->dev))
+		e24_runtime_suspend(e24_dev->dev);
 
 	misc_deregister(&e24_dev->miscdev);
-	release_firmware(e24_dev->firmware);
 	e24_free_pool(e24_dev->pool);
 	kfree(e24_dev->address_map.entry);
 	ida_simple_remove(&e24_nodeid, e24_dev->nodeid);
@@ -1460,12 +1515,18 @@ static int e24_remove(struct platform_device *pdev)
 	return e24_deinit(pdev);
 }
 
+static const struct dev_pm_ops e24_runtime_pm_ops = {
+	SET_RUNTIME_PM_OPS(e24_runtime_suspend,
+		   e24_boot_firmware, NULL)
+};
+
 static struct platform_driver e24_driver = {
 	.probe = e24_probe,
 	.remove = e24_remove,
 	.driver = {
 		.name = "e24_boot",
 		.of_match_table = of_match_ptr(e24_of_match),
+		.pm = &e24_runtime_pm_ops,
 	},
 };
 
