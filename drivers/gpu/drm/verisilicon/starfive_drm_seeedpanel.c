@@ -355,7 +355,6 @@ static int seeed_panel_get_modes(struct drm_panel *panel,
 	connector->display_info.height_mm = 86;
 	drm_display_info_set_bus_formats(&connector->display_info,
 				&bus_format, 1);
-
 	return num;
 }
 
@@ -380,7 +379,6 @@ static int seeed_panel_probe(struct i2c_client *client, const struct i2c_device_
 		.channel = 0, //0,
 		.node = NULL,
 	};
-
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_warn(&client->dev,
 			 "I2C adapter doesn't support I2C_FUNC_SMBUS_BYTE\n");
@@ -515,7 +513,7 @@ static int __init init_seeed_panel(void)
 	err = i2c_add_driver(&seeed_panel_driver);
 	return err;
 }
-late_initcall(init_seeed_panel);
+module_init(init_seeed_panel);
 
 static void __exit exit_seeed_panel(void)
 {
