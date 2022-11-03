@@ -515,7 +515,7 @@ static int __init init_seeed_panel(void)
 	err = i2c_add_driver(&seeed_panel_driver);
 	return err;
 }
-module_init(init_seeed_panel);
+late_initcall(init_seeed_panel);
 
 static void __exit exit_seeed_panel(void)
 {

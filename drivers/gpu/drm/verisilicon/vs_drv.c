@@ -7,6 +7,7 @@
 #include <linux/component.h>
 #include <linux/iommu.h>
 #include <linux/version.h>
+#include <linux/delay.h>
 
 #include <drm/drm_of.h>
 #include <drm/drm_crtc.h>
@@ -195,17 +196,6 @@ static int vs_drm_bind(struct device *dev)
 	static u64 dma_mask = DMA_40BIT_MASK;
 #endif
 
-#if 0
-	/* Remove existing drivers that may own the framebuffer memory. */
-	ret = drm_aperture_remove_framebuffers(false, &vs_drm_driver);
-	if (ret) {
-		DRM_DEV_ERROR(dev,
-				  "Failed to remove existing framebuffers - %d.\n",
-				  ret);
-		return ret;
-	}
-#endif
-
 	drm_dev = drm_dev_alloc(&vs_drm_driver, dev);
 	if (IS_ERR(drm_dev))
 		return PTR_ERR(drm_dev);
@@ -225,9 +215,11 @@ static int vs_drm_bind(struct device *dev)
 	drm_dev->dev_private = priv;
 
 	drm_mode_config_init(drm_dev);
+	msleep(120);//this sleep can make dsi and panel probe finish
 
 	/* Now try and bind all our sub-components */
 	ret = component_bind_all(dev, drm_dev);
+
 	if (ret)
 		goto err_mode;
 
@@ -255,8 +247,6 @@ err_bind:
 	component_unbind_all(drm_dev->dev, drm_dev);
 err_mode:
 	drm_mode_config_cleanup(drm_dev);
-	if (priv->domain)
-		iommu_domain_free(priv->domain);
 err_put_dev:
 	drm_dev->dev_private = NULL;
 	dev_set_drvdata(dev, NULL);
@@ -391,7 +381,6 @@ static int vs_drm_platform_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct component_match *match;
 	int ret;
-	printk("lqw vs_drm_platform_probe\n");
 	ret = vs_drm_platform_of_probe(dev);
 	if (ret)
 		return ret;

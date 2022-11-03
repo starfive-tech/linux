@@ -593,28 +593,33 @@ static int cdns_dsi_resets_assert(struct cdns_dsi *dsi, struct device *dev)
 //get clock func
 static int cdns_dsi_get_clock(struct device *dev, struct cdns_dsi *dsi)
 {
+	int ret;
 	dsi->dsi_sys_clk = devm_clk_get(dev, "sys");
 	if (IS_ERR(dsi->dsi_sys_clk)){
-		dev_err(dev, "failed to get dsi_sys_clk\n");
-		return PTR_ERR(dsi->dsi_sys_clk);
+		ret = IS_ERR(dsi->dsi_sys_clk);
+		dsi->dsi_sys_clk = NULL;
+		return ret;
 	}
 
 	dsi->apb_clk = devm_clk_get(dev, "apb");
 	if (IS_ERR(dsi->apb_clk)){
-		dev_err(dev, "failed to get apb_clk\n");
-		return PTR_ERR(dsi->apb_clk);
+		ret = IS_ERR(dsi->apb_clk);
+		dsi->apb_clk = NULL;
+		return ret;
 	}
 
 	dsi->txesc_clk = devm_clk_get(dev, "txesc");
 	if (IS_ERR(dsi->txesc_clk)){
-		dev_err(dev, "failed to get txesc_clk\n");
-		return PTR_ERR(dsi->txesc_clk);
+		ret = IS_ERR(dsi->txesc_clk);
+		dsi->txesc_clk = NULL;
+		return ret;
 	}
 
 	dsi->dpi_clk = devm_clk_get(dev, "dpi");
 	if (IS_ERR(dsi->dpi_clk)){
-		dev_err(dev, "failed to get dpi_clk\n");
-		return PTR_ERR(dsi->dpi_clk);
+		ret = IS_ERR(dsi->dpi_clk);
+		dsi->dpi_clk = NULL;
+		return ret;
 	}
 
 	return 0;
@@ -623,40 +628,47 @@ static int cdns_dsi_get_clock(struct device *dev, struct cdns_dsi *dsi)
 //get reset func
 static int cdns_dsi_get_reset(struct device *dev, struct cdns_dsi *dsi)
 {
+	int ret;
 	dsi->dpi_rst = reset_control_get_exclusive(dev, "dsi_dpi");
 	if (IS_ERR(dsi->dpi_rst)){
-		dev_err(dev, "failed to get dpi_rst\n");
-		return PTR_ERR(dsi->dpi_rst);
+		ret = IS_ERR(dsi->dpi_rst);
+		dsi->dpi_rst = NULL;
+		return ret;
 	}
 
 	dsi->apb_rst = reset_control_get_exclusive(dev, "dsi_apb");
 	if (IS_ERR(dsi->apb_rst)){
-		dev_err(dev, "failed to get apb_rst\n");
-		return PTR_ERR(dsi->apb_rst);
+		ret = IS_ERR(dsi->apb_rst);
+		dsi->apb_rst = NULL;
+		return ret;
 	}
 
 	dsi->rxesc_rst = reset_control_get_exclusive(dev, "dsi_rxesc");
 	if (IS_ERR(dsi->rxesc_rst)){
-		dev_err(dev, "failed to get rxesc_rst\n");
-		return PTR_ERR(dsi->rxesc_rst);
+		ret = IS_ERR(dsi->rxesc_rst);
+		dsi->rxesc_rst = NULL;
+		return ret;
 	}
 
 	dsi->sys_rst = reset_control_get_exclusive(dev, "dsi_sys");
 	if (IS_ERR(dsi->sys_rst)){
-		dev_err(dev, "failed to get sys_rst\n");
-		return PTR_ERR(dsi->sys_rst);
+		ret = IS_ERR(dsi->sys_rst);
+		dsi->sys_rst = NULL;
+		return ret;
 	}
 
 	dsi->txbytehs_rst = reset_control_get_exclusive(dev, "dsi_txbytehs");
 	if (IS_ERR(dsi->txbytehs_rst)){
-		dev_err(dev, "failed to get txbytehs_rst\n");
-		return PTR_ERR(dsi->txbytehs_rst);
+		ret = IS_ERR(dsi->txbytehs_rst);
+		dsi->txbytehs_rst = NULL;
+		return ret;
 	}
 
 	dsi->txesc_rst = reset_control_get_exclusive(dev, "dsi_txesc");
 	if (IS_ERR(dsi->txesc_rst)){
-		dev_err(dev, "failed to get txesc_rst\n");
-		return PTR_ERR(dsi->txesc_rst);
+		ret = IS_ERR(dsi->txesc_rst);
+		dsi->txesc_rst = NULL;
+		return ret;
 	}
 
 	return 0;
@@ -1531,21 +1543,6 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	if (IS_ERR(dsi->regs))
 		return PTR_ERR(dsi->regs);
 
-	ret = cdns_dsi_get_clock(&pdev->dev, dsi);//get clock res
-
-	ret = cdns_dsi_get_reset(&pdev->dev, dsi);//get reset res
-
-	ret = cdns_dsi_clock_enable(dsi, &pdev->dev);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to enable clock\n");
-		return ret;
-	}
-	ret = cdns_dsi_resets_deassert(dsi, &pdev->dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to deassert reset\n");
-		return ret;
-	}
-
     irq = platform_get_irq(pdev, 0);
 		if (irq < 0){
 			dev_err(&pdev->dev, "---get irq error\n");
@@ -1556,50 +1553,9 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	if (IS_ERR(dsi->dphy))
 		return PTR_ERR(dsi->dphy);
 
-	val = readl(dsi->regs + ID_REG);
-
-	if (REV_VENDOR_ID(val) != 0xcad) {
-		dev_err(&pdev->dev, "invalid vendor id\n");
-		ret = -EINVAL;
-		goto err_disable_pclk;
-	}
-
-	ret = cdns_check_register_access(dsi);
-    if (ret) {
-        dev_err(&pdev->dev, "error: r/w test generic reg failed\n");
-        goto ERROR;
-    }
-
-	val = readl(dsi->regs + IP_CONF);
-	dsi->direct_cmd_fifo_depth = 1 << (DIRCMD_FIFO_DEPTH(val) + 2);
-	dsi->rx_fifo_depth = RX_FIFO_DEPTH(val);
-	init_completion(&dsi->direct_cmd_comp);
-
-	writel(0, dsi->regs + MCTL_MAIN_DATA_CTL);
-	writel(0, dsi->regs + MCTL_MAIN_EN);
-	writel(0, dsi->regs + MCTL_MAIN_PHY_CTL);
-
 	input->id = CDNS_DPI_INPUT;
 	input->bridge.funcs = &cdns_dsi_bridge_funcs;
 	input->bridge.of_node = pdev->dev.of_node;
-
-	//drm_bridge_add(&input->bridge);
-
-	/* Mask all interrupts before registering the IRQ handler. */
-	writel(0, dsi->regs + MCTL_MAIN_STS_CTL);
-	writel(0, dsi->regs + MCTL_DPHY_ERR_CTL1);
-	writel(0, dsi->regs + CMD_MODE_STS_CTL);
-	writel(0, dsi->regs + DIRECT_CMD_STS_CTL);
-	writel(0, dsi->regs + DIRECT_CMD_RD_STS_CTL);
-	writel(0, dsi->regs + VID_MODE_STS_CTL);
-	writel(0, dsi->regs + TVG_STS_CTL);
-	writel(0, dsi->regs + DPI_IRQ_EN);
-
-	ret = devm_request_irq(&pdev->dev, irq, cdns_dsi_interrupt, 0,
-                               dev_name(&pdev->dev), dsi);
-    if (ret){
-		goto err_disable_pclk;
-	}
 
 	pm_runtime_enable(&pdev->dev);
 	dsi->base.dev = &pdev->dev;
@@ -1608,6 +1564,40 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	ret = mipi_dsi_host_register(&dsi->base);
 	if (ret)
 		goto err_disable_runtime_pm;
+
+	ret = cdns_dsi_get_clock(&pdev->dev, dsi);//get clock res
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to enable clock\n");
+		return ret;
+	}
+
+	ret = cdns_dsi_get_reset(&pdev->dev, dsi);//get reset res
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to get_reset\n");
+		return ret;
+	}
+
+	ret = cdns_dsi_clock_enable(dsi, &pdev->dev);
+	if (ret < 0) {
+			dev_err(&pdev->dev, "failed to enable clock\n");
+			return ret;
+	}
+	ret = cdns_dsi_resets_deassert(dsi, &pdev->dev);
+	if (ret < 0) {
+			dev_err(&pdev->dev, "failed to deassert reset\n");
+			return ret;
+	}
+
+	val = readl(dsi->regs + IP_CONF);
+	dsi->direct_cmd_fifo_depth = 1 << (DIRCMD_FIFO_DEPTH(val) + 2);
+	dsi->rx_fifo_depth = RX_FIFO_DEPTH(val);
+	init_completion(&dsi->direct_cmd_comp);
+
+	ret = devm_request_irq(&pdev->dev, irq, cdns_dsi_interrupt, 0,
+                               dev_name(&pdev->dev), dsi);
+    if (ret){
+		goto err_disable_pclk;
+	}
 
 	return 0;
 
@@ -1655,6 +1645,8 @@ static struct platform_driver cdns_dsi_platform_driver = {
 	},
 };
 module_platform_driver(cdns_dsi_platform_driver);
+
+
 
 
 MODULE_AUTHOR("Boris Brezillon <boris.brezillon@bootlin.com>");

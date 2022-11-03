@@ -218,7 +218,6 @@ static int encoder_bind(struct device *dev, struct device *master, void *data)
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0,&tmp_panel, &bridge);
 	if (ret){
 		printk("no panel, %d\n",ret);
-		//dev_err_probe(dev, ret, "endpoint returns %d\n", ret);
 		goto err;
 	}
 	if (tmp_panel)
@@ -235,10 +234,9 @@ static int encoder_bind(struct device *dev, struct device *master, void *data)
 	dev_info(dev,"encoder_bind end\n");
 	return 0;
 err:
-	drm_encoder_cleanup(encoder);
+	//drm_encoder_cleanup(encoder);
 	dev_info(dev,"encoder_bind error\n");
 
-	//return ret;
 	return 0;
 }
 

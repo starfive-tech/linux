@@ -664,11 +664,16 @@ static void dc_deinit(struct device *dev)
 	struct vs_dc *dc = dev_get_drvdata(dev);
 	struct platform_device *pdev = to_platform_device(dev);
 	int ret;
+
 	dc_hw_enable_interrupt(&dc->hw, 0);
+
 	dc_hw_deinit(&dc->hw);
+
 	vs_dc_dc8200_clock_disable(dc);
+
 	vs_dc_vouttop_clock_disable(dc);
 	vs_dc_clock_disable(dc);
+
 	ret = reset_control_assert(dc->vout_resets);
 	if (ret)
 		dev_err(dev, "assert vout resets error.\n");
@@ -743,7 +748,6 @@ static int dc_init(struct device *dev)
 		dev_err(dev, "failed to init DC HW\n");
 		return ret;
 	}
-	printk("lqw %s,%d\n",__func__,__LINE__);
 	return 0;
 
 }
