@@ -12,7 +12,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttySIF0,115200 earlycon=sbi";
+		bootargs = "console=ttySIF0,115200 earlycon=sbi root=/dev/nfs nfsroot=192.168.153.221:/home/nfsroot,rw,tcp,vers=3 ip=192.168.152.100:192.168.153.221:192.168.152.1:255.255.255.0::eth0:off";
 	};
 
 	cpus {
