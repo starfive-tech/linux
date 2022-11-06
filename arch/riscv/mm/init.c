@@ -26,6 +26,7 @@
 unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)]
 							__page_aligned_bss;
 EXPORT_SYMBOL(empty_zero_page);
+phys_addr_t end_linear_map;
 
 extern char _start[];
 #define DTB_EARLY_BASE_VA      PGDIR_SIZE
@@ -575,6 +576,7 @@ static void __init setup_vm_final(void)
 			start = __pa(PAGE_OFFSET);
 
 		map_size = best_map_size(start, end - start);
+		end_linear_map = end;
 		for (pa = start; pa < end; pa += map_size) {
 			va = (uintptr_t)__va(pa);
 			create_pgd_mapping(swapper_pg_dir, va, pa,
