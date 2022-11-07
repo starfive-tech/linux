@@ -29,6 +29,7 @@ enum sbi_ext_id {
 	SBI_EXT_HSM = 0x48534D,
 	SBI_EXT_SRST = 0x53525354,
 	SBI_EXT_PMU = 0x504D55,
+	SBI_EXT_CACHE = 0x09057485,
 };
 
 enum sbi_ext_base_fid {
@@ -94,6 +95,11 @@ enum sbi_ext_pmu_fid {
 	SBI_EXT_PMU_COUNTER_START,
 	SBI_EXT_PMU_COUNTER_STOP,
 	SBI_EXT_PMU_COUNTER_FW_READ,
+};
+
+enum sbi_ext_cache_fid {
+	SBI_EXT_BASE_L2_FLUSH = 0,
+	SBI_EXT_BASE_L2_INVALIDATE,
 };
 
 #define RISCV_PMU_RAW_EVENT_MASK GENMASK_ULL(55, 0)
@@ -240,6 +246,8 @@ int sbi_remote_hfence_vvma_asid(const unsigned long *hart_mask,
 				unsigned long size,
 				unsigned long asid);
 int sbi_probe_extension(int ext);
+int sbi_cache_invalidate(unsigned long start, unsigned long len);
+int sbi_cache_flush(unsigned long start, unsigned long len);
 
 /* Check if current SBI specification version is 0.1 or not */
 static inline int sbi_spec_is_0_1(void)

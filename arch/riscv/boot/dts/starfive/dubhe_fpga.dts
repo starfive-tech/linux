@@ -7,11 +7,12 @@
 	model = "StarFive Dubhe FPGA";
 
 	aliases {
+		ethernet0 = &gmac0;
 		serial0 = &uart0;
 	};
 
 	chosen {
-		bootargs = "console=ttySIF0,115200 earlycon=sbi";
+		bootargs = "console=ttySIF0,115200 earlycon=sbi root=/dev/nfs nfsroot=192.168.153.221:/home/nfsroot,rw,tcp,vers=3 ip=192.168.152.100:192.168.153.221:192.168.152.1:255.255.255.0::eth0:off";
 	};
 
 	cpus {
@@ -25,6 +26,40 @@
 	};
 
 	soc {
+
+		fpga_2p5mhz_clk: fpga_2p5mhz_clk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <2500000>;
+		};
+
+		fpga_50mhz_clk: fpga_50mhz_clk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <50000000>;
+		};
+	};
+};
+
+&gmac0 {
+	status = "okay";
+	phy-mode = "rgmii-id";
+	phy-handle = <&ethernet_phy0>;
+	clocks = <&fpga_2p5mhz_clk>,
+		 <&fpga_2p5mhz_clk>,
+		 <&fpga_2p5mhz_clk>,
+		 <&fpga_50mhz_clk>,
+		 <&fpga_50mhz_clk>,
+		 <&fpga_2p5mhz_clk>;
+
+	mdio0 {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		ethernet_phy0: ethernet-phy@0 {
+			reg = <0>;
+			max-speed = <10>;
+		};
 	};
 };
 
