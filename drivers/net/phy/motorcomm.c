@@ -160,6 +160,7 @@
 
 #define YT8521_CHIP_CONFIG_REG			0xA001
 #define YT8521_CCR_SW_RST			BIT(15)
+#define YT8521_CCR_RXC_DLY_EN			BIT(8)
 
 #define YT8521_CCR_MODE_SEL_MASK		(BIT(2) | BIT(1) | BIT(0))
 #define YT8521_CCR_MODE_UTP_TO_RGMII		0
@@ -1148,6 +1149,12 @@ static int yt8521_config_init(struct phy_device *phydev)
 				       YT8521_RC1R_FE_TX_DELAY_MASK |
 				       YT8521_RC1R_GE_TX_DELAY_MASK),
 				       val);
+		if (ret < 0)
+			goto err_restore_page;
+
+		/* disable rx delay */
+		ret = ytphy_modify_ext(phydev, YT8521_CHIP_CONFIG_REG,
+				       YT8521_CCR_RXC_DLY_EN, 0);
 		if (ret < 0)
 			goto err_restore_page;
 	}
