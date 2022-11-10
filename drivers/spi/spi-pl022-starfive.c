@@ -2318,6 +2318,9 @@ static int pl022_probe(struct amba_device *adev, const struct amba_id *id)
 		goto err_no_irq;
 	}
 
+	/* dma is not used unless configured in device tree */
+	platform_info->enable_dma = 0;
+
 	/* If that failed, use channels from platform_info */
 	if (status == 0)
 		platform_info->enable_dma = 1;
