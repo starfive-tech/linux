@@ -28,6 +28,7 @@ config SOC_STARFIVE
 
 config SOC_STARFIVE_DUBHE
 	bool "StarFive Dubhe SoC"
+	select RISCV_DMA_NONCOHERENT
 	select SERIAL_SIFIVE if TTY
 	select SERIAL_SIFIVE_CONSOLE if TTY
 	select SIFIVE_PLIC
