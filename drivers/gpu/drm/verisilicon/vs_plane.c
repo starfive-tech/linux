@@ -9,7 +9,7 @@
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/vs_drm.h>
-#include <soc/starfive/vic7100.h>
+#include <soc/starfive/jh7110.h>
 
 #include "vs_type.h"
 #include "vs_crtc.h"
