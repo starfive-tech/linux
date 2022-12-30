@@ -1188,6 +1188,8 @@ static int m88e1510_config_init(struct phy_device *phydev)
 	int err;
 	int i;
 
+	phydev->autoneg = AUTONEG_DISABLE;
+
 	/* As per Marvell Release Notes - Alaska 88E1510/88E1518/88E1512/
 	 * 88E1514 Rev A0, Errata Section 5.1:
 	 * If EEE is intended to be used, the following register writes
