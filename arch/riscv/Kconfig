@@ -411,6 +411,9 @@ config EFI
 	  allow the kernel to be booted as an EFI application. This
 	  is only useful on systems that have UEFI firmware.
 
+config ARCH_SUSPEND_POSSIBLE
+        def_bool y
+
 endmenu
 
 config BUILTIN_DTB
