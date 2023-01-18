@@ -2633,7 +2633,11 @@ static int __init pl022_init(void)
 {
 	return amba_driver_register(&pl022_driver);
 }
+#if !IS_MODULE(CONFIG_SPI_PL022)
 subsys_initcall(pl022_init);
+#else
+module_init(pl022_init);
+#endif
 
 static void __exit pl022_exit(void)
 {
@@ -2723,7 +2727,9 @@ static struct platform_driver starfive_of_pl022_driver = {
 	.remove = starfive_of_pl022_remove,
 };
 
+#if !IS_MODULE(CONFIG_SPI_PL022)
 module_platform_driver(starfive_of_pl022_driver);
+#endif
 /* platform register end */
 
 MODULE_AUTHOR("xingyu.wu <xingyu.wu@starfivetech.com>");
