@@ -12,7 +12,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttySIF0,115200 earlycon=sbi";
+		bootargs = "console=ttySIF0,115200 earlycon=sbi ip=::192.168.152.1:255.255.255.0::eth0:dhcp";
 	};
 
 	cpus {
@@ -64,6 +64,7 @@
 };
 
 &gmac0 {
+	status = "okay";
 	phy-mode = "rgmii-id";
 	phy-handle = <&ethernet_phy0>;
 	clocks = <&fpga_2p5mhz_clk>,
