@@ -19666,6 +19666,20 @@ F:	Documentation/devicetree/bindings/reset/starfive,jh7100-reset.yaml
 F:	drivers/reset/starfive/reset-starfive-jh71*
 F:	include/dt-bindings/reset/starfive?jh71*.h
 
+STARFIVE SOC DRIVER
+M:	Conor Dooley <conor@kernel.org>
+S:	Maintained
+T:	git https://git.kernel.org/pub/scm/linux/kernel/git/conor/linux.git/
+F:	drivers/soc/starfive/
+F:	include/soc/starfive/
+
+STARFIVE JH71XX PMU CONTROLLER DRIVER
+M:	Walker Chen <walker.chen@starfivetech.com>
+S:	Supported
+F:	Documentation/devicetree/bindings/power/starfive*
+F:	drivers/soc/starfive/jh71xx_pmu.c
+F:	include/dt-bindings/power/starfive,jh7110-pmu.h
+
 STATIC BRANCH/CALL
 M:	Peter Zijlstra <peterz@infradead.org>
 M:	Josh Poimboeuf <jpoimboe@kernel.org>
