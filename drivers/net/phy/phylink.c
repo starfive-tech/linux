@@ -1495,10 +1495,10 @@ struct phylink *phylink_create(struct phylink_config *config,
 	else
 		pl->link_port = PORT_MII;
 	pl->link_config.interface = iface;
-	pl->link_config.pause = MLO_PAUSE_AN;
-	pl->link_config.speed = SPEED_UNKNOWN;
-	pl->link_config.duplex = DUPLEX_UNKNOWN;
-	pl->link_config.an_enabled = true;
+	pl->link_config.pause = MLO_PAUSE_TXRX_MASK;
+	pl->link_config.speed = SPEED_10;
+	pl->link_config.duplex = DUPLEX_FULL;
+	pl->link_config.an_enabled = false;
 	pl->mac_ops = mac_ops;
 	__set_bit(PHYLINK_DISABLE_STOPPED, &pl->phylink_disable_state);
 	timer_setup(&pl->link_poll, phylink_fixed_poll, 0);
