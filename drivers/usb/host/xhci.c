@@ -17,6 +17,8 @@
 #include <linux/slab.h>
 #include <linux/dmi.h>
 #include <linux/dma-mapping.h>
+#include <linux/dma-map-ops.h>
+#include <linux/genalloc.h>
 
 #include "xhci.h"
 #include "xhci-trace.h"
@@ -1270,6 +1272,53 @@ EXPORT_SYMBOL_GPL(xhci_resume);
 #endif	/* CONFIG_PM */
 
 /*-------------------------------------------------------------------------*/
+static void xhci_map_urb_local(struct usb_hcd *hcd, struct urb *urb,
+				gfp_t mem_flags)
+{
+	void *buffer;
+	dma_addr_t dma_handle;
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct xhci_lowmem_pool *lowmem_pool = &xhci->lowmem_pool;
+
+	if (lowmem_pool->pool
+		&& (usb_endpoint_type(&urb->ep->desc) == USB_ENDPOINT_XFER_BULK)
+		&& (urb->transfer_buffer_length > PAGE_SIZE)
+		&& urb->num_sgs && urb->sg && (sg_phys(urb->sg) > 0xffffffff)) {
+		buffer = gen_pool_dma_alloc(lowmem_pool->pool,
+			urb->transfer_buffer_length, &dma_handle);
+		if (buffer) {
+			urb->transfer_dma = dma_handle;
+			urb->transfer_buffer = buffer;
+			urb->transfer_flags |= URB_MAP_LOCAL;
+			if (usb_urb_dir_out(urb))
+				sg_copy_to_buffer(urb->sg, urb->num_sgs,
+					(void *)buffer,
+					urb->transfer_buffer_length);
+		}
+	}
+
+}
+
+static void xhci_unmap_urb_local(struct usb_hcd *hcd, struct urb *urb)
+{
+	dma_addr_t dma_handle;
+	u64 cached_buffer;
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct xhci_lowmem_pool *lowmem_pool = &xhci->lowmem_pool;
+
+	if (urb->transfer_flags & URB_MAP_LOCAL) {
+		dma_handle = urb->transfer_dma;
+		cached_buffer = lowmem_pool->cached_base +
+			((u32)urb->transfer_dma & (lowmem_pool->size - 1));
+		if (usb_urb_dir_in(urb))
+			sg_copy_from_buffer(urb->sg, urb->num_sgs,
+				(void *)cached_buffer, urb->transfer_buffer_length);
+		gen_pool_free(lowmem_pool->pool, (unsigned long)urb->transfer_buffer,
+				urb->transfer_buffer_length);
+		urb->transfer_flags &= ~URB_MAP_LOCAL;
+		urb->transfer_buffer = NULL;
+	}
+}
 
 /*
  * Bypass the DMA mapping if URB is suitable for Immediate Transfer (IDT),
@@ -1283,7 +1332,19 @@ static int xhci_map_urb_for_dma(struct usb_hcd *hcd, struct urb *urb,
 	if (xhci_urb_suitable_for_idt(urb))
 		return 0;
 
+	xhci_map_urb_local(hcd, urb, mem_flags);
 	return usb_hcd_map_urb_for_dma(hcd, urb, mem_flags);
+}
+
+
+static void xhci_unmap_urb_for_dma(struct usb_hcd *hcd, struct urb *urb)
+{
+	struct xhci_hcd *xhci;
+
+	xhci = hcd_to_xhci(hcd);
+
+	xhci_unmap_urb_local(hcd, urb);
+	usb_hcd_unmap_urb_for_dma(hcd, urb);
 }
 
 /*
@@ -5354,6 +5415,7 @@ static const struct hc_driver xhci_hc_driver = {
 	 * managing i/o requests and associated device resources
 	 */
 	.map_urb_for_dma =      xhci_map_urb_for_dma,
+	.unmap_urb_for_dma =    xhci_unmap_urb_for_dma,
 	.urb_enqueue =		xhci_urb_enqueue,
 	.urb_dequeue =		xhci_urb_dequeue,
 	.alloc_dev =		xhci_alloc_dev,
