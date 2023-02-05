@@ -206,6 +206,12 @@ bool kernel_page_present(struct page *page)
 	pmd_t *pmd;
 	pte_t *pte;
 
+	/* Workaround for Kernel 5.10. Address 0xffffffe000204000 and below are
+	 * not overwrite-able
+	 */
+	if (addr <= 0xffffffe000204000)
+		return false;
+
 	pgd = pgd_offset_k(addr);
 	if (!pgd_present(*pgd))
 		return false;
