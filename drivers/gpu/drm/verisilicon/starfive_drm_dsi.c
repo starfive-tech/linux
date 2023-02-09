@@ -626,37 +626,37 @@ static int cdns_dsi_get_clock(struct device *dev, struct cdns_dsi *dsi)
 //get reset func
 static int cdns_dsi_get_reset(struct device *dev, struct cdns_dsi *dsi)
 {
-	dsi->dpi_rst = reset_control_get_exclusive(dev, "dsi_dpi");
+	dsi->dpi_rst = reset_control_get_shared(dev, "dsi_dpi");
 	if (IS_ERR(dsi->dpi_rst)){
 		dev_err(dev, "failed to get dpi_rst\n");
 		return PTR_ERR(dsi->dpi_rst);
 	}
 
-	dsi->apb_rst = reset_control_get_exclusive(dev, "dsi_apb");
+	dsi->apb_rst = reset_control_get_shared(dev, "dsi_apb");
 	if (IS_ERR(dsi->apb_rst)){
 		dev_err(dev, "failed to get apb_rst\n");
 		return PTR_ERR(dsi->apb_rst);
 	}
 
-	dsi->rxesc_rst = reset_control_get_exclusive(dev, "dsi_rxesc");
+	dsi->rxesc_rst = reset_control_get_shared(dev, "dsi_rxesc");
 	if (IS_ERR(dsi->rxesc_rst)){
 		dev_err(dev, "failed to get rxesc_rst\n");
 		return PTR_ERR(dsi->rxesc_rst);
 	}
 
-	dsi->sys_rst = reset_control_get_exclusive(dev, "dsi_sys");
+	dsi->sys_rst = reset_control_get_shared(dev, "dsi_sys");
 	if (IS_ERR(dsi->sys_rst)){
 		dev_err(dev, "failed to get sys_rst\n");
 		return PTR_ERR(dsi->sys_rst);
 	}
 
-	dsi->txbytehs_rst = reset_control_get_exclusive(dev, "dsi_txbytehs");
+	dsi->txbytehs_rst = reset_control_get_shared(dev, "dsi_txbytehs");
 	if (IS_ERR(dsi->txbytehs_rst)){
 		dev_err(dev, "failed to get txbytehs_rst\n");
 		return PTR_ERR(dsi->txbytehs_rst);
 	}
 
-	dsi->txesc_rst = reset_control_get_exclusive(dev, "dsi_txesc");
+	dsi->txesc_rst = reset_control_get_shared(dev, "dsi_txesc");
 	if (IS_ERR(dsi->txesc_rst)){
 		dev_err(dev, "failed to get txesc_rst\n");
 		return PTR_ERR(dsi->txesc_rst);
@@ -1479,7 +1479,17 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	if (IS_ERR(dsi->regs))
 		return PTR_ERR(dsi->regs);
 
+	dsi->dphy = devm_phy_get(&pdev->dev, "dphy");
+	if (IS_ERR(dsi->dphy)){
+		dev_err(&pdev->dev, "---get dphy error\n");
+		return -EPROBE_DEFER;
+	}
+
 	ret = cdns_dsi_get_clock(&pdev->dev, dsi);//get clock res
+	if(ret){
+		dev_err(&pdev->dev, "failed to get clock\n");
+		return -EPROBE_DEFER;
+	}
 
 	dev_info(&pdev->dev, "dsi_sys_clk = %ld\n", clk_get_rate(dsi->dsi_sys_clk));
 
@@ -1493,7 +1503,7 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	ret = cdns_dsi_resets_deassert(dsi, &pdev->dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to deassert reset\n");
-		return ret;
+		goto err_disable_pclk;
 	}
 
 	dsi->irq = platform_get_irq(pdev, 0);
@@ -1501,10 +1511,6 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "---get irq error\n");
 			return dsi->irq;
 	}
-
-	dsi->dphy = devm_phy_get(&pdev->dev, "dphy");
-	if (IS_ERR(dsi->dphy))
-		return PTR_ERR(dsi->dphy);
 
 	val = readl(dsi->regs + ID_REG);
 
@@ -1517,7 +1523,7 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	ret = cdns_check_register_access(dsi);
 	if (ret) {
 		dev_err(&pdev->dev, "rw test generic reg failed\n");
-		goto ERROR;
+		goto err_disable_pclk;
     }
 
 	val = readl(dsi->regs + IP_CONF);
@@ -1574,7 +1580,7 @@ err_disable_runtime_pm:
 
 err_disable_pclk:
 	//clk_disable_unprepare(dsi->dsi_p_clk);
-
+	cdns_dsi_clock_disable(dsi);
 ERROR:
 	return ret;
 }
