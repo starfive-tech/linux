@@ -249,7 +249,8 @@ ret_from_exception:
 resume_userspace:
 	/* Interrupts must be disabled here so flags are checked atomically */
 	REG_L s0, TASK_TI_FLAGS(tp) /* current_thread_info->flags */
-	andi s1, s0, _TIF_WORK_MASK
+	li t0, _TIF_WORK_MASK
+	and s1, s0, t0
 	bnez s1, work_pending
 
 #ifdef CONFIG_CONTEXT_TRACKING
@@ -345,7 +346,8 @@ resume_kernel:
 	REG_L s0, TASK_TI_PREEMPT_COUNT(tp)
 	bnez s0, restore_all
 	REG_L s0, TASK_TI_FLAGS(tp)
-	andi s0, s0, _TIF_NEED_RESCHED
+	li t0, _TIF_NEED_RESCHED_MASK
+	and s0, s0, t0
 	beqz s0, restore_all
 	call preempt_schedule_irq
 	j restore_all
@@ -354,7 +356,8 @@ resume_kernel:
 work_pending:
 	/* Enter slow path for supplementary processing */
 	la ra, ret_from_exception
-	andi s1, s0, _TIF_NEED_RESCHED
+	li t0, _TIF_NEED_RESCHED_MASK
+	and s1, s0, t0
 	bnez s1, work_resched
 work_notifysig:
 	/* Handle pending signals and notify-resume requests */
