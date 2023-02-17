@@ -29,8 +29,6 @@
 struct cpu_hw_events {
 	/* currently enabled events */
 	int			n_events;
-	/* Counter overflow interrupt */
-	int		irq;
 	/* currently enabled events */
 	struct perf_event	*events[RISCV_MAX_COUNTERS];
 	/* currently enabled hardware counters */

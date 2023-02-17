@@ -622,6 +622,23 @@ static int sf_dphy_power_off(struct phy *phy)
 
 static int sf_dphy_init(struct phy *phy)
 {
+	struct sf_dphy *dphy = phy_get_drvdata(phy);
+	int ret;
+	//pmic turn on
+	ret = regulator_enable(dphy->mipitx_0p9);
+	if (ret) {
+		dev_err(dphy->dev, "Cannot enable mipitx_0p9 regulator\n");
+		return ret;
+	}
+	udelay(100);
+	ret = regulator_enable(dphy->mipitx_1p8);
+	if (ret) {
+		dev_err(dphy->dev, "Cannot enable mipitx_1p8 regulator\n");
+		return ret;
+	}
+	udelay(100);
+	//mipi_pmic setting
+
 	return 0;
 }
 
@@ -639,6 +656,12 @@ static int sf_dphy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 
 static int sf_dphy_exit(struct phy *phy)
 {
+	struct sf_dphy *dphy = phy_get_drvdata(phy);
+	regulator_disable(dphy->mipitx_0p9);
+	udelay(100);
+	regulator_disable(dphy->mipitx_1p8);
+	udelay(100);
+
 	return 0;
 }
 
@@ -708,32 +731,20 @@ static int sf_dphy_probe(struct platform_device *pdev)
 	//mipi_pmic setting
 	dphy->mipitx_1p8 = devm_regulator_get(&pdev->dev, "mipitx_1p8");
 	if (IS_ERR(dphy->mipitx_1p8))
-		return PTR_ERR(dphy->mipitx_1p8);
+		//return PTR_ERR(dphy->mipitx_1p8);
+		return -EPROBE_DEFER;
 
 	dphy->mipitx_0p9 = devm_regulator_get(&pdev->dev, "mipitx_0p9");
 	if (IS_ERR(dphy->mipitx_0p9))
-		return PTR_ERR(dphy->mipitx_0p9);
-
-	//pmic turn on
-	ret = regulator_enable(dphy->mipitx_0p9);
-	if (ret) {
-		dev_err(&pdev->dev, "Cannot enable mipitx_0p9 regulator\n");
-		//goto err_reg_0p9;
-	}
-	udelay(100);
-	ret = regulator_enable(dphy->mipitx_1p8);
-	if (ret) {
-		dev_err(&pdev->dev, "Cannot enable mipitx_1p8 regulator\n");
-		//goto err_reg_1p8;
-	}
-	udelay(100);
-	//mipi_pmic setting
+		//return PTR_ERR(dphy->mipitx_0p9);
+		return -EPROBE_DEFER;
 
 	ret = sf_dphy_clkrst_get(&pdev->dev, dphy);
 	if (ret) {
 		dev_err(&pdev->dev, "sf_dphy_clkrst_get\n");
-		return ret;
+		//return ret;
 		//goto err_reg_1p8;
+		return -EPROBE_DEFER;
 	}
 
 	phy_provider = devm_of_phy_provider_register(&pdev->dev, of_phy_simple_xlate);
@@ -751,21 +762,8 @@ static struct platform_driver sf_dphy_driver = {
 	},
 };
 
-#if 1
-static int __init sf_dphy_probe_init(void)
-{
-	int ret;
 
-	ret = platform_driver_register(&sf_dphy_driver);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-late_initcall_sync(sf_dphy_probe_init);
-#endif
-
+module_platform_driver(sf_dphy_driver);
 MODULE_AUTHOR("Ezequiel Garcia <ezequiel@collabora.com>");
 MODULE_DESCRIPTION("sf MIPI  DPHY TX0 driver");
 MODULE_LICENSE("Dual MIT/GPL");

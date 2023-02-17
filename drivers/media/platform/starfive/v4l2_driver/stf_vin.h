@@ -82,13 +82,15 @@ struct vin_line {
 	spinlock_t output_lock;
 	const struct vin2_format *formats;
 	unsigned int nformats;
+#ifdef CONFIG_PM_SLEEP
+	int pm_stream_count;
+	int pm_power_count;
+#endif
 };
 
 struct stf_vin2_dev;
 
 struct vin_hw_ops {
-	int (*vin_top_clk_init)(struct stf_vin2_dev *vin_dev);
-	int (*vin_top_clk_deinit)(struct stf_vin2_dev *vin_dev);
 	int (*vin_clk_enable)(struct stf_vin2_dev *vin_dev);
 	int (*vin_clk_disable)(struct stf_vin2_dev *vin_dev);
 	int (*vin_config_set)(struct stf_vin2_dev *vin_dev);

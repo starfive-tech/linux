@@ -451,19 +451,23 @@ static int dw_i2s_runtime_resume(struct device *dev)
 		return ret;
 	}
 
+	if (dw_dev->rst_i2s_apb) {
+		ret = reset_control_deassert(dw_dev->rst_i2s_apb);
+		if (ret)
+			return ret;
+	}
+	if (dw_dev->rst_i2s_bclk) {
+		ret = reset_control_deassert(dw_dev->rst_i2s_bclk);
+		if (ret)
+			return ret;
+	}
+
 	return 0;
 }
 
 static int dw_i2s_suspend(struct snd_soc_component *component)
 {
-	struct dw_i2s_dev *dev = snd_soc_component_get_drvdata(component);
-
-	if (dev->capability & DW_I2S_MASTER) {
-		clk_disable_unprepare(dev->clk_i2s_lrck);
-		clk_disable_unprepare(dev->clk_i2s_bclk);
-	}
-
-	return 0;
+	return pm_runtime_force_suspend(component->dev);
 }
 
 static int dw_i2s_resume(struct snd_soc_component *component)
@@ -473,17 +477,42 @@ static int dw_i2s_resume(struct snd_soc_component *component)
 	int stream;
 	int ret;
 
-	if (dev->capability & DW_I2S_MASTER) {
-		ret = clk_prepare_enable(dev->clk_i2s_bclk);
+	if (!dev->is_master) {
+		ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_i2s_bclk_mst);
 		if (ret) {
-			dev_err(dev->dev, "Failed to enable clk_i2s_bclk\n");
-			return ret;
+			dev_err(dev->dev, "%s: failed to set clk_i2s_bclk parent to bclk_mst.\n",
+				__func__);
+			goto exit;
 		}
 
-		ret = clk_prepare_enable(dev->clk_i2s_lrck);
+		ret = clk_set_parent(dev->clk_i2s_lrck, dev->clk_i2s_lrck_mst);
 		if (ret) {
-			dev_err(dev->dev, "Failed to enable clk_i2s_lrck\n");
-			return ret;
+			dev_err(dev->dev, "%s: failed to set clk_i2s_lrck parent to lrck_mst.\n",
+				__func__);
+			goto exit;
+		}
+	}
+
+	ret = pm_runtime_force_resume(component->dev);
+	if (ret)
+		return ret;
+
+	if (dev->syscon_base) {
+		if (dev->is_master) {
+			/* config i2s data source: PDM  */
+			regmap_update_bits(dev->syscon_base, dev->syscon_offset_34,
+						AUDIO_SDIN_MUX_MASK, I2SRX_DATA_SRC_PDM);
+
+			regmap_update_bits(dev->syscon_base, dev->syscon_offset_18,
+				I2SRX_3CH_ADC_MASK, I2SRX_3CH_ADC_EN);
+		} else {
+			/*i2srx_3ch_adc_enable*/
+			regmap_update_bits(dev->syscon_base, dev->syscon_offset_18,
+						0x1 << 1, 0x1 << 1);
+
+			/*set i2sdin_sel*/
+			regmap_update_bits(dev->syscon_base, dev->syscon_offset_34,
+				(0x1 << 10) | (0x1 << 14) | (0x1<<17), (0x0<<10) | (0x0<<14) | (0x0<<17));
 		}
 	}
 
@@ -493,7 +522,34 @@ static int dw_i2s_resume(struct snd_soc_component *component)
 				dw_i2s_config(dev, stream);
 	}
 
+	i2s_write_reg(dev->i2s_base, CCR, dev->ccr);
+
+	if (!dev->is_master) {
+		ret = clk_set_parent(dev->clk_mclk, dev->clk_mclk_ext);
+		if (ret) {
+			dev_err(dev->dev, "failed to set mclk parent to mclk_ext\n");
+			goto exit;
+		}
+
+		ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_bclk_ext);
+		if (ret) {
+			dev_err(dev->dev, "%s: failed to set clk_i2s_bclk parent to bclk_ext.\n",
+				__func__);
+			goto exit;
+		}
+
+		ret = clk_set_parent(dev->clk_i2s_lrck, dev->clk_lrck_ext);
+		if (ret) {
+			dev_err(dev->dev, "%s: failed to set clk_i2s_lrck parent to lrck_ext.\n",
+				__func__);
+			goto exit;
+		}
+	}
+
 	return 0;
+
+exit:
+	return ret;
 }
 
 #else
@@ -512,12 +568,13 @@ static int dw_i2srx_mst_clk_init(struct platform_device *pdev, struct dw_i2s_dev
 	int ret = 0;
 
 	static struct clk_bulk_data clks[] = {
-		{ .id = "apb0" },
 		{ .id = "i2srx_apb" },
 		{ .id = "i2srx_bclk_mst" },
 		{ .id = "i2srx_lrck_mst" },
 		{ .id = "i2srx_bclk" },
 		{ .id = "i2srx_lrck" },
+		{ .id = "mclk" },
+		{ .id = "mclk_ext" },
 	};
 
 	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
@@ -526,12 +583,13 @@ static int dw_i2srx_mst_clk_init(struct platform_device *pdev, struct dw_i2s_dev
 		goto exit;
 	}
 
-	dev->clk_apb0 = clks[0].clk;
-	dev->clk_i2s_apb = clks[1].clk;
-	dev->clk_i2s_bclk_mst = clks[2].clk;
-	dev->clk_i2s_lrck_mst = clks[3].clk;
-	dev->clk_i2s_bclk = clks[4].clk;
-	dev->clk_i2s_lrck = clks[5].clk;
+	dev->clk_i2s_apb = clks[0].clk;
+	dev->clk_i2s_bclk_mst = clks[1].clk;
+	dev->clk_i2s_lrck_mst = clks[2].clk;
+	dev->clk_i2s_bclk = clks[3].clk;
+	dev->clk_i2s_lrck = clks[4].clk;
+	dev->clk_mclk = clks[5].clk;
+	dev->clk_mclk_ext = clks[6].clk;
 
 	dev->rst_i2s_apb = devm_reset_control_get_exclusive(&pdev->dev, "rst_apb_rx");
 	if (IS_ERR(dev->rst_i2s_apb)) {
@@ -547,19 +605,28 @@ static int dw_i2srx_mst_clk_init(struct platform_device *pdev, struct dw_i2s_dev
 		goto exit;
 	}
 
-	reset_control_assert(dev->rst_i2s_apb);
-	reset_control_assert(dev->rst_i2s_bclk);
-
-	ret = clk_prepare_enable(dev->clk_apb0);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_apb0\n");
-		goto exit;
-	}
-
 	ret = clk_prepare_enable(dev->clk_i2s_apb);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to prepare enable clk_i2srx_apb\n");
-		goto err_dis_i2srx_apb;
+		goto exit;
+	}
+
+	ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_i2s_bclk_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set parent clk_i2s_bclk\n");
+		goto err_dis_bclk_mst;
+	}
+
+	ret = clk_set_parent(dev->clk_i2s_lrck, dev->clk_i2s_lrck_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set parent clk_i2s_lrck\n");
+		goto err_dis_bclk_mst;
+	}
+
+	ret = clk_set_parent(dev->clk_mclk, dev->clk_mclk_ext);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set mclk parent to mclk_ext\n");
+		goto err_dis_bclk_mst;
 	}
 
 	ret = clk_prepare_enable(dev->clk_i2s_bclk_mst);
@@ -568,41 +635,16 @@ static int dw_i2srx_mst_clk_init(struct platform_device *pdev, struct dw_i2s_dev
 		goto err_dis_bclk_mst;
 	}
 
-	ret = clk_prepare_enable(dev->clk_i2s_lrck_mst);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_i2srx_3ch_lrck_mst\n");
-		goto err_dis_lrck_mst;
-	}
-
-	ret = clk_prepare_enable(dev->clk_i2s_bclk);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_i2srx_3ch_bclk\n");
-		goto err_dis_bclk;
-	}
-
-	ret = clk_prepare_enable(dev->clk_i2s_lrck);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_i2srx_3ch_lrck\n");
-		goto err_dis_lrck;
-	}
-
 	reset_control_deassert(dev->rst_i2s_apb);
 	reset_control_deassert(dev->rst_i2s_bclk);
 
 	regmap_update_bits(dev->syscon_base, dev->syscon_offset_18,
 				I2SRX_3CH_ADC_MASK, I2SRX_3CH_ADC_EN);
+
 	return 0;
 
-err_dis_i2srx_apb:
-	clk_disable_unprepare(dev->clk_apb0);
 err_dis_bclk_mst:
 	clk_disable_unprepare(dev->clk_i2s_apb);
-err_dis_lrck_mst:
-	clk_disable_unprepare(dev->clk_i2s_bclk_mst);
-err_dis_bclk:
-	clk_disable_unprepare(dev->clk_i2s_lrck_mst);
-err_dis_lrck:
-	clk_disable_unprepare(dev->clk_i2s_bclk);
 exit:
 	return ret;
 }
@@ -619,6 +661,8 @@ static int dw_i2srx_clk_init(struct platform_device *pdev, struct dw_i2s_dev *de
 		{ .id = "rx-lrck" },
 		{ .id = "bclk-ext" },
 		{ .id = "lrck-ext" },
+		{ .id = "mclk" },
+		{ .id = "mclk_ext" },
 	};
 
 	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(clks), clks);
@@ -634,6 +678,22 @@ static int dw_i2srx_clk_init(struct platform_device *pdev, struct dw_i2s_dev *de
 	dev->clk_i2s_lrck = clks[4].clk;
 	dev->clk_bclk_ext = clks[5].clk;
 	dev->clk_lrck_ext = clks[6].clk;
+	dev->clk_mclk = clks[7].clk;
+	dev->clk_mclk_ext = clks[8].clk;
+
+	ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_i2s_bclk_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set clk_i2s_bclk parent to bclk_mst.\n",
+			__func__);
+		goto exit;
+	}
+
+	ret = clk_set_parent(dev->clk_i2s_lrck, dev->clk_i2s_lrck_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set clk_i2s_lrck parent to lrck_mst.\n",
+			__func__);
+		goto exit;
+	}
 
 	ret = clk_prepare_enable(dev->clk_i2s_apb);
 	if (ret) {
@@ -673,6 +733,13 @@ static int dw_i2srx_clk_init(struct platform_device *pdev, struct dw_i2s_dev *de
 	regmap_update_bits(dev->syscon_base, dev->syscon_offset_34,
 		(0x1 << 10) | (0x1 << 14) | (0x1<<17), (0x0<<10) | (0x0<<14) | (0x0<<17));
 
+
+	ret = clk_set_parent(dev->clk_mclk, dev->clk_mclk_ext);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set mclk parent to mclk_ext\n");
+		goto disable_parent;
+	}
+
 	ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_bclk_ext);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to set clk_i2s_bclk parent to bclk_ext.\n",
@@ -695,6 +762,7 @@ disable_rst:
 disable_bclk:
 	clk_disable_unprepare(dev->clk_i2s_apb);
 disable_apb_clk:
+exit:
 
 	return ret;
 }
@@ -821,6 +889,20 @@ static int dw_i2stx_4ch1_clk_init(struct platform_device *pdev, struct dw_i2s_de
 	dev->clk_bclk_ext = clks[7].clk;
 	dev->clk_lrck_ext = clks[8].clk;
 
+	ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_i2s_bclk_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set clk_i2s_bclk parent to bclk_mst.\n",
+			__func__);
+		goto exit;
+	}
+
+	ret = clk_set_parent(dev->clk_i2s_lrck, dev->clk_i2s_lrck_mst);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set clk_i2s_lrck parent to lrck_mst.\n",
+			__func__);
+		goto exit;
+	}
+
 	ret = clk_prepare_enable(dev->clk_i2s_apb);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to enable clk_i2s_apb\n", __func__);
@@ -844,11 +926,17 @@ static int dw_i2stx_4ch1_clk_init(struct platform_device *pdev, struct dw_i2s_de
 		dev_err(&pdev->dev, "%s: failed to reset control assert rsts\n", __func__);
 		goto disable_rst;
 	}
-
+	udelay(5);
 	ret = reset_control_deassert(dev->rst_i2s_apb);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to reset control deassert rsts\n", __func__);
 		goto disable_rst;
+	}
+
+	ret = clk_set_parent(dev->clk_mclk, dev->clk_mclk_ext);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to set mclk parent to mclk_ext\n");
+		goto exit;
 	}
 
 	ret = clk_set_parent(dev->clk_i2s_bclk, dev->clk_bclk_ext);
@@ -1243,10 +1331,12 @@ err_init:
 
 static int dw_i2s_remove(struct platform_device *pdev)
 {
+#ifndef CONFIG_PM
 	struct dw_i2s_dev *dev = dev_get_drvdata(&pdev->dev);
 
 	clk_disable_unprepare(dev->clk_i2s_bclk_mst);
 	clk_disable_unprepare(dev->clk_i2s_apb);
+#endif
 
 	pm_runtime_disable(&pdev->dev);
 	return 0;

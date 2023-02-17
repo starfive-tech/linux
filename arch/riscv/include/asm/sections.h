@@ -9,5 +9,5 @@
 
 extern char _start[];
 extern char _start_kernel[];
-
+extern phys_addr_t end_linear_map;
 #endif /* __ASM_SECTIONS_H */
