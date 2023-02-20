@@ -697,6 +697,8 @@ static int canfd_driver_close(struct net_device *ndev)
 	free_irq(ndev->irq, ndev);
 	close_candev(ndev);
 
+	pm_runtime_put(priv->dev);
+
 	return 0;
 }
 
@@ -955,6 +957,13 @@ static int canfd_driver_open(struct net_device *ndev)
 	struct ipms_canfd_priv *priv = netdev_priv(ndev);
 	int ret;
 
+	ret = pm_runtime_get_sync(priv->dev);
+	if (ret < 0) {
+		netdev_err(ndev, "%s: pm_runtime_get failed(%d)\n",
+			   __func__, ret);
+		goto err;
+	}
+
 	/* Set chip into reset mode */
 	ret = set_reset_mode(ndev);
 	if (ret) {
@@ -987,6 +996,8 @@ static int canfd_driver_open(struct net_device *ndev)
 
 exit_can_start:
 	free_irq(ndev->irq, ndev);
+err:
+	pm_runtime_put(priv->dev);
 exit_irq:
 	close_candev(ndev);
 	return ret;
@@ -1101,6 +1112,9 @@ static int canfd_driver_probe(struct platform_device *pdev)
 	priv->reg_base = addr;
 	priv->write_reg = canfd_write_reg_le;
 	priv->read_reg = canfd_read_reg_le;
+
+	pm_runtime_enable(&pdev->dev);
+
 	priv->can_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(priv->can_clk)) {
 		dev_err(&pdev->dev, "Device clock not found.\n");
@@ -1150,6 +1164,7 @@ static int canfd_driver_remove(struct platform_device *pdev)
 
 	reset_control_assert(priv->resets);
 	clk_bulk_disable_unprepare(priv->nr_clks, priv->clks);
+	pm_runtime_disable(&pdev->dev);
 
 	unregister_candev(ndev);
 	netif_napi_del(&priv->napi);
@@ -1157,6 +1172,84 @@ static int canfd_driver_remove(struct platform_device *pdev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int __maybe_unused canfd_suspend(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+
+	if (netif_running(ndev)) {
+		netif_stop_queue(ndev);
+		netif_device_detach(ndev);
+		canfd_driver_stop(ndev);
+	}
+
+	return pm_runtime_force_suspend(dev);
+}
+
+static int __maybe_unused canfd_resume(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+	if (ret) {
+		dev_err(dev, "pm_runtime_force_resume failed on resume\n");
+		return ret;
+	}
+
+	if (netif_running(ndev)) {
+		ret = canfd_chip_start(ndev);
+		if (ret) {
+			dev_err(dev, "canfd_chip_start failed on resume\n");
+			return ret;
+		}
+
+		netif_device_attach(ndev);
+		netif_start_queue(ndev);
+	}
+
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_PM
+static int canfd_runtime_suspend(struct device *dev)
+{
+	struct ipms_canfd_priv *priv = dev_get_drvdata(dev);
+
+	reset_control_assert(priv->resets);
+	clk_bulk_disable_unprepare(priv->nr_clks, priv->clks);
+
+	return 0;
+}
+
+static int canfd_runtime_resume(struct device *dev)
+{
+	struct ipms_canfd_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_bulk_prepare_enable(priv->nr_clks, priv->clks);
+	if (ret) {
+		dev_err(dev, "Failed to  prepare_enable clk\n");
+		return ret;
+	}
+
+	ret = reset_control_deassert(priv->resets);
+	if (ret) {
+		dev_err(dev, "Failed to deassert reset\n");
+		return ret;
+	}
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops canfd_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(canfd_suspend, canfd_resume)
+	SET_RUNTIME_PM_OPS(canfd_runtime_suspend,
+			   canfd_runtime_resume, NULL)
+};
 
 static const struct of_device_id canfd_of_match[] = {
 	{ .compatible = "ipms,can" },
@@ -1169,6 +1262,7 @@ static struct platform_driver can_driver = {
 	.remove         = canfd_driver_remove,
 	.driver = {
 		.name  = DRIVER_NAME,
+		.pm    = &canfd_pm_ops,
 		.of_match_table = canfd_of_match,
 	},
 };

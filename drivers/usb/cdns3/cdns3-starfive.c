@@ -16,6 +16,7 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/usb/otg.h>
+#include "core.h"
 
 #define USB_STRAP_HOST			(2 << 0x10)
 #define USB_STRAP_DEVICE		(4 << 0X10)
@@ -73,6 +74,8 @@ struct cdns_starfive {
 	u32 stg_offset_500;
 	bool usb2_only;
 	enum usb_dr_mode mode;
+	void __iomem *phybase_20;
+	void __iomem *phybase_30;
 };
 
 static int cdns_mode_init(struct platform_device *pdev,
@@ -193,43 +196,62 @@ exit:
 	return ret;
 }
 
-static int cdns_starfive_phy_init(struct platform_device *pdev,
-							struct cdns_starfive *data)
+static void cdns_starfive_set_phy(struct cdns_starfive *data)
 {
-	struct device *dev = &pdev->dev;
-	void __iomem *phybase_20, *phybase_30;
 	unsigned int val;
-	int ret = 0;
-
-	phybase_20 = devm_platform_ioremap_resource(pdev, USB2_PHY_RES_INDEX);
-	if (IS_ERR(phybase_20)) {
-		dev_err(dev, "Can't map phybase_20 IOMEM resource\n");
-		ret = PTR_ERR(phybase_20);
-		goto get_res_err;
-	}
-
-	phybase_30 = devm_platform_ioremap_resource(pdev, USB3_PHY_RES_INDEX);
-	if (IS_ERR(phybase_30)) {
-		dev_err(dev, "Can't map phybase_30 IOMEM resource\n");
-		ret = PTR_ERR(phybase_30);
-		goto get_res_err;
-	}
 
 	if (data->mode != USB_DR_MODE_PERIPHERAL) {
 		/* Enable the LS speed keep-alive signal */
-		val = readl(phybase_20 + USB_LS_KEEPALIVE_OFF);
+		val = readl(data->phybase_20 + USB_LS_KEEPALIVE_OFF);
 		val |= BIT(USB_LS_KEEPALIVE_ENABLE);
-		writel(val, phybase_20 + USB_LS_KEEPALIVE_OFF);
+		writel(val, data->phybase_20 + USB_LS_KEEPALIVE_OFF);
 	}
 
 	if (!data->usb2_only) {
 		/* Configuare spread-spectrum mode: down-spread-spectrum */
-		writel(BIT(4), (phybase_30 + PCIE_USB3_PHY_PLL_CTL_OFF));
+		writel(BIT(4), data->phybase_30 + PCIE_USB3_PHY_PLL_CTL_OFF);
 	}
+}
+
+static int cdns_starfive_phy_init(struct platform_device *pdev,
+							struct cdns_starfive *data)
+{
+	struct device *dev = &pdev->dev;
+	int ret = 0;
+
+	data->phybase_20 = devm_platform_ioremap_resource(pdev, USB2_PHY_RES_INDEX);
+	if (IS_ERR(data->phybase_20)) {
+		dev_err(dev, "Can't map phybase_20 IOMEM resource\n");
+		ret = PTR_ERR(data->phybase_20);
+		goto get_res_err;
+	}
+
+	data->phybase_30 = devm_platform_ioremap_resource(pdev, USB3_PHY_RES_INDEX);
+	if (IS_ERR(data->phybase_30)) {
+		dev_err(dev, "Can't map phybase_30 IOMEM resource\n");
+		ret = PTR_ERR(data->phybase_30);
+		goto get_res_err;
+	}
+
+	cdns_starfive_set_phy(data);
 
 get_res_err:
 	return ret;
 }
+
+static struct cdns3_platform_data cdns_starfive_pdata = {
+#ifdef CONFIG_PM_SLEEP
+	.quirks		  = CDNS3_REGISTER_PM_NOTIFIER,
+#endif
+};
+
+static const struct of_dev_auxdata cdns_starfive_auxdata[] = {
+	{
+		.compatible = "cdns,usb3",
+		.platform_data = &cdns_starfive_pdata,
+	},
+	{},
+};
 
 static int cdns_starfive_probe(struct platform_device *pdev)
 {
@@ -291,11 +313,15 @@ static int cdns_starfive_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	ret = of_platform_populate(node, NULL, NULL, dev);
+	ret = of_platform_populate(node, NULL, cdns_starfive_auxdata, dev);
 	if (ret) {
 		dev_err(dev, "Failed to create children: %d\n", ret);
 		goto exit;
 	}
+
+	device_set_wakeup_capable(dev, true);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
 
 	dev_info(dev, "usb mode %d %s probe success\n",
 		data->mode, data->usb2_only ? "2.0" : "3.0");
@@ -317,13 +343,58 @@ static int cdns_starfive_remove_core(struct device *dev, void *c)
 static int cdns_starfive_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	struct cdns_starfive *data = dev_get_drvdata(dev);
 
+	pm_runtime_get_sync(dev);
 	device_for_each_child(dev, NULL, cdns_starfive_remove_core);
 
+	reset_control_assert(data->resets);
+	clk_bulk_disable_unprepare(data->num_clks, data->clks);
+	pm_runtime_disable(dev);
+	pm_runtime_put_noidle(dev);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int cdns_starfive_resume(struct device *dev)
+{
+	struct cdns_starfive *data = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_set_rate(data->usb_125m_clk, USB_125M_CLK_RATE);
+	if (ret)
+		goto err;
+
+	ret = clk_bulk_prepare_enable(data->num_clks, data->clks);
+	if (ret)
+		goto err;
+
+	ret = reset_control_deassert(data->resets);
+	if (ret)
+		goto err;
+
+	cdns_starfive_set_phy(data);
+err:
+	return ret;
+}
+
+static int cdns_starfive_suspend(struct device *dev)
+{
+	struct cdns_starfive *data = dev_get_drvdata(dev);
+
+	clk_bulk_disable_unprepare(data->num_clks, data->clks);
+	reset_control_assert(data->resets);
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops cdns_starfive_pm_ops = {
+	SET_RUNTIME_PM_OPS(cdns_starfive_suspend, cdns_starfive_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(cdns_starfive_suspend, cdns_starfive_resume)
+};
 
 static const struct of_device_id cdns_starfive_of_match[] = {
 	{ .compatible = "starfive,jh7110-cdns3", },
@@ -337,6 +408,7 @@ static struct platform_driver cdns_starfive_driver = {
 	.driver		= {
 		.name	= "cdns3-starfive",
 		.of_match_table	= cdns_starfive_of_match,
+		.pm	= &cdns_starfive_pm_ops,
 	},
 };
 

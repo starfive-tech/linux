@@ -11,6 +11,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/regmap.h>
+#include <linux/pm_runtime.h>
 #include <linux/dma/starfive-dma.h>
 #include <sound/soc.h>
 #include <sound/soc-dai.h>
@@ -27,6 +28,12 @@ static inline u32 sf_tdm_readl(struct sf_tdm_dev *dev, u16 reg)
 static inline void sf_tdm_writel(struct sf_tdm_dev *dev, u16 reg, u32 val)
 {
 	writel_relaxed(val, dev->tdm_base + reg);
+}
+
+static void sf_tdm_save_context(struct sf_tdm_dev *dev)
+{
+	dev->saved_reg_value[0] = sf_tdm_readl(dev, TDM_PCMGBCR);
+	dev->saved_reg_value[3] = sf_tdm_readl(dev, TDM_PCMDIV);
 }
 
 static void sf_tdm_start(struct sf_tdm_dev *dev, struct snd_pcm_substream *substream)
@@ -74,7 +81,7 @@ static int sf_tdm_syncdiv(struct sf_tdm_dev *dev)
 		return -1;
 	}
 
-	if ((dev->syncm == TDM_SYNCM_LONG) &&
+	if ((dev->syncm == TDM_SYNCM_LONG) && 
 			((dev->rx.sscale <= 1) || (dev->tx.sscale <= 1))) {
 		if ((syncdiv + 1) <= sl) {
 			pr_info("set syncdiv failed! it must be (syncdiv+1) > max[tx.sl, rx.sl]\n");
@@ -86,11 +93,14 @@ static int sf_tdm_syncdiv(struct sf_tdm_dev *dev)
 	return 0;
 }
 
-static void sf_tdm_contrl(struct sf_tdm_dev *dev)
+static void sf_tdm_control(struct sf_tdm_dev *dev)
 {
 	u32 data;
 
-	data = (dev->clkpolity << 5) | (dev->elm << 3) | (dev->syncm << 2) | (dev->ms_mode << 1);
+	data = (dev->clkpolity << CLKPOL_BIT) |
+		(dev->elm << ELM_BIT) |
+		(dev->syncm << SYNCM_BIT) |
+		(dev->ms_mode << MS_BIT);
 	sf_tdm_writel(dev, TDM_PCMGBCR, data);
 }
 
@@ -98,14 +108,20 @@ static void sf_tdm_config(struct sf_tdm_dev *dev, struct snd_pcm_substream *subs
 {
 	u32 datarx, datatx;
 
-	sf_tdm_contrl(dev);
+	sf_tdm_control(dev);
 	sf_tdm_syncdiv(dev);
 
-	datarx = (dev->rx.ifl << 11) | (dev->rx.wl << 8) | (dev->rx.sscale << 4) |
-		(dev->rx.sl << 2) | (dev->rx.lrj << 1);
+	datarx = (dev->rx.ifl << IFL_BIT) |
+		(dev->rx.wl << WL_BIT) |
+		(dev->rx.sscale << SSCALE_BIT) |
+		(dev->rx.sl << SL_BIT) |
+		(dev->rx.lrj << LRJ_BIT);
 
-	datatx = (dev->tx.ifl << 11) | (dev->tx.wl << 8) | (dev->tx.sscale << 4) |
-		(dev->tx.sl << 2) | (dev->tx.lrj << 1);
+	datatx = (dev->tx.ifl << IFL_BIT) |
+		(dev->tx.wl << WL_BIT) |
+		(dev->tx.sscale << SSCALE_BIT) |
+		(dev->tx.sl << SL_BIT) |
+		(dev->tx.lrj << LRJ_BIT);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		sf_tdm_writel(dev, TDM_PCMTXCR, datatx);
@@ -113,9 +129,131 @@ static void sf_tdm_config(struct sf_tdm_dev *dev, struct snd_pcm_substream *subs
 		sf_tdm_writel(dev, TDM_PCMRXCR, datarx);
 }
 
+static void sf_tdm_clk_disable(struct sf_tdm_dev *priv)
+{
+	clk_disable_unprepare(priv->clk_tdm);
+	clk_disable_unprepare(priv->clk_tdm_ext);
+	clk_disable_unprepare(priv->clk_tdm_internal);
+	clk_disable_unprepare(priv->clk_tdm_apb);
+	clk_disable_unprepare(priv->clk_tdm_ahb);
+	clk_disable_unprepare(priv->clk_mclk_inner);
+}
 
+static int sf_tdm_clk_enable(struct sf_tdm_dev *priv)
+{
+	int ret;
+
+	ret = clk_prepare_enable(priv->clk_mclk_inner);
+	if (ret) {
+		dev_err(priv->dev, "failed to prepare enable clk_mclk_inner\n");
+		return ret;
+	}
+
+	ret = clk_prepare_enable(priv->clk_tdm_ahb);
+	if (ret) {
+		dev_err(priv->dev, "Failed to prepare enable clk_tdm_ahb\n");
+		goto dis_mclk_inner;
+	}
+
+	ret = clk_prepare_enable(priv->clk_tdm_apb);
+	if (ret) {
+		dev_err(priv->dev, "Failed to prepare enable clk_tdm_apb\n");
+		goto dis_tdm_ahb;
+	}
+
+	ret = clk_prepare_enable(priv->clk_tdm_internal);
+	if (ret) {
+		dev_err(priv->dev, "Failed to prepare enable clk_tdm_intl\n");
+		goto dis_tdm_apb;
+	}
+
+	ret = clk_prepare_enable(priv->clk_tdm_ext);
+	if (ret) {
+		dev_err(priv->dev, "Failed to prepare enable clk_tdm_ext\n");
+		goto dis_tdm_internal;
+	}
+
+	ret = clk_set_parent(priv->clk_tdm, priv->clk_tdm_internal);
+	if (ret) {
+		dev_err(priv->dev, "Can't set internal clock source for clk_tdm: %d\n", ret);
+		goto dis_tdm_ext;
+	}
+
+	ret = clk_prepare_enable(priv->clk_tdm);
+	if (ret) {
+		dev_err(priv->dev, "Failed to prepare enable clk_tdm\n");
+		goto dis_tdm_ext;
+	}
+
+	ret = reset_control_deassert(priv->resets);
+	if (ret) {
+		dev_err(priv->dev, "%s: failed to deassert tdm resets\n", __func__);
+		goto err_reset;
+	}
+
+	ret = clk_set_parent(priv->clk_tdm, priv->clk_tdm_ext);
+	if (ret) {
+		dev_err(priv->dev, "Can't set external clock source for clk_tdm: %d\n", ret);
+		goto err_reset;
+	}
+
+	return 0;
+
+err_reset:
+	clk_disable_unprepare(priv->clk_tdm);	
+dis_tdm_ext:
+	clk_disable_unprepare(priv->clk_tdm_ext);
+dis_tdm_internal:
+	clk_disable_unprepare(priv->clk_tdm_internal);
+dis_tdm_apb:
+	clk_disable_unprepare(priv->clk_tdm_apb);
+dis_tdm_ahb:
+	clk_disable_unprepare(priv->clk_tdm_ahb);
+dis_mclk_inner:
+	clk_disable_unprepare(priv->clk_mclk_inner);
+
+	return ret;
+}
+
+#ifdef CONFIG_PM
+static int sf_tdm_runtime_suspend(struct device *dev)
+{
+	struct sf_tdm_dev *priv = dev_get_drvdata(dev);
+
+	sf_tdm_clk_disable(priv);
+	return 0;
+}
+
+static int sf_tdm_runtime_resume(struct device *dev)
+{
+	struct sf_tdm_dev *priv = dev_get_drvdata(dev);
+
+	return sf_tdm_clk_enable(priv);
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+static int sf_tdm_suspend(struct snd_soc_component *component)
+{
+	return pm_runtime_force_suspend(component->dev);
+}
+
+static int sf_tdm_resume(struct snd_soc_component *component)
+{
+
+	struct sf_tdm_dev *dev = snd_soc_component_get_drvdata(component);
+
+	// restore context
+	sf_tdm_writel(dev, TDM_PCMGBCR, dev->saved_reg_value[0]);
+	sf_tdm_writel(dev, TDM_PCMDIV, dev->saved_reg_value[3]);
+
+	return pm_runtime_force_resume(component->dev);
+}
+
+#else
 #define sf_tdm_suspend	NULL
 #define sf_tdm_resume	NULL
+#endif
 
 /* 
  * To stop dma first, we must implement this function, because it is
@@ -173,35 +311,29 @@ static int sf_tdm_hw_params(struct snd_pcm_substream *substream,
 	/*  There are some limitation when using 8k sample rate  */
 	case 8000:
 		mclk_rate = 12288000;
-		dev->pcmclk = 512000;
 		if ((data_width == 16) || (channels == 1)) {
 			pr_err("TDM: not support 16bit or 1-channel when using 8k sample rate\n");
 			return -EINVAL;
 		}
 		break;
 	case 11025:
-		mclk_rate = 11289600; //sysclk
-		dev->pcmclk = 352800; //bit clock, for 16-bit
+		/* sysclk */
+		mclk_rate = 11289600;
 		break;
 	case 16000:
-		mclk_rate = 12288000; //sysclk
-		dev->pcmclk = 512000; //bit clock
+		mclk_rate = 12288000;
 		break;
 	case 22050:
 		mclk_rate = 11289600;
-		dev->pcmclk = 705600;
 		break;
 	case 32000:
 		mclk_rate = 12288000;
-		dev->pcmclk = 1024000;
 		break;
 	case 44100:
 		mclk_rate = 11289600;
-		dev->pcmclk = 1411200;
 		break;
 	case 48000:
 		mclk_rate = 12288000;
-		dev->pcmclk = 1536000;
 		break;
 	default:
 		pr_err("TDM: not support sample rate:%d\n", dev->samplerate);
@@ -259,19 +391,19 @@ static int sf_tdm_hw_params(struct snd_pcm_substream *substream,
 
 	ret = clk_set_rate(dev->clk_mclk_inner, mclk_rate);
 	if (ret) {
-		dev_info(dev->dev, "Can't set clk_mclk: %d\n", ret);
+		dev_err(dev->dev, "Can't set clk_mclk: %d\n", ret);
 		return ret;
 	}
 
 	ret = clk_set_rate(dev->clk_tdm_internal, dev->pcmclk);
 	if (ret) {
-		dev_info(dev->dev, "Can't set clk_tdm_internal: %d\n", ret);
+		dev_err(dev->dev, "Can't set clk_tdm_internal: %d\n", ret);
 		return ret;
 	}
 
 	ret = clk_set_parent(dev->clk_tdm, dev->clk_tdm_ext);
 	if (ret) {
-		dev_info(dev->dev, "Can't set clock source for clk_tdm: %d\n", ret);
+		dev_err(dev->dev, "Can't set clock source for clk_tdm: %d\n", ret);
 		return ret;
 	}
 
@@ -288,6 +420,11 @@ static int sf_tdm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	sf_tdm_config(dev, substream);
+	sf_tdm_save_context(dev);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dev->saved_reg_value[1] = sf_tdm_readl(dev, TDM_PCMTXCR);
+	else
+		dev->saved_reg_value[2] = sf_tdm_readl(dev, TDM_PCMRXCR);
 
 	return 0;
 }
@@ -304,6 +441,11 @@ static int sf_tdm_trigger(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		dev->active++;
+		/* restore context */
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			sf_tdm_writel(dev, TDM_PCMTXCR, dev->saved_reg_value[1]);
+		else
+			sf_tdm_writel(dev, TDM_PCMRXCR, dev->saved_reg_value[2]);
 		sf_tdm_start(dev, substream);
 		break;
 
@@ -391,6 +533,8 @@ static struct snd_soc_dai_driver sf_tdm_dai = {
 static const struct snd_pcm_hardware jh71xx_pcm_hardware = {
 	.info			= (SNDRV_PCM_INFO_MMAP		|
 				   SNDRV_PCM_INFO_MMAP_VALID	|
+				   SNDRV_PCM_INFO_PAUSE		|
+				   SNDRV_PCM_INFO_RESUME	|
 				   SNDRV_PCM_INFO_INTERLEAVED	|
 				   SNDRV_PCM_INFO_BLOCK_TRANSFER),
 	.buffer_bytes_max	= 192512,
@@ -443,9 +587,7 @@ static int sf_tdm_clk_reset_init(struct platform_device *pdev, struct sf_tdm_dev
 	int ret;
 
 	static struct clk_bulk_data clks[] = {
-		{ .id = "clk_ahb0" },
 		{ .id = "clk_tdm_ahb" },
-		{ .id = "clk_apb0" },
 		{ .id = "clk_tdm_apb" },
 		{ .id = "clk_tdm_internal" },
 		{ .id = "clk_tdm_ext" },
@@ -459,14 +601,12 @@ static int sf_tdm_clk_reset_init(struct platform_device *pdev, struct sf_tdm_dev
 		goto exit;
 	}
 
-	dev->clk_ahb0 = clks[0].clk;
-	dev->clk_tdm_ahb = clks[1].clk;
-	dev->clk_apb0 = clks[2].clk;
-	dev->clk_tdm_apb = clks[3].clk;
-	dev->clk_tdm_internal = clks[4].clk;
-	dev->clk_tdm_ext = clks[5].clk;
-	dev->clk_tdm = clks[6].clk;
-	dev->clk_mclk_inner = clks[7].clk;
+	dev->clk_tdm_ahb = clks[0].clk;
+	dev->clk_tdm_apb = clks[1].clk;
+	dev->clk_tdm_internal = clks[2].clk;
+	dev->clk_tdm_ext = clks[3].clk;
+	dev->clk_tdm = clks[4].clk;
+	dev->clk_mclk_inner = clks[5].clk;
 
 	dev->resets = devm_reset_control_array_get_exclusive(&pdev->dev);
 	if (IS_ERR(dev->resets)) {
@@ -475,76 +615,8 @@ static int sf_tdm_clk_reset_init(struct platform_device *pdev, struct sf_tdm_dev
 		goto exit;
 	}
 
-	ret = reset_control_assert(dev->resets);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to assert tdm resets\n");
-		goto exit;
-	}
+	ret = sf_tdm_clk_enable(dev);
 
-	ret = clk_prepare_enable(dev->clk_mclk_inner);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_mclk_inner\n");
-		goto exit;
-	}
-
-	ret = clk_prepare_enable(dev->clk_ahb0);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to prepare enable clk_ahb0\n");
-		goto err_dis_ahb0;
-	}
-
-	ret = clk_prepare_enable(dev->clk_tdm_ahb);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to prepare enable clk_tdm_ahb\n");
-		goto err_dis_tdm_ahb;
-	}
-
-	ret = clk_prepare_enable(dev->clk_apb0);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to prepare enable clk_apb0\n");
-		goto err_dis_apb0;
-	}
-
-	ret = clk_prepare_enable(dev->clk_tdm_apb);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to prepare enable clk_tdm_apb\n");
-		goto err_dis_tdm_apb;
-	}
-
-	ret = clk_prepare_enable(dev->clk_tdm_internal);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to prepare enable clk_tdm_intl\n");
-		goto err_dis_tdm_internal;
-	}
-
-	ret = clk_prepare_enable(dev->clk_tdm_ext);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to prepare enable clk_tdm_ext\n");
-		goto err_dis_tdm_ext;
-	}
-
-	ret = reset_control_deassert(dev->resets);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to deassert tdm resets\n");
-		goto err_clk_disable;
-	}
-
-	return 0;
-
-err_clk_disable:
-	clk_disable_unprepare(dev->clk_tdm_ext);
-err_dis_tdm_ext:
-	clk_disable_unprepare(dev->clk_tdm_internal);
-err_dis_tdm_internal:
-	clk_disable_unprepare(dev->clk_tdm_apb);
-err_dis_tdm_apb:
-	clk_disable_unprepare(dev->clk_apb0);
-err_dis_apb0:
-	clk_disable_unprepare(dev->clk_tdm_ahb);
-err_dis_tdm_ahb:
-	clk_disable_unprepare(dev->clk_ahb0);
-err_dis_ahb0:
-	clk_disable_unprepare(dev->clk_mclk_inner);
 exit:
 	return ret;
 }
@@ -591,11 +663,17 @@ static int sf_tdm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+#ifdef CONFIG_PM
+	sf_tdm_clk_disable(dev);
+#endif
+
 	return 0;
 }
 
 static int sf_tdm_dev_remove(struct platform_device *pdev)
 {
+	pm_runtime_disable(&pdev->dev);
 	return 0;
 }
 static const struct of_device_id sf_tdm_of_match[] = {
@@ -604,10 +682,17 @@ static const struct of_device_id sf_tdm_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sf_tdm_of_match);
 
+static const struct dev_pm_ops sf_tdm_pm_ops = {
+	SET_RUNTIME_PM_OPS(sf_tdm_runtime_suspend,
+			   sf_tdm_runtime_resume, NULL)
+};
+
 static struct platform_driver sf_tdm_driver = {
+
 	.driver = {
 		.name = "jh7110-tdm",
 		.of_match_table = sf_tdm_of_match,
+		.pm = &sf_tdm_pm_ops,
 	},
 	.probe = sf_tdm_probe,
 	.remove = sf_tdm_dev_remove,

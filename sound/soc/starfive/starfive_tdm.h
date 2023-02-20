@@ -26,6 +26,11 @@
 	#define MS_BIT			1
 #define TDM_PCMTXCR			0x04
 	#define PCMTXCR_TXEN		BIT(0)
+	#define IFL_BIT			11
+	#define WL_BIT			8
+	#define SSCALE_BIT		4
+	#define SL_BIT			2
+	#define LRJ_BIT			1
 #define TDM_PCMRXCR			0x08
 	#define PCMRXCR_RXEN		BIT(0)
 	#define PCMRXCR_RXSL_MASK	0xc
@@ -36,8 +41,7 @@
 #define TDM_PCMDIV			0x0c
 
 /*  DMA registers */
-#define TDM_FIFO		0x170c0000
-//#define TDM_FIFO_DEPTH			16
+#define TDM_FIFO			0x170c0000
 #define TDM_FIFO_DEPTH			32
 
 #define ONE_CHANNEL_SUPPORT		1
@@ -117,9 +121,7 @@ typedef struct tdm_chan_cfg {
 struct sf_tdm_dev {
 	void __iomem *tdm_base;
 	struct device *dev;
-	struct clk *clk_ahb0;
 	struct clk *clk_tdm_ahb;
-	struct clk *clk_apb0;
 	struct clk *clk_tdm_apb;
 	struct clk *clk_tdm_internal;
 	struct clk *clk_tdm_ext;
@@ -145,6 +147,7 @@ struct sf_tdm_dev {
 	/* data related to DMA transfers b/w tdm and DMAC */
 	struct snd_dmaengine_dai_dma_data play_dma_data;
 	struct snd_dmaengine_dai_dma_data capture_dma_data;
+	u32 saved_reg_value[4];
 };
 
 #endif	/* __SND_SOC_STARFIVE_TDM_H */
