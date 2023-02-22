@@ -370,6 +370,12 @@ static int sf_dphy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 
 static int sf_dphy_exit(struct phy *phy)
 {
+	struct sf_dphy *dphy = phy_get_drvdata(phy);
+	regulator_disable(dphy->mipitx_0p9);
+	udelay(100);
+	regulator_disable(dphy->mipitx_1p8);
+	udelay(100);
+
 	return 0;
 }
 
@@ -429,17 +435,20 @@ static int sf_dphy_probe(struct platform_device *pdev)
 	//mipi_pmic setting
 	dphy->mipitx_1p8 = devm_regulator_get(&pdev->dev, "mipi_1p8");
 	if (IS_ERR(dphy->mipitx_1p8))
-		return PTR_ERR(dphy->mipitx_1p8);
+		//return PTR_ERR(dphy->mipitx_1p8);
+		return -EPROBE_DEFER;
 
 	dphy->mipitx_0p9 = devm_regulator_get(&pdev->dev, "mipi_0p9");
 	if (IS_ERR(dphy->mipitx_0p9))
-		return PTR_ERR(dphy->mipitx_0p9);
+		//return PTR_ERR(dphy->mipitx_0p9);
+		return -EPROBE_DEFER;
 
 	ret = sf_dphy_clkrst_get(&pdev->dev, dphy);
 	if (ret) {
 		dev_err(&pdev->dev, "sf_dphy_clkrst_get\n");
-		return ret;
+		//return ret;
 		//goto err_reg_1p8;
+		return -EPROBE_DEFER;
 	}
 
 	phy_provider = devm_of_phy_provider_register(&pdev->dev, of_phy_simple_xlate);
