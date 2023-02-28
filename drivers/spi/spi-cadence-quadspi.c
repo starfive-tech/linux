@@ -72,6 +72,8 @@ struct cqspi_st {
 	struct clk		*clks[CLK_QSPI_NUM];
 	unsigned int		sclk;
 
+	struct reset_control *qspi_rst;
+
 	void __iomem		*iobase;
 	void __iomem		*ahb_base;
 	resource_size_t		ahb_size;
@@ -1499,13 +1501,11 @@ disable_apb_clk:
 static int cqspi_probe(struct platform_device *pdev)
 {
 	const struct cqspi_driver_platdata *ddata;
-	struct reset_control *rst_apb, *rst_ahb, *rst_ref;
 	struct device *dev = &pdev->dev;
 	struct spi_master *master;
 	struct resource *res_ahb;
 	struct cqspi_st *cqspi;
 	struct resource *res;
-	void __iomem	*reset_res;
 	int ret;
 	int irq;
 
@@ -1575,33 +1575,15 @@ static int cqspi_probe(struct platform_device *pdev)
 		goto probe_clk_failed;
 
 	/* Obtain QSPI reset control */
-	rst_apb = devm_reset_control_get_optional_exclusive(dev, "rst_apb");
-	if (IS_ERR(rst_apb)) {
-		ret = PTR_ERR(rst_apb);
-		dev_err(dev, "Cannot get APB reset.\n");
+	cqspi->qspi_rst = devm_reset_control_array_get_exclusive(&pdev->dev);
+	if (IS_ERR(cqspi->qspi_rst)) {
+		ret = PTR_ERR(cqspi->qspi_rst);
+		dev_err(dev, "Cannot get QSPI reset.\n");
 		goto probe_reset_failed;
 	}
 
-	rst_ahb = devm_reset_control_get_optional_exclusive(dev, "rst_ahb");
-	if (IS_ERR(rst_ahb)) {
-		ret = PTR_ERR(rst_ahb);
-		dev_err(dev, "Cannot get QSPI ahb reset.\n");
-		goto probe_reset_failed;
-	}
-
-	rst_ref = devm_reset_control_get_optional_exclusive(dev, "rst_ref");
-	if (IS_ERR(rst_ref)) {
-		ret = PTR_ERR(rst_ref);
-		dev_err(dev, "Cannot get QSPI ref reset.\n");
-		goto probe_reset_failed;
-	}
-
-	/*
-	 *  Due to the problem of reset in the current QSPI driver
-	 *  we temporarily reset QSPI by writing register
-	 */
-	reset_res = ioremap(STARFIVE_RESET_REG_BASE_ADDR, 0x300);
-	writel(0X7E7FE00, reset_res + QSPI_RESET_REG_OFFSET);
+	reset_control_assert(cqspi->qspi_rst);
+	reset_control_deassert(cqspi->qspi_rst);
 
 	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->clks[CLK_QSPI_REF]);
 
