@@ -334,7 +334,4 @@ config QORIQ_CPUFREQ
 
 endif
 
-if RISCV
-source "drivers/cpufreq/Kconfig.riscv"
-endif
 endmenu
