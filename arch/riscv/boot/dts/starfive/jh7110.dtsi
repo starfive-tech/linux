@@ -486,6 +486,15 @@
 			status = "disabled";
 		};
 
+		ptc: pwm@120d0000 {
+			compatible = "starfive,jh7110-pwm";
+			reg = <0x0 0x120d0000 0x0 0x10000>;
+			clocks = <&syscrg JH7110_SYSCLK_PWM_APB>;
+			resets = <&syscrg JH7110_SYSRST_PWM_APB>;
+			#pwm-cells=<3>;
+			status = "disabled";
+		};
+
 		qspi: spi@13010000 {
 			compatible = "starfive,jh7110-qspi", "cdns,qspi-nor";
 			#address-cells = <1>;
