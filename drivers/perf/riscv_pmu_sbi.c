@@ -881,9 +881,11 @@ static int pmu_sbi_device_probe(struct platform_device *pdev)
 	}
 	pdev->dev.groups = pmu_sbi_groups;
 
+#ifndef CONFIG_SOC_STARFIVE
 	ret = cpuhp_state_add_instance(CPUHP_AP_PERF_RISCV_STARTING, &pmu->node);
 	if (ret)
 		return ret;
+#endif
 
 	ret = riscv_pm_pmu_register(pmu);
 	if (ret)
