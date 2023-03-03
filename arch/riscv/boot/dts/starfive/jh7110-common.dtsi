@@ -29,8 +29,6 @@
 	};
 
 	chosen {
-		linux,initrd-start = <0x0 0x46100000>;
-		linux,initrd-end = <0x0 0x4c000000>;
 		stdout-path = "serial0:115200";
 		#bootargs = "debug console=ttyS0 rootwait";
 	};
