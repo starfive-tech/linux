@@ -28,6 +28,7 @@
 #include <linux/pci.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
@@ -54,12 +55,18 @@
 #define IDS_PCI_TO_PCI_BRIDGE		0x060400
 #define IDS_CLASS_CODE_SHIFT		8
 
+#define PLDA_LINK_UP			1
+#define PLDA_LINK_DOWN			0
+
+#define PLDA_DATA_LINK_ACTIVE		BIT(5)
 #define PREF_MEM_WIN_64_SUPPORT		BIT(3)
 #define PMSG_LTR_SUPPORT		BIT(2)
 #define PDLA_LINK_SPEED_GEN2		BIT(12)
 #define PLDA_FUNCTION_DIS		BIT(15)
 #define PLDA_FUNC_NUM			4
 #define PLDA_PHY_FUNC_SHIFT		9
+#define PHY_KVCO_FINE_TUNE_LEVEL	0x91
+#define PHY_KVCO_FINE_TUNE_SIGNALS	0xc
 
 #define XR3PCI_ATR_AXI4_SLV0		0x800
 #define XR3PCI_ATR_SRC_ADDR_LOW		0x0
@@ -141,9 +148,13 @@ struct plda_pcie {
 	void __iomem		*config_base;
 	struct resource *cfg_res;
 	struct regmap *reg_syscon;
+	struct regmap *reg_phyctrl;
 	u32 stg_arfun;
 	u32 stg_awfun;
 	u32 stg_rp_nep;
+	u32 stg_lnksta;
+	u32 phy_kvco_level;
+	u32 phy_kvco_tune_signals;
 	int			irq;
 	struct irq_domain	*legacy_irq_domain;
 	struct pci_host_bridge  *bridge;
@@ -563,7 +574,7 @@ static int plda_pcie_parse_dt(struct plda_pcie *pcie)
 {
 	struct resource *reg_res;
 	struct platform_device *pdev = pcie->pdev;
-	struct of_phandle_args args;
+	struct of_phandle_args syscon_args, phyctrl_args;
 	int ret;
 
 	reg_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "reg");
@@ -590,6 +601,23 @@ static int plda_pcie_parse_dt(struct plda_pcie *pcie)
 		return PTR_ERR(pcie->config_base);
 	}
 
+	ret = of_parse_phandle_with_fixed_args(pdev->dev.of_node,
+					       "starfive,phyctrl", 2, 0, &phyctrl_args);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to parse starfive,phyctrl\n");
+		return -EINVAL;
+	}
+
+	if (!of_device_is_compatible(phyctrl_args.np, "starfive,phyctrl"))
+		return -EINVAL;
+	pcie->reg_phyctrl =  device_node_to_regmap(phyctrl_args.np);
+	of_node_put(phyctrl_args.np);
+	if (IS_ERR(pcie->reg_phyctrl))
+		return PTR_ERR(pcie->reg_phyctrl);
+
+	pcie->phy_kvco_level = phyctrl_args.args[0];
+	pcie->phy_kvco_tune_signals = phyctrl_args.args[1];
+
 	pcie->irq = platform_get_irq(pdev, 0);
 	if (pcie->irq <= 0) {
 		dev_err(&pdev->dev, "Failed to get IRQ: %d\n", pcie->irq);
@@ -597,20 +625,21 @@ static int plda_pcie_parse_dt(struct plda_pcie *pcie)
 	}
 
 	ret = of_parse_phandle_with_fixed_args(pdev->dev.of_node,
-							"starfive,stg-syscon", 3, 0, &args);
+					       "starfive,stg-syscon", 4, 0, &syscon_args);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to parse starfive,stg-syscon\n");
 		return -EINVAL;
 	}
 
-	pcie->reg_syscon = syscon_node_to_regmap(args.np);
-	of_node_put(args.np);
+	pcie->reg_syscon = syscon_node_to_regmap(syscon_args.np);
+	of_node_put(syscon_args.np);
 	if (IS_ERR(pcie->reg_syscon))
 		return PTR_ERR(pcie->reg_syscon);
 
-	pcie->stg_arfun = args.args[0];
-	pcie->stg_awfun = args.args[1];
-	pcie->stg_rp_nep = args.args[2];
+	pcie->stg_arfun = syscon_args.args[0];
+	pcie->stg_awfun = syscon_args.args[1];
+	pcie->stg_rp_nep = syscon_args.args[2];
+	pcie->stg_lnksta = syscon_args.args[3];
 
 	/* Clear all interrupts */
 	plda_writel(pcie, 0xffffffff, ISTATUS_LOCAL);
@@ -779,6 +808,12 @@ static void plda_pcie_hw_init(struct plda_pcie *pcie)
 				STG_SYSCON_AXI4_SLVL_AWFUNC_MASK,
 				0 << STG_SYSCON_AXI4_SLVL_AWFUNC_SHIFT);
 
+	/* PCIe Multi-PHY PLL KVCO Gain fine tune settings: */
+	regmap_write(pcie->reg_phyctrl, pcie->phy_kvco_level,
+		     PHY_KVCO_FINE_TUNE_LEVEL);
+	regmap_write(pcie->reg_phyctrl, pcie->phy_kvco_tune_signals,
+		     PHY_KVCO_FINE_TUNE_SIGNALS);
+
 	/* Enable root port*/
 	value = readl(pcie->reg_base + GEN_SETTINGS);
 	value |= PLDA_RP_ENABLE;
@@ -823,7 +858,32 @@ static void plda_pcie_hw_init(struct plda_pcie *pcie)
 		if (ret)
 			dev_err(dev, "Cannot set reset pin to high\n");
 	}
+}
 
+static int plda_pcie_is_link_up(struct plda_pcie *pcie)
+{
+	struct device *dev = &pcie->pdev->dev;
+	int ret;
+	u32 stg_reg_val;
+
+	/* 100ms timeout value should be enough for Gen1/2 training */
+	ret = regmap_read_poll_timeout(pcie->reg_syscon,
+					pcie->stg_lnksta,
+					stg_reg_val,
+					stg_reg_val & PLDA_DATA_LINK_ACTIVE,
+					10 * 1000, 100 * 1000);
+
+	/* If the link is down (no device in slot), then exit. */
+	if (ret == -ETIMEDOUT) {
+		dev_info(dev, "Port link down, exit.\n");
+		return PLDA_LINK_DOWN;
+	} else if (ret == 0) {
+		dev_info(dev, "Port link up.\n");
+		return PLDA_LINK_UP;
+	}
+
+	dev_warn(dev, "Read stg_linksta failed.\n");
+	return ret;
 }
 
 static int plda_pcie_probe(struct platform_device *pdev)
@@ -888,6 +948,9 @@ static int plda_pcie_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
 	/* Set default bus ops */
 	bridge->ops = &plda_pcie_ops;
 	bridge->sysdata = pcie;
@@ -895,19 +958,36 @@ static int plda_pcie_probe(struct platform_device *pdev)
 
 	plda_pcie_hw_init(pcie);
 
+	if (plda_pcie_is_link_up(pcie) == PLDA_LINK_DOWN)
+		goto release;
+
 	ret = pci_host_probe(bridge);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to pci host probe: %d\n", ret);
-		goto exit;
+		goto release;
 	}
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		ret = plda_pcie_enable_msi(pcie, bus);
-		if (ret < 0)
+		if (ret < 0) {
 			dev_err(&pdev->dev,	"Failed to enable MSI support: %d\n", ret);
+			goto release;
+		}
 	}
 
 exit:
+	return ret;
+
+release:
+	plda_clk_rst_deinit(pcie);
+
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
+	pci_free_host_bridge(pcie->bridge);
+	devm_kfree(&pdev->dev, pcie);
+	platform_set_drvdata(pdev, NULL);
+
 	return ret;
 }
 
@@ -922,6 +1002,39 @@ static int plda_pcie_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int __maybe_unused plda_pcie_suspend_noirq(struct device *dev)
+{
+	struct plda_pcie *pcie = dev_get_drvdata(dev);
+
+	if (!pcie)
+		return 0;
+
+	clk_bulk_disable_unprepare(pcie->num_clks, pcie->clks);
+
+	return 0;
+}
+
+static int __maybe_unused plda_pcie_resume_noirq(struct device *dev)
+{
+	struct plda_pcie *pcie = dev_get_drvdata(dev);
+	int ret;
+
+	if (!pcie)
+		return 0;
+
+	ret = clk_bulk_prepare_enable(pcie->num_clks, pcie->clks);
+	if (ret)
+		dev_err(dev, "Failed to enable clocks\n");
+
+	return ret;
+}
+
+static const struct dev_pm_ops plda_pcie_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(plda_pcie_suspend_noirq,
+				      plda_pcie_resume_noirq)
+};
+#endif
 
 static const struct of_device_id plda_pcie_of_match[] = {
 	{ .compatible = "plda,pci-xpressrich3-axi"},
@@ -934,6 +1047,9 @@ static struct platform_driver plda_pcie_driver = {
 	.driver = {
 		.name = KBUILD_MODNAME,
 		.of_match_table = of_match_ptr(plda_pcie_of_match),
+#ifdef CONFIG_PM_SLEEP
+		.pm = &plda_pcie_pm_ops,
+#endif
 	},
 	.probe = plda_pcie_probe,
 	.remove = plda_pcie_remove,

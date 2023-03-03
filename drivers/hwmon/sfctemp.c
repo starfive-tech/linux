@@ -14,6 +14,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
+#include <linux/pm_runtime.h>
 
 /*
  * TempSensor reset. The RSTN can be de-asserted once the analog core has
@@ -52,6 +53,7 @@ struct sfctemp {
 	/* serialize access to hardware register and enabled below */
 	struct mutex lock;
 	struct completion conversion_done;
+	struct device *dev;
 	void __iomem *regs;
 	struct clk *clk_sense;
 	struct clk *clk_bus;
@@ -95,13 +97,9 @@ static void sfctemp_run_single(struct sfctemp *sfctemp)
 	writel(SFCTEMP_RSTN, sfctemp->regs);
 }
 
-static int sfctemp_enable(struct sfctemp *sfctemp)
+static int sfctemp_clk_enable(struct sfctemp *sfctemp)
 {
 	int ret = 0;
-
-	mutex_lock(&sfctemp->lock);
-	if (sfctemp->enabled)
-		goto done;
 
 	ret = clk_prepare_enable(sfctemp->clk_bus);
 	if (ret)
@@ -117,12 +115,7 @@ static int sfctemp_enable(struct sfctemp *sfctemp)
 	if (ret)
 		goto err_disable_sense;
 
-	sfctemp_power_up(sfctemp);
-	sfctemp->enabled = true;
-done:
-	mutex_unlock(&sfctemp->lock);
 	return ret;
-
 err_disable_sense:
 	clk_disable_unprepare(sfctemp->clk_sense);
 err_assert_bus:
@@ -134,19 +127,41 @@ err:
 	return ret;
 }
 
-static int sfctemp_disable(struct sfctemp *sfctemp)
+static int sfctemp_clk_disable(struct sfctemp *sfctemp)
 {
-	mutex_lock(&sfctemp->lock);
-	if (!sfctemp->enabled)
-		goto done;
-
-	sfctemp_power_down(sfctemp);
 	reset_control_assert(sfctemp->rst_sense);
 	clk_disable_unprepare(sfctemp->clk_sense);
 	reset_control_assert(sfctemp->rst_bus);
 	clk_disable_unprepare(sfctemp->clk_bus);
-	sfctemp->enabled = false;
+	return 0;
+}
+
+static int sfctemp_enable(struct sfctemp *sfctemp)
+{
+	int ret = 0;
+
+	mutex_lock(&sfctemp->lock);
+	if (sfctemp->enabled || IS_ENABLED(CONFIG_PM))
+		goto done;
+
+	ret = sfctemp_clk_enable(sfctemp);
+	sfctemp_power_up(sfctemp);
 done:
+	sfctemp->enabled = true;
+	mutex_unlock(&sfctemp->lock);
+	return ret;
+}
+
+static int sfctemp_disable(struct sfctemp *sfctemp)
+{
+	mutex_lock(&sfctemp->lock);
+	if (!sfctemp->enabled || IS_ENABLED(CONFIG_PM))
+		goto done;
+
+	sfctemp_power_down(sfctemp);
+	sfctemp_clk_disable(sfctemp);
+done:
+	sfctemp->enabled = false;
 	mutex_unlock(&sfctemp->lock);
 	return 0;
 }
@@ -166,6 +181,7 @@ static int sfctemp_convert(struct sfctemp *sfctemp, long *val)
 		goto out;
 	}
 
+	pm_runtime_get_sync(sfctemp->dev);
 	sfctemp_run_single(sfctemp);
 
 	ret = wait_for_completion_interruptible_timeout(&sfctemp->conversion_done,
@@ -181,6 +197,7 @@ static int sfctemp_convert(struct sfctemp *sfctemp, long *val)
 		* SFCTEMP_Y1000 / SFCTEMP_Z - SFCTEMP_K1000;
 
 	ret = 0;
+	pm_runtime_put(sfctemp->dev);
 out:
 	mutex_unlock(&sfctemp->lock);
 	return ret;
@@ -272,6 +289,8 @@ static int sfctemp_probe(struct platform_device *pdev)
 	if (!sfctemp)
 		return -ENOMEM;
 
+	sfctemp->dev = dev;
+	sfctemp->enabled = false;
 	dev_set_drvdata(dev, sfctemp);
 	mutex_init(&sfctemp->lock);
 	init_completion(&sfctemp->conversion_done);
@@ -300,14 +319,6 @@ static int sfctemp_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(sfctemp->rst_bus),
 				     "error getting busreset\n");
 
-	ret = reset_control_assert(sfctemp->rst_sense);
-	if (ret)
-		return dev_err_probe(dev, ret, "error asserting sense reset\n");
-
-	ret = reset_control_assert(sfctemp->rst_bus);
-	if (ret)
-		return dev_err_probe(dev, ret, "error asserting bus reset\n");
-
 	ret = platform_get_irq(pdev, 0);
 	if (ret < 0)
 		return ret;
@@ -326,8 +337,38 @@ static int sfctemp_probe(struct platform_device *pdev)
 
 	hwmon_dev = devm_hwmon_device_register_with_info(dev, pdev->name, sfctemp,
 							 &sfctemp_chip_info, NULL);
+	pm_runtime_enable(dev);
+
 	return PTR_ERR_OR_ZERO(hwmon_dev);
 }
+
+#ifdef CONFIG_PM
+static int starfive_temp_suspend(struct device *dev)
+{
+	struct sfctemp *sfctemp = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "starfive temp runtime suspend\n");
+	sfctemp_power_down(sfctemp);
+	return sfctemp_clk_disable(sfctemp);
+}
+
+static int starfive_temp_resume(struct device *dev)
+{
+	struct sfctemp *sfctemp = dev_get_drvdata(dev);
+	int ret;
+
+	dev_dbg(dev, "starfive temp runtime resume\n");
+
+	ret = sfctemp_clk_enable(sfctemp);
+	sfctemp_power_up(sfctemp);
+	return ret;
+}
+#endif /* CONFIG_PM */
+
+static const struct dev_pm_ops sfctemp_dev_pm_ops = {
+	SET_RUNTIME_PM_OPS(starfive_temp_suspend, starfive_temp_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+};
 
 static const struct of_device_id sfctemp_of_match[] = {
 	{ .compatible = "starfive,jh7100-temp" },
@@ -341,6 +382,7 @@ static struct platform_driver sfctemp_driver = {
 	.driver = {
 		.name = "sfctemp",
 		.of_match_table = sfctemp_of_match,
+		.pm   = &sfctemp_dev_pm_ops,
 	},
 };
 module_platform_driver(sfctemp_driver);

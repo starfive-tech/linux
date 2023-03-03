@@ -16,6 +16,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
+#include <linux/pm_runtime.h>
 
 #include <dt-bindings/clock/starfive-jh7110-clkgen.h>
 #include "clk-starfive-jh7110.h"
@@ -54,6 +55,20 @@ static u32 jh7110_clk_reg_get(struct jh7110_clk *clk)
 {
 	void __iomem *reg = jh7110_clk_reg_addr_get(clk);
 
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG)) {
+		int ret;
+		struct jh7110_clk_priv *priv = jh7110_priv_from(clk);
+
+		if (pm_runtime_suspended(priv->dev)) {
+			ret = pm_runtime_get_sync(priv->dev);
+			if (ret < 0) {
+				dev_err(priv->dev, "cannot resume device :%d.\n", ret);
+				return 0;
+			}
+			pm_runtime_put(priv->dev);
+		}
+	}
+
 	return readl_relaxed(reg);
 }
 
@@ -64,12 +79,7 @@ static void jh7110_clk_reg_rmw(struct jh7110_clk *clk, u32 mask, u32 value)
 	unsigned long flags;
 
 	spin_lock_irqsave(&priv->rmw_lock, flags);
-	if ((clk->idx == JH7110_UART3_CLK_CORE
-		|| clk->idx == JH7110_UART4_CLK_CORE
-		|| clk->idx == JH7110_UART5_CLK_CORE)
-		&& (value != JH7110_CLK_ENABLE))
-		value  <<= 8;
-	value |= readl_relaxed(reg) & ~mask;
+	value |= jh7110_clk_reg_get(clk) & ~mask;
 	writel_relaxed(value, reg);
 	spin_unlock_irqrestore(&priv->rmw_lock, flags);
 }
@@ -148,6 +158,12 @@ static int jh7110_clk_set_rate(struct clk_hw *hw,
 	unsigned long div = clamp(DIV_ROUND_CLOSEST(parent_rate, rate),
 					1UL, (unsigned long)clk->max_div);
 
+	/* UART3-5: [15:8]: integer part of the divisor. [7:0] fraction part of the divisor */
+	if (clk->idx == JH7110_UART3_CLK_CORE ||
+	    clk->idx == JH7110_UART4_CLK_CORE ||
+	    clk->idx == JH7110_UART5_CLK_CORE)
+		div <<= 8;
+
 	jh7110_clk_reg_rmw(clk, JH7110_CLK_DIV_MASK, div);
 	return 0;
 }
@@ -224,11 +240,145 @@ static void jh7110_clk_debug_init(struct clk_hw *hw, struct dentry *dentry)
 #define jh7110_clk_debug_init NULL
 #endif
 
+#ifdef CONFIG_PM_SLEEP
+static int jh7110_clk_save_context(struct clk_hw *hw)
+{
+	struct jh7110_clk *clk = jh7110_clk_from(hw);
+	void __iomem *reg = jh7110_clk_reg_addr_get(clk);
+	struct jh7110_clk_priv *priv = jh7110_priv_from(clk);
+
+	if (!clk || !priv)
+		return 0;
+
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG))
+		return 0;
+
+	if (clk->idx >= JH7110_CLK_REG_END)
+		return 0;
+
+	spin_lock(&priv->rmw_lock);
+	clk->saved_reg_value = readl_relaxed(reg);
+	spin_unlock(&priv->rmw_lock);
+
+	return 0;
+}
+
+static void jh7110_clk_gate_restore_context(struct clk_hw *hw)
+{
+	struct jh7110_clk *clk = jh7110_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG))
+		return;
+
+	if (clk->idx >= JH7110_CLK_REG_END)
+		return;
+
+	jh7110_clk_reg_rmw(clk, JH7110_CLK_ENABLE, clk->saved_reg_value);
+
+	return;
+}
+
+static void jh7110_clk_div_restore_context(struct clk_hw *hw)
+{
+	struct jh7110_clk *clk = jh7110_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG))
+		return;
+
+	if (clk->idx >= JH7110_CLK_REG_END)
+		return;
+
+	jh7110_clk_reg_rmw(clk, JH7110_CLK_DIV_MASK, clk->saved_reg_value);
+
+	return;
+}
+
+static void jh7110_clk_mux_restore_context(struct clk_hw *hw)
+{
+	struct jh7110_clk *clk = jh7110_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG))
+		return;
+
+	if (clk->idx >= JH7110_CLK_REG_END)
+		return;
+
+	jh7110_clk_reg_rmw(clk, JH7110_CLK_MUX_MASK, clk->saved_reg_value);
+
+	return;
+}
+
+static void jh7110_clk_inv_restore_context(struct clk_hw *hw)
+{
+	struct jh7110_clk *clk = jh7110_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	if ((clk->reg_flags == JH7110_CLK_ISP_FLAG) || (clk->reg_flags == JH7110_CLK_VOUT_FLAG))
+		return;
+
+	if (clk->idx >= JH7110_CLK_REG_END)
+		return;
+
+	jh7110_clk_reg_rmw(clk, JH7110_CLK_INVERT, clk->saved_reg_value);
+
+	return;
+}
+
+static void jh7110_clk_gdiv_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_div_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+
+	return;
+}
+
+static void jh7110_clk_gmux_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+
+	return;
+}
+
+static void jh7110_clk_mdiv_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_div_restore_context(hw);
+
+	return;
+}
+
+static void jh7110_clk_gmd_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_div_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+
+	return;
+}
+
+#endif
+
 static const struct clk_ops jh7110_clk_gate_ops = {
 	.enable = jh7110_clk_enable,
 	.disable = jh7110_clk_disable,
 	.is_enabled = jh7110_clk_is_enabled,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_gate_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_div_ops = {
@@ -236,6 +386,10 @@ static const struct clk_ops jh7110_clk_div_ops = {
 	.determine_rate = jh7110_clk_determine_rate,
 	.set_rate = jh7110_clk_set_rate,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_div_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_gdiv_ops = {
@@ -246,6 +400,10 @@ static const struct clk_ops jh7110_clk_gdiv_ops = {
 	.determine_rate = jh7110_clk_determine_rate,
 	.set_rate = jh7110_clk_set_rate,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_gdiv_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_mux_ops = {
@@ -253,6 +411,10 @@ static const struct clk_ops jh7110_clk_mux_ops = {
 	.set_parent = jh7110_clk_set_parent,
 	.get_parent = jh7110_clk_get_parent,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_mux_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_gmux_ops = {
@@ -263,6 +425,10 @@ static const struct clk_ops jh7110_clk_gmux_ops = {
 	.set_parent = jh7110_clk_set_parent,
 	.get_parent = jh7110_clk_get_parent,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_gmux_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_mdiv_ops = {
@@ -272,6 +438,10 @@ static const struct clk_ops jh7110_clk_mdiv_ops = {
 	.set_parent = jh7110_clk_set_parent,
 	.set_rate = jh7110_clk_set_rate,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_mdiv_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_gmd_ops = {
@@ -284,12 +454,20 @@ static const struct clk_ops jh7110_clk_gmd_ops = {
 	.set_parent = jh7110_clk_set_parent,
 	.set_rate = jh7110_clk_set_rate,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_gmd_restore_context,
+#endif
 };
 
 static const struct clk_ops jh7110_clk_inv_ops = {
 	.get_phase = jh7110_clk_get_phase,
 	.set_phase = jh7110_clk_set_phase,
 	.debug_init = jh7110_clk_debug_init,
+#ifdef CONFIG_PM_SLEEP
+	.save_context = jh7110_clk_save_context,
+	.restore_context = jh7110_clk_inv_restore_context,
+#endif
 };
 
 const struct clk_ops *starfive_jh7110_clk_ops(u32 max)
@@ -319,6 +497,25 @@ const struct clk_ops *starfive_jh7110_clk_ops(u32 max)
 	return ops;
 }
 EXPORT_SYMBOL_GPL(starfive_jh7110_clk_ops);
+
+#ifdef CONFIG_PM_SLEEP
+static int clk_starfive_jh7110_gen_system_suspend(struct device *dev)
+{
+	return clk_save_context();
+}
+
+static int clk_starfive_jh7110_gen_system_resume(struct device *dev)
+{
+	clk_restore_context();
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops clk_starfive_jh7110_gen_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(clk_starfive_jh7110_gen_system_suspend,
+				     clk_starfive_jh7110_gen_system_resume)
+};
 
 static struct clk_hw *jh7110_clk_get(struct of_phandle_args *clkspec,
 						void *data)
@@ -353,6 +550,8 @@ static int __init clk_starfive_jh7110_probe(struct platform_device *pdev)
 
 	spin_lock_init(&priv->rmw_lock);
 	priv->dev = &pdev->dev;
+
+	pm_runtime_enable(priv->dev);
 
 #ifdef CONFIG_CLK_STARFIVE_JH7110_PLL
 	ret = clk_starfive_jh7110_pll_init(pdev, priv->pll_priv);
@@ -424,6 +623,7 @@ static struct platform_driver clk_starfive_jh7110_driver = {
 	.driver = {
 		.name = "clk-starfive-jh7110",
 		.of_match_table = clk_starfive_jh7110_match,
+		.pm = &clk_starfive_jh7110_gen_pm_ops,
 	},
 };
 builtin_platform_driver_probe(clk_starfive_jh7110_driver,
