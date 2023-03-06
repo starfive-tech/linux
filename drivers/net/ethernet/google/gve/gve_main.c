@@ -24,6 +24,9 @@
 #define GVE_VERSION		"1.0.0"
 #define GVE_VERSION_PREFIX	"GVE-"
 
+// Minimum amount of time between queue kicks in msec (10 seconds)
+#define MIN_TX_TIMEOUT_GAP (1000 * 10)
+
 const char gve_version_str[] = GVE_VERSION;
 static const char gve_version_prefix[] = GVE_VERSION_PREFIX;
 
@@ -48,10 +51,10 @@ static void gve_get_stats(struct net_device *dev, struct rtnl_link_stats64 *s)
 		for (ring = 0; ring < priv->rx_cfg.num_queues; ring++) {
 			do {
 				start =
-				  u64_stats_fetch_begin(&priv->rx[ring].statss);
+				  u64_stats_fetch_begin_irq(&priv->rx[ring].statss);
 				packets = priv->rx[ring].rpackets;
 				bytes = priv->rx[ring].rbytes;
-			} while (u64_stats_fetch_retry(&priv->rx[ring].statss,
+			} while (u64_stats_fetch_retry_irq(&priv->rx[ring].statss,
 						       start));
 			s->rx_packets += packets;
 			s->rx_bytes += bytes;
@@ -61,10 +64,10 @@ static void gve_get_stats(struct net_device *dev, struct rtnl_link_stats64 *s)
 		for (ring = 0; ring < priv->tx_cfg.num_queues; ring++) {
 			do {
 				start =
-				  u64_stats_fetch_begin(&priv->tx[ring].statss);
+				  u64_stats_fetch_begin_irq(&priv->tx[ring].statss);
 				packets = priv->tx[ring].pkt_done;
 				bytes = priv->tx[ring].bytes_done;
-			} while (u64_stats_fetch_retry(&priv->tx[ring].statss,
+			} while (u64_stats_fetch_retry_irq(&priv->tx[ring].statss,
 						       start));
 			s->tx_packets += packets;
 			s->tx_bytes += bytes;
@@ -743,9 +746,9 @@ static void gve_free_rings(struct gve_priv *priv)
 
 int gve_alloc_page(struct gve_priv *priv, struct device *dev,
 		   struct page **page, dma_addr_t *dma,
-		   enum dma_data_direction dir)
+		   enum dma_data_direction dir, gfp_t gfp_flags)
 {
-	*page = alloc_page(GFP_KERNEL);
+	*page = alloc_page(gfp_flags);
 	if (!*page) {
 		priv->page_alloc_fail++;
 		return -ENOMEM;
@@ -789,7 +792,7 @@ static int gve_alloc_queue_page_list(struct gve_priv *priv, u32 id,
 	for (i = 0; i < pages; i++) {
 		err = gve_alloc_page(priv, &priv->pdev->dev, &qpl->pages[i],
 				     &qpl->page_buses[i],
-				     gve_qpl_dma_dir(priv, id));
+				     gve_qpl_dma_dir(priv, id), GFP_KERNEL);
 		/* caller handles clean up */
 		if (err)
 			return -ENOMEM;
@@ -1116,9 +1119,47 @@ static void gve_turnup(struct gve_priv *priv)
 
 static void gve_tx_timeout(struct net_device *dev, unsigned int txqueue)
 {
-	struct gve_priv *priv = netdev_priv(dev);
+	struct gve_notify_block *block;
+	struct gve_tx_ring *tx = NULL;
+	struct gve_priv *priv;
+	u32 last_nic_done;
+	u32 current_time;
+	u32 ntfy_idx;
 
+	netdev_info(dev, "Timeout on tx queue, %d", txqueue);
+	priv = netdev_priv(dev);
+	if (txqueue > priv->tx_cfg.num_queues)
+		goto reset;
+
+	ntfy_idx = gve_tx_idx_to_ntfy(priv, txqueue);
+	if (ntfy_idx >= priv->num_ntfy_blks)
+		goto reset;
+
+	block = &priv->ntfy_blocks[ntfy_idx];
+	tx = block->tx;
+
+	current_time = jiffies_to_msecs(jiffies);
+	if (tx->last_kick_msec + MIN_TX_TIMEOUT_GAP > current_time)
+		goto reset;
+
+	/* Check to see if there are missed completions, which will allow us to
+	 * kick the queue.
+	 */
+	last_nic_done = gve_tx_load_event_counter(priv, tx);
+	if (last_nic_done - tx->done) {
+		netdev_info(dev, "Kicking queue %d", txqueue);
+		iowrite32be(GVE_IRQ_MASK, gve_irq_doorbell(priv, block));
+		napi_schedule(&block->napi);
+		tx->last_kick_msec = current_time;
+		goto out;
+	} // Else reset.
+
+reset:
 	gve_schedule_reset(priv);
+
+out:
+	if (tx)
+		tx->queue_timeout++;
 	priv->tx_timeo_cnt++;
 }
 
@@ -1219,9 +1260,9 @@ void gve_handle_report_stats(struct gve_priv *priv)
 			}
 
 			do {
-				start = u64_stats_fetch_begin(&priv->tx[idx].statss);
+				start = u64_stats_fetch_begin_irq(&priv->tx[idx].statss);
 				tx_bytes = priv->tx[idx].bytes_done;
-			} while (u64_stats_fetch_retry(&priv->tx[idx].statss, start));
+			} while (u64_stats_fetch_retry_irq(&priv->tx[idx].statss, start));
 			stats[stats_idx++] = (struct stats) {
 				.stat_name = cpu_to_be32(TX_WAKE_CNT),
 				.value = cpu_to_be64(priv->tx[idx].wake_queue),
@@ -1245,6 +1286,11 @@ void gve_handle_report_stats(struct gve_priv *priv)
 			stats[stats_idx++] = (struct stats) {
 				.stat_name = cpu_to_be32(TX_LAST_COMPLETION_PROCESSED),
 				.value = cpu_to_be64(last_completion),
+				.queue_id = cpu_to_be32(idx),
+			};
+			stats[stats_idx++] = (struct stats) {
+				.stat_name = cpu_to_be32(TX_TIMEOUT_CNT),
+				.value = cpu_to_be64(priv->tx[idx].queue_timeout),
 				.queue_id = cpu_to_be32(idx),
 			};
 		}

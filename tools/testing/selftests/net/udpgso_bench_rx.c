@@ -250,7 +250,7 @@ static int recv_msg(int fd, char *buf, int len, int *gso_size)
 static void do_flush_udp(int fd)
 {
 	static char rbuf[ETH_MAX_MTU];
-	int ret, len, gso_size, budget = 256;
+	int ret, len, gso_size = 0, budget = 256;
 
 	len = cfg_read_all ? sizeof(rbuf) : 0;
 	while (budget--) {
@@ -293,19 +293,17 @@ static void usage(const char *filepath)
 
 static void parse_opts(int argc, char **argv)
 {
+	const char *bind_addr = NULL;
 	int c;
 
-	/* bind to any by default */
-	setup_sockaddr(PF_INET6, "::", &cfg_bind_addr);
 	while ((c = getopt(argc, argv, "4b:C:Gl:n:p:rR:S:tv")) != -1) {
 		switch (c) {
 		case '4':
 			cfg_family = PF_INET;
 			cfg_alen = sizeof(struct sockaddr_in);
-			setup_sockaddr(PF_INET, "0.0.0.0", &cfg_bind_addr);
 			break;
 		case 'b':
-			setup_sockaddr(cfg_family, optarg, &cfg_bind_addr);
+			bind_addr = optarg;
 			break;
 		case 'C':
 			cfg_connect_timeout_ms = strtoul(optarg, NULL, 0);
@@ -338,8 +336,15 @@ static void parse_opts(int argc, char **argv)
 			cfg_verify = true;
 			cfg_read_all = true;
 			break;
+		default:
+			exit(1);
 		}
 	}
+
+	if (!bind_addr)
+		bind_addr = cfg_family == PF_INET6 ? "::" : "0.0.0.0";
+
+	setup_sockaddr(cfg_family, bind_addr, &cfg_bind_addr);
 
 	if (optind != argc)
 		usage(argv[0]);

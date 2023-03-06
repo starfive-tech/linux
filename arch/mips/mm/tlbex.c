@@ -634,7 +634,7 @@ static __maybe_unused void build_convert_pte_to_entrylo(u32 **p,
 		return;
 	}
 
-	if (cpu_has_rixi && !!_PAGE_NO_EXEC) {
+	if (cpu_has_rixi && _PAGE_NO_EXEC != 0) {
 		if (fill_includes_sw_bits) {
 			UASM_i_ROTR(p, reg, reg, ilog2(_PAGE_GLOBAL));
 		} else {
@@ -2167,16 +2167,14 @@ static void build_r4000_tlb_load_handler(void)
 		uasm_i_tlbr(&p);
 
 		switch (current_cpu_type()) {
-		default:
-			if (cpu_has_mips_r2_exec_hazard) {
-				uasm_i_ehb(&p);
-			fallthrough;
-
 		case CPU_CAVIUM_OCTEON:
 		case CPU_CAVIUM_OCTEON_PLUS:
 		case CPU_CAVIUM_OCTEON2:
-				break;
-			}
+			break;
+		default:
+			if (cpu_has_mips_r2_exec_hazard)
+				uasm_i_ehb(&p);
+			break;
 		}
 
 		/* Examine  entrylo 0 or 1 based on ptr. */
@@ -2243,15 +2241,14 @@ static void build_r4000_tlb_load_handler(void)
 		uasm_i_tlbr(&p);
 
 		switch (current_cpu_type()) {
-		default:
-			if (cpu_has_mips_r2_exec_hazard) {
-				uasm_i_ehb(&p);
-
 		case CPU_CAVIUM_OCTEON:
 		case CPU_CAVIUM_OCTEON_PLUS:
 		case CPU_CAVIUM_OCTEON2:
-				break;
-			}
+			break;
+		default:
+			if (cpu_has_mips_r2_exec_hazard)
+				uasm_i_ehb(&p);
+			break;
 		}
 
 		/* Examine  entrylo 0 or 1 based on ptr. */
@@ -2576,7 +2573,7 @@ static void check_pabits(void)
 	unsigned long entry;
 	unsigned pabits, fillbits;
 
-	if (!cpu_has_rixi || !_PAGE_NO_EXEC) {
+	if (!cpu_has_rixi || _PAGE_NO_EXEC == 0) {
 		/*
 		 * We'll only be making use of the fact that we can rotate bits
 		 * into the fill if the CPU supports RIXI, so don't bother

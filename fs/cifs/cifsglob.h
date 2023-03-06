@@ -13,6 +13,8 @@
 #include <linux/in6.h>
 #include <linux/inet.h>
 #include <linux/slab.h>
+#include <linux/scatterlist.h>
+#include <linux/mm.h>
 #include <linux/mempool.h>
 #include <linux/workqueue.h>
 #include "cifs_fs_sb.h"
@@ -21,6 +23,7 @@
 #include <linux/scatterlist.h>
 #include <uapi/linux/cifs/cifs_mount.h>
 #include "smb2pdu.h"
+#include "smb2glob.h"
 
 #define CIFS_MAGIC_NUMBER 0xFF534D42      /* the first four bytes of SMB PDUs */
 
@@ -74,7 +77,8 @@
 #define SMB_ECHO_INTERVAL_MAX 600
 #define SMB_ECHO_INTERVAL_DEFAULT 60
 
-/* dns resolution interval in seconds */
+/* dns resolution intervals in seconds */
+#define SMB_DNS_RESOLVE_INTERVAL_MIN     120
 #define SMB_DNS_RESOLVE_INTERVAL_DEFAULT 600
 
 /* maximum number of PDUs in one compound */
@@ -591,6 +595,7 @@ struct TCP_Server_Info {
 	struct list_head pending_mid_q;
 	bool noblocksnd;		/* use blocking sendmsg */
 	bool noautotune;		/* do not autotune send buf sizes */
+	bool nosharesock;
 	bool tcp_nodelay;
 	unsigned int credits;  /* send no more requests at once */
 	unsigned int max_credits; /* can override large 32000 default at mnt */
@@ -691,6 +696,19 @@ struct TCP_Server_Info {
 #endif
 #ifdef CONFIG_CIFS_DFS_UPCALL
 	bool is_dfs_conn; /* if a dfs connection */
+	struct mutex refpath_lock; /* protects leaf_fullpath */
+	/*
+	 * Canonical DFS full paths that were used to chase referrals in mount and reconnect.
+	 *
+	 * origin_fullpath: first or original referral path
+	 * leaf_fullpath: last referral path (might be changed due to nested links in reconnect)
+	 *
+	 * current_fullpath: pointer to either origin_fullpath or leaf_fullpath
+	 * NOTE: cannot be accessed outside cifs_reconnect() and smb2_reconnect()
+	 *
+	 * format: \\HOST\SHARE\[OPTIONAL PATH]
+	 */
+	char *origin_fullpath, *leaf_fullpath, *current_fullpath;
 #endif
 };
 
@@ -932,16 +950,21 @@ struct cifs_ses {
 	 * iface_lock should be taken when accessing any of these fields
 	 */
 	spinlock_t iface_lock;
+	/* ========= begin: protected by iface_lock ======== */
 	struct cifs_server_iface *iface_list;
 	size_t iface_count;
 	unsigned long iface_last_update; /* jiffies */
+	/* ========= end: protected by iface_lock ======== */
 
+	spinlock_t chan_lock;
+	/* ========= begin: protected by chan_lock ======== */
 #define CIFS_MAX_CHANNELS 16
 	struct cifs_chan chans[CIFS_MAX_CHANNELS];
 	struct cifs_chan *binding_chan;
 	size_t chan_count;
 	size_t chan_max;
 	atomic_t chan_seq; /* round robin state */
+	/* ========= end: protected by chan_lock ======== */
 };
 
 /*
@@ -1090,7 +1113,6 @@ struct cifs_tcon {
 	struct cached_fid crfid; /* Cached root fid */
 	/* BB add field for back pointer to sb struct(s)? */
 #ifdef CONFIG_CIFS_DFS_UPCALL
-	char *dfs_path; /* canonical DFS path */
 	struct list_head ulist; /* cache update list */
 #endif
 };
@@ -1883,11 +1905,13 @@ extern mempool_t *cifs_mid_poolp;
 
 /* Operations for different SMB versions */
 #define SMB1_VERSION_STRING	"1.0"
+#define SMB20_VERSION_STRING    "2.0"
+#ifdef CONFIG_CIFS_ALLOW_INSECURE_LEGACY
 extern struct smb_version_operations smb1_operations;
 extern struct smb_version_values smb1_values;
-#define SMB20_VERSION_STRING	"2.0"
 extern struct smb_version_operations smb20_operations;
 extern struct smb_version_values smb20_values;
+#endif /* CIFS_ALLOW_INSECURE_LEGACY */
 #define SMB21_VERSION_STRING	"2.1"
 extern struct smb_version_operations smb21_operations;
 extern struct smb_version_values smb21_values;
@@ -1939,6 +1963,82 @@ static inline bool is_tcon_dfs(struct cifs_tcon *tcon)
 		return false;
 	return is_smb1_server(tcon->ses->server) ? tcon->Flags & SMB_SHARE_IS_IN_DFS :
 		tcon->share_flags & (SHI1005_FLAGS_DFS | SHI1005_FLAGS_DFS_ROOT);
+}
+
+static inline bool cifs_is_referral_server(struct cifs_tcon *tcon,
+					   const struct dfs_info3_param *ref)
+{
+	/*
+	 * Check if all targets are capable of handling DFS referrals as per
+	 * MS-DFSC 2.2.4 RESP_GET_DFS_REFERRAL.
+	 */
+	return is_tcon_dfs(tcon) || (ref && (ref->flags & DFSREF_REFERRAL_SERVER));
+}
+
+static inline unsigned int cifs_get_num_sgs(const struct smb_rqst *rqst,
+					    int num_rqst,
+					    const u8 *sig)
+{
+	unsigned int len, skip;
+	unsigned int nents = 0;
+	unsigned long addr;
+	int i, j;
+
+	/* Assumes the first rqst has a transform header as the first iov.
+	 * I.e.
+	 * rqst[0].rq_iov[0]  is transform header
+	 * rqst[0].rq_iov[1+] data to be encrypted/decrypted
+	 * rqst[1+].rq_iov[0+] data to be encrypted/decrypted
+	 */
+	for (i = 0; i < num_rqst; i++) {
+		/*
+		 * The first rqst has a transform header where the
+		 * first 20 bytes are not part of the encrypted blob.
+		 */
+		for (j = 0; j < rqst[i].rq_nvec; j++) {
+			struct kvec *iov = &rqst[i].rq_iov[j];
+
+			skip = (i == 0) && (j == 0) ? 20 : 0;
+			addr = (unsigned long)iov->iov_base + skip;
+			if (unlikely(is_vmalloc_addr((void *)addr))) {
+				len = iov->iov_len - skip;
+				nents += DIV_ROUND_UP(offset_in_page(addr) + len,
+						      PAGE_SIZE);
+			} else {
+				nents++;
+			}
+		}
+		nents += rqst[i].rq_npages;
+	}
+	nents += DIV_ROUND_UP(offset_in_page(sig) + SMB2_SIGNATURE_SIZE, PAGE_SIZE);
+	return nents;
+}
+
+/* We can not use the normal sg_set_buf() as we will sometimes pass a
+ * stack object as buf.
+ */
+static inline struct scatterlist *cifs_sg_set_buf(struct scatterlist *sg,
+						  const void *buf,
+						  unsigned int buflen)
+{
+	unsigned long addr = (unsigned long)buf;
+	unsigned int off = offset_in_page(addr);
+
+	addr &= PAGE_MASK;
+	if (unlikely(is_vmalloc_addr((void *)addr))) {
+		do {
+			unsigned int len = min_t(unsigned int, buflen, PAGE_SIZE - off);
+
+			sg_set_page(sg++, vmalloc_to_page((void *)addr), len, off);
+
+			off = 0;
+			addr += PAGE_SIZE;
+			buflen -= len;
+		} while (buflen);
+	} else {
+		sg_set_page(sg++, virt_to_page(addr), buflen, off);
+	}
+	return sg;
 }
 
 #endif	/* _CIFS_GLOB_H */

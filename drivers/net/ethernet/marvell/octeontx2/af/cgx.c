@@ -695,9 +695,9 @@ int cgx_lmac_rx_tx_enable(void *cgxd, int lmac_id, bool enable)
 
 	cfg = cgx_read(cgx, lmac_id, CGXX_CMRX_CFG);
 	if (enable)
-		cfg |= CMR_EN | DATA_PKT_RX_EN | DATA_PKT_TX_EN;
+		cfg |= DATA_PKT_RX_EN | DATA_PKT_TX_EN;
 	else
-		cfg &= ~(CMR_EN | DATA_PKT_RX_EN | DATA_PKT_TX_EN);
+		cfg &= ~(DATA_PKT_RX_EN | DATA_PKT_TX_EN);
 	cgx_write(cgx, lmac_id, CGXX_CMRX_CFG, cfg);
 	return 0;
 }
@@ -836,9 +836,6 @@ void cgx_lmac_ptp_config(void *cgxd, int lmac_id, bool enable)
 	u64 cfg;
 
 	if (!cgx)
-		return;
-
-	if (is_dev_rpm(cgx))
 		return;
 
 	if (enable) {
@@ -1545,9 +1542,11 @@ static int cgx_lmac_exit(struct cgx *cgx)
 static void cgx_populate_features(struct cgx *cgx)
 {
 	if (is_dev_rpm(cgx))
-		cgx->hw_features =  (RVU_MAC_RPM | RVU_LMAC_FEAT_FC);
+		cgx->hw_features = (RVU_LMAC_FEAT_DMACF | RVU_MAC_RPM |
+				    RVU_LMAC_FEAT_FC | RVU_LMAC_FEAT_PTP);
 	else
-		cgx->hw_features = (RVU_LMAC_FEAT_FC | RVU_LMAC_FEAT_PTP);
+		cgx->hw_features = (RVU_LMAC_FEAT_FC  | RVU_LMAC_FEAT_HIGIG2 |
+				    RVU_LMAC_FEAT_PTP | RVU_LMAC_FEAT_DMACF);
 }
 
 static struct mac_ops	cgx_mac_ops    = {
@@ -1571,6 +1570,9 @@ static struct mac_ops	cgx_mac_ops    = {
 	.mac_get_pause_frm_status =	cgx_lmac_get_pause_frm_status,
 	.mac_enadis_pause_frm =		cgx_lmac_enadis_pause_frm,
 	.mac_pause_frm_config =		cgx_lmac_pause_frm_config,
+	.mac_enadis_ptp_config =	cgx_lmac_ptp_config,
+	.mac_rx_tx_enable =		cgx_lmac_rx_tx_enable,
+	.mac_tx_enable =		cgx_lmac_tx_enable,
 };
 
 static int cgx_probe(struct pci_dev *pdev, const struct pci_device_id *id)

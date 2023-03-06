@@ -458,7 +458,7 @@ static struct drm_display_mode simpledrm_mode(unsigned int width,
 {
 	struct drm_display_mode mode = { SIMPLEDRM_MODE(width, height) };
 
-	mode.clock = 60 /* Hz */ * mode.hdisplay * mode.vdisplay;
+	mode.clock = mode.hdisplay * mode.vdisplay * 60 / 1000 /* kHz */;
 	drm_mode_set_name(&mode);
 
 	return mode;
@@ -614,7 +614,7 @@ static const struct drm_connector_funcs simpledrm_connector_funcs = {
 	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
 };
 
-static int
+static enum drm_mode_status
 simpledrm_simple_display_pipe_mode_valid(struct drm_simple_display_pipe *pipe,
 				    const struct drm_display_mode *mode)
 {
@@ -779,6 +779,9 @@ static int simpledrm_device_init_modeset(struct simpledrm_device *sdev)
 	if (ret)
 		return ret;
 	drm_connector_helper_add(connector, &simpledrm_connector_helper_funcs);
+	drm_connector_set_panel_orientation_with_quirk(connector,
+						       DRM_MODE_PANEL_ORIENTATION_UNKNOWN,
+						       mode->hdisplay, mode->vdisplay);
 
 	formats = simpledrm_device_formats(sdev, &nformats);
 

@@ -160,10 +160,17 @@ static int modify_esw_vport_cvlan(struct mlx5_core_dev *dev, u16 vport,
 			 esw_vport_context.vport_cvlan_strip, 1);
 
 	if (set_flags & SET_VLAN_INSERT) {
-		/* insert only if no vlan in packet */
-		MLX5_SET(modify_esw_vport_context_in, in,
-			 esw_vport_context.vport_cvlan_insert, 1);
-
+		if (MLX5_CAP_ESW(dev, vport_cvlan_insert_always)) {
+			/* insert either if vlan exist in packet or not */
+			MLX5_SET(modify_esw_vport_context_in, in,
+				 esw_vport_context.vport_cvlan_insert,
+				 MLX5_VPORT_CVLAN_INSERT_ALWAYS);
+		} else {
+			/* insert only if no vlan in packet */
+			MLX5_SET(modify_esw_vport_context_in, in,
+				 esw_vport_context.vport_cvlan_insert,
+				 MLX5_VPORT_CVLAN_INSERT_WHEN_NO_CVLAN);
+		}
 		MLX5_SET(modify_esw_vport_context_in, in,
 			 esw_vport_context.cvlan_pcp, qos);
 		MLX5_SET(modify_esw_vport_context_in, in,
@@ -773,6 +780,7 @@ static void esw_vport_cleanup_acl(struct mlx5_eswitch *esw,
 
 static int esw_vport_setup(struct mlx5_eswitch *esw, struct mlx5_vport *vport)
 {
+	bool vst_mode_steering = esw_vst_mode_is_steering(esw);
 	u16 vport_num = vport->vport;
 	int flags;
 	int err;
@@ -802,8 +810,9 @@ static int esw_vport_setup(struct mlx5_eswitch *esw, struct mlx5_vport *vport)
 
 	flags = (vport->info.vlan || vport->info.qos) ?
 		SET_VLAN_STRIP | SET_VLAN_INSERT : 0;
-	modify_esw_vport_cvlan(esw->dev, vport_num, vport->info.vlan,
-			       vport->info.qos, flags);
+	if (esw->mode == MLX5_ESWITCH_OFFLOADS || !vst_mode_steering)
+		modify_esw_vport_cvlan(esw->dev, vport_num, vport->info.vlan,
+				       vport->info.qos, flags);
 
 	return 0;
 }
@@ -1305,12 +1314,17 @@ abort:
  */
 int mlx5_eswitch_enable(struct mlx5_eswitch *esw, int num_vfs)
 {
+	bool toggle_lag;
 	int ret;
 
 	if (!mlx5_esw_allowed(esw))
 		return 0;
 
-	mlx5_lag_disable_change(esw->dev);
+	toggle_lag = esw->mode == MLX5_ESWITCH_NONE;
+
+	if (toggle_lag)
+		mlx5_lag_disable_change(esw->dev);
+
 	down_write(&esw->mode_lock);
 	if (esw->mode == MLX5_ESWITCH_NONE) {
 		ret = mlx5_eswitch_enable_locked(esw, MLX5_ESWITCH_LEGACY, num_vfs);
@@ -1324,7 +1338,10 @@ int mlx5_eswitch_enable(struct mlx5_eswitch *esw, int num_vfs)
 			esw->esw_funcs.num_vfs = num_vfs;
 	}
 	up_write(&esw->mode_lock);
-	mlx5_lag_enable_change(esw->dev);
+
+	if (toggle_lag)
+		mlx5_lag_enable_change(esw->dev);
+
 	return ret;
 }
 
@@ -1572,6 +1589,11 @@ int mlx5_eswitch_init(struct mlx5_core_dev *dev)
 	esw->enabled_vports = 0;
 	esw->mode = MLX5_ESWITCH_NONE;
 	esw->offloads.inline_mode = MLX5_INLINE_MODE_NONE;
+	if (MLX5_CAP_ESW_FLOWTABLE_FDB(dev, reformat) &&
+	    MLX5_CAP_ESW_FLOWTABLE_FDB(dev, decap))
+		esw->offloads.encap = DEVLINK_ESWITCH_ENCAP_MODE_BASIC;
+	else
+		esw->offloads.encap = DEVLINK_ESWITCH_ENCAP_MODE_NONE;
 
 	dev->priv.eswitch = esw;
 	BLOCKING_INIT_NOTIFIER_HEAD(&esw->n_head);
@@ -1833,6 +1855,7 @@ int __mlx5_eswitch_set_vport_vlan(struct mlx5_eswitch *esw,
 				  u16 vport, u16 vlan, u8 qos, u8 set_flags)
 {
 	struct mlx5_vport *evport = mlx5_eswitch_get_vport(esw, vport);
+	bool vst_mode_steering = esw_vst_mode_is_steering(esw);
 	int err = 0;
 
 	if (IS_ERR(evport))
@@ -1840,9 +1863,11 @@ int __mlx5_eswitch_set_vport_vlan(struct mlx5_eswitch *esw,
 	if (vlan > 4095 || qos > 7)
 		return -EINVAL;
 
-	err = modify_esw_vport_cvlan(esw->dev, vport, vlan, qos, set_flags);
-	if (err)
-		return err;
+	if (esw->mode == MLX5_ESWITCH_OFFLOADS || !vst_mode_steering) {
+		err = modify_esw_vport_cvlan(esw->dev, vport, vlan, qos, set_flags);
+		if (err)
+			return err;
+	}
 
 	evport->info.vlan = vlan;
 	evport->info.qos = qos;
@@ -1934,7 +1959,7 @@ free_out:
 	return err;
 }
 
-u8 mlx5_eswitch_mode(struct mlx5_core_dev *dev)
+u8 mlx5_eswitch_mode(const struct mlx5_core_dev *dev)
 {
 	struct mlx5_eswitch *esw = dev->priv.eswitch;
 
@@ -1948,7 +1973,7 @@ mlx5_eswitch_get_encap_mode(const struct mlx5_core_dev *dev)
 	struct mlx5_eswitch *esw;
 
 	esw = dev->priv.eswitch;
-	return mlx5_esw_allowed(esw) ? esw->offloads.encap :
+	return (mlx5_eswitch_mode(dev) == MLX5_ESWITCH_OFFLOADS)  ? esw->offloads.encap :
 		DEVLINK_ESWITCH_ENCAP_MODE_NONE;
 }
 EXPORT_SYMBOL(mlx5_eswitch_get_encap_mode);

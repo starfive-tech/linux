@@ -347,17 +347,17 @@ static int anfc_select_target(struct nand_chip *chip, int target)
 
 	/* Update clock frequency */
 	if (nfc->cur_clk != anand->clk) {
-		clk_disable_unprepare(nfc->controller_clk);
-		ret = clk_set_rate(nfc->controller_clk, anand->clk);
+		clk_disable_unprepare(nfc->bus_clk);
+		ret = clk_set_rate(nfc->bus_clk, anand->clk);
 		if (ret) {
 			dev_err(nfc->dev, "Failed to change clock rate\n");
 			return ret;
 		}
 
-		ret = clk_prepare_enable(nfc->controller_clk);
+		ret = clk_prepare_enable(nfc->bus_clk);
 		if (ret) {
 			dev_err(nfc->dev,
-				"Failed to re-enable the controller clock\n");
+				"Failed to re-enable the bus clock\n");
 			return ret;
 		}
 
@@ -973,6 +973,21 @@ static int anfc_setup_interface(struct nand_chip *chip, int target,
 		nvddr = nand_get_nvddr_timings(conf);
 		if (IS_ERR(nvddr))
 			return PTR_ERR(nvddr);
+
+		/*
+		 * The controller only supports data payload requests which are
+		 * a multiple of 4. In practice, most data accesses are 4-byte
+		 * aligned and this is not an issue. However, rounding up will
+		 * simply be refused by the controller if we reached the end of
+		 * the device *and* we are using the NV-DDR interface(!). In
+		 * this situation, unaligned data requests ending at the device
+		 * boundary will confuse the controller and cannot be performed.
+		 *
+		 * This is something that happens in nand_read_subpage() when
+		 * selecting software ECC support and must be avoided.
+		 */
+		if (chip->ecc.engine_type == NAND_ECC_ENGINE_TYPE_SOFT)
+			return -ENOTSUPP;
 	} else {
 		sdr = nand_get_sdr_timings(conf);
 		if (IS_ERR(sdr))
@@ -1028,7 +1043,13 @@ static int anfc_setup_interface(struct nand_chip *chip, int target,
 				 DQS_BUFF_SEL_OUT(dqs_mode);
 	}
 
-	anand->clk = ANFC_XLNX_SDR_DFLT_CORE_CLK;
+	if (nand_interface_is_sdr(conf)) {
+		anand->clk = ANFC_XLNX_SDR_DFLT_CORE_CLK;
+	} else {
+		/* ONFI timings are defined in picoseconds */
+		anand->clk = div_u64((u64)NSEC_PER_SEC * 1000,
+				     conf->timings.nvddr.tCK_min);
+	}
 
 	/*
 	 * Due to a hardware bug in the ZynqMP SoC, SDR timing modes 0-1 work

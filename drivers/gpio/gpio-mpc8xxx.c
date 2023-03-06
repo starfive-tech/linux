@@ -47,7 +47,7 @@ struct mpc8xxx_gpio_chip {
 				unsigned offset, int value);
 
 	struct irq_domain *irq;
-	unsigned int irqn;
+	int irqn;
 };
 
 /*
@@ -172,6 +172,7 @@ static int mpc8xxx_irq_set_type(struct irq_data *d, unsigned int flow_type)
 
 	switch (flow_type) {
 	case IRQ_TYPE_EDGE_FALLING:
+	case IRQ_TYPE_LEVEL_LOW:
 		raw_spin_lock_irqsave(&mpc8xxx_gc->lock, flags);
 		gc->write_reg(mpc8xxx_gc->regs + GPIO_ICR,
 			gc->read_reg(mpc8xxx_gc->regs + GPIO_ICR)
@@ -388,8 +389,8 @@ static int mpc8xxx_probe(struct platform_device *pdev)
 	}
 
 	mpc8xxx_gc->irqn = platform_get_irq(pdev, 0);
-	if (!mpc8xxx_gc->irqn)
-		return 0;
+	if (mpc8xxx_gc->irqn < 0)
+		return mpc8xxx_gc->irqn;
 
 	mpc8xxx_gc->irq = irq_domain_create_linear(fwnode,
 						   MPC8XXX_GPIO_PINS,

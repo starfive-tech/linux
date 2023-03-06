@@ -1103,7 +1103,7 @@ void sparx5_get_stats64(struct net_device *ndev,
 	stats->tx_carrier_errors = portstats[spx5_stats_tx_csense_cnt];
 	stats->tx_window_errors = portstats[spx5_stats_tx_late_coll_cnt];
 	stats->rx_dropped = portstats[spx5_stats_ana_ac_port_stat_lsb_cnt];
-	for (idx = 0; idx < 2 * SPX5_PRIOS; ++idx, ++stats)
+	for (idx = 0; idx < 2 * SPX5_PRIOS; ++idx)
 		stats->rx_dropped += portstats[spx5_stats_green_p0_rx_port_drop
 					       + idx];
 	stats->tx_dropped = portstats[spx5_stats_tx_local_drop];
@@ -1219,6 +1219,9 @@ int sparx_stats_init(struct sparx5 *sparx5)
 	snprintf(queue_name, sizeof(queue_name), "%s-stats",
 		 dev_name(sparx5->dev));
 	sparx5->stats_queue = create_singlethread_workqueue(queue_name);
+	if (!sparx5->stats_queue)
+		return -ENOMEM;
+
 	INIT_DELAYED_WORK(&sparx5->stats_work, sparx5_check_stats_work);
 	queue_delayed_work(sparx5->stats_queue, &sparx5->stats_work,
 			   SPX5_STATS_CHECK_DELAY);

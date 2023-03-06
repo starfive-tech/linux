@@ -80,7 +80,7 @@ static const struct dmi_system_id community_key_platforms[] = {
 	{
 		.ident = "Google Chromebooks",
 		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "Google"),
+			DMI_MATCH(DMI_PRODUCT_FAMILY, "Google"),
 		}
 	},
 	{},
@@ -128,6 +128,11 @@ int sof_pci_probe(struct pci_dev *pci, const struct pci_device_id *pci_id)
 	int ret;
 
 	dev_dbg(&pci->dev, "PCI DSP detected");
+
+	if (!desc) {
+		dev_err(dev, "error: no matching PCI descriptor\n");
+		return -ENODEV;
+	}
 
 	if (!desc->ops) {
 		dev_err(dev, "error: no matching PCI descriptor ops\n");

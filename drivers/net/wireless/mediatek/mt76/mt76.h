@@ -19,7 +19,7 @@
 
 #define MT_MCU_RING_SIZE	32
 #define MT_RX_BUF_SIZE		2048
-#define MT_SKB_HEAD_LEN		128
+#define MT_SKB_HEAD_LEN		256
 
 #define MT_MAX_NON_AQL_PKT	16
 #define MT_TXQ_FREE_THR		32
@@ -263,7 +263,7 @@ struct mt76_wcid {
 };
 
 struct mt76_txq {
-	struct mt76_wcid *wcid;
+	u16 wcid;
 
 	u16 agg_ssn;
 	bool send_bar;
@@ -869,7 +869,13 @@ struct mt76_phy *mt76_alloc_phy(struct mt76_dev *dev, unsigned int size,
 int mt76_register_phy(struct mt76_phy *phy, bool vht,
 		      struct ieee80211_rate *rates, int n_rates);
 
-struct dentry *mt76_register_debugfs(struct mt76_dev *dev);
+struct dentry *mt76_register_debugfs_fops(struct mt76_dev *dev,
+					  const struct file_operations *ops);
+static inline struct dentry *mt76_register_debugfs(struct mt76_dev *dev)
+{
+	return mt76_register_debugfs_fops(dev, NULL);
+}
+
 int mt76_queues_read(struct seq_file *s, void *data);
 void mt76_seq_puts_array(struct seq_file *file, const char *str,
 			 s8 *val, int len);
@@ -1015,8 +1021,9 @@ static inline bool mt76_is_skb_pktid(u8 pktid)
 static inline u8 mt76_tx_power_nss_delta(u8 nss)
 {
 	static const u8 nss_delta[4] = { 0, 6, 9, 12 };
+	u8 idx = nss - 1;
 
-	return nss_delta[nss - 1];
+	return (idx < ARRAY_SIZE(nss_delta)) ? nss_delta[idx] : 0;
 }
 
 static inline bool mt76_testmode_enabled(struct mt76_phy *phy)

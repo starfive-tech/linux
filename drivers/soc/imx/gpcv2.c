@@ -237,12 +237,17 @@ static int imx_pgc_power_up(struct generic_pm_domain *genpd)
 		}
 	}
 
+	reset_control_assert(domain->reset);
+
 	/* Enable reset clocks for all devices in the domain */
 	ret = clk_bulk_prepare_enable(domain->num_clks, domain->clks);
 	if (ret) {
 		dev_err(domain->dev, "failed to enable reset clocks\n");
 		goto out_regulator_disable;
 	}
+
+	/* delays for reset to propagate */
+	udelay(5);
 
 	if (domain->bits.pxx) {
 		/* request the domain to power up */
@@ -265,8 +270,6 @@ static int imx_pgc_power_up(struct generic_pm_domain *genpd)
 		regmap_clear_bits(domain->regmap, GPC_PGC_CTRL(domain->pgc),
 				  GPC_PGC_CTRL_PCR);
 	}
-
-	reset_control_assert(domain->reset);
 
 	/* delay for reset to propagate */
 	udelay(5);
@@ -369,7 +372,7 @@ static int imx_pgc_power_down(struct generic_pm_domain *genpd)
 		}
 	}
 
-	pm_runtime_put(domain->dev);
+	pm_runtime_put_sync_suspend(domain->dev);
 
 	return 0;
 

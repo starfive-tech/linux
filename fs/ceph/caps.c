@@ -2240,33 +2240,29 @@ static int unsafe_request_wait(struct inode *inode)
 	 * to wait the journal logs to be flushed by the MDSes periodically.
 	 */
 	if (req1 || req2) {
-		struct ceph_mds_session **sessions = NULL;
-		struct ceph_mds_session *s;
 		struct ceph_mds_request *req;
-		unsigned int max;
+		struct ceph_mds_session **sessions;
+		struct ceph_mds_session *s;
+		unsigned int max_sessions;
 		int i;
 
-		/*
-		 * The mdsc->max_sessions is unlikely to be changed
-		 * mostly, here we will retry it by reallocating the
-		 * sessions arrary memory to get rid of the mdsc->mutex
-		 * lock.
-		 */
-retry:
-		max = mdsc->max_sessions;
-		sessions = krealloc(sessions, max * sizeof(s), __GFP_ZERO);
-		if (!sessions)
-			return -ENOMEM;
+		mutex_lock(&mdsc->mutex);
+		max_sessions = mdsc->max_sessions;
+
+		sessions = kcalloc(max_sessions, sizeof(s), GFP_KERNEL);
+		if (!sessions) {
+			mutex_unlock(&mdsc->mutex);
+			err = -ENOMEM;
+			goto out;
+		}
 
 		spin_lock(&ci->i_unsafe_lock);
 		if (req1) {
 			list_for_each_entry(req, &ci->i_unsafe_dirops,
 					    r_unsafe_dir_item) {
 				s = req->r_session;
-				if (unlikely(s->s_mds >= max)) {
-					spin_unlock(&ci->i_unsafe_lock);
-					goto retry;
-				}
+				if (!s)
+					continue;
 				if (!sessions[s->s_mds]) {
 					s = ceph_get_mds_session(s);
 					sessions[s->s_mds] = s;
@@ -2277,10 +2273,8 @@ retry:
 			list_for_each_entry(req, &ci->i_unsafe_iops,
 					    r_unsafe_target_item) {
 				s = req->r_session;
-				if (unlikely(s->s_mds >= max)) {
-					spin_unlock(&ci->i_unsafe_lock);
-					goto retry;
-				}
+				if (!s)
+					continue;
 				if (!sessions[s->s_mds]) {
 					s = ceph_get_mds_session(s);
 					sessions[s->s_mds] = s;
@@ -2292,14 +2286,15 @@ retry:
 		/* the auth MDS */
 		spin_lock(&ci->i_ceph_lock);
 		if (ci->i_auth_cap) {
-		      s = ci->i_auth_cap->session;
-		      if (!sessions[s->s_mds])
-			      sessions[s->s_mds] = ceph_get_mds_session(s);
+			s = ci->i_auth_cap->session;
+			if (!sessions[s->s_mds])
+				sessions[s->s_mds] = ceph_get_mds_session(s);
 		}
 		spin_unlock(&ci->i_ceph_lock);
+		mutex_unlock(&mdsc->mutex);
 
 		/* send flush mdlog request to MDSes */
-		for (i = 0; i < max; i++) {
+		for (i = 0; i < max_sessions; i++) {
 			s = sessions[i];
 			if (s) {
 				send_flush_mdlog(s);
@@ -2316,15 +2311,19 @@ retry:
 					ceph_timeout_jiffies(req1->r_timeout));
 		if (ret)
 			err = -EIO;
-		ceph_mdsc_put_request(req1);
 	}
 	if (req2) {
 		ret = !wait_for_completion_timeout(&req2->r_safe_completion,
 					ceph_timeout_jiffies(req2->r_timeout));
 		if (ret)
 			err = -EIO;
-		ceph_mdsc_put_request(req2);
 	}
+
+out:
+	if (req1)
+		ceph_mdsc_put_request(req1);
+	if (req2)
+		ceph_mdsc_put_request(req2);
 	return err;
 }
 
@@ -2873,7 +2872,7 @@ int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got
 
 	while (true) {
 		flags &= CEPH_FILE_MODE_MASK;
-		if (atomic_read(&fi->num_locks))
+		if (vfs_inode_has_locks(inode))
 			flags |= CHECK_FILELOCK;
 		_got = 0;
 		ret = try_get_cap_refs(inode, need, want, endoff,
@@ -3520,24 +3519,23 @@ static void handle_cap_grant(struct inode *inode,
 			fill_inline = true;
 	}
 
-	if (ci->i_auth_cap == cap &&
-	    le32_to_cpu(grant->op) == CEPH_CAP_OP_IMPORT) {
-		if (newcaps & ~extra_info->issued)
-			wake = true;
+	if (le32_to_cpu(grant->op) == CEPH_CAP_OP_IMPORT) {
+		if (ci->i_auth_cap == cap) {
+			if (newcaps & ~extra_info->issued)
+				wake = true;
 
-		if (ci->i_requested_max_size > max_size ||
-		    !(le32_to_cpu(grant->wanted) & CEPH_CAP_ANY_FILE_WR)) {
-			/* re-request max_size if necessary */
-			ci->i_requested_max_size = 0;
-			wake = true;
+			if (ci->i_requested_max_size > max_size ||
+			    !(le32_to_cpu(grant->wanted) & CEPH_CAP_ANY_FILE_WR)) {
+				/* re-request max_size if necessary */
+				ci->i_requested_max_size = 0;
+				wake = true;
+			}
+
+			ceph_kick_flushing_inode_caps(session, ci);
 		}
-
-		ceph_kick_flushing_inode_caps(session, ci);
-		spin_unlock(&ci->i_ceph_lock);
 		up_read(&session->s_mdsc->snap_rwsem);
-	} else {
-		spin_unlock(&ci->i_ceph_lock);
 	}
+	spin_unlock(&ci->i_ceph_lock);
 
 	if (fill_inline)
 		ceph_fill_inline_data(inode, NULL, extra_info->inline_data,
@@ -4349,7 +4347,7 @@ void ceph_get_fmode(struct ceph_inode_info *ci, int fmode, int count)
 {
 	struct ceph_mds_client *mdsc = ceph_sb_to_mdsc(ci->vfs_inode.i_sb);
 	int bits = (fmode << 1) | 1;
-	bool is_opened = false;
+	bool already_opened = false;
 	int i;
 
 	if (count == 1)
@@ -4357,19 +4355,19 @@ void ceph_get_fmode(struct ceph_inode_info *ci, int fmode, int count)
 
 	spin_lock(&ci->i_ceph_lock);
 	for (i = 0; i < CEPH_FILE_MODE_BITS; i++) {
-		if (bits & (1 << i))
-			ci->i_nr_by_mode[i] += count;
-
 		/*
-		 * If any of the mode ref is larger than 1,
+		 * If any of the mode ref is larger than 0,
 		 * that means it has been already opened by
 		 * others. Just skip checking the PIN ref.
 		 */
-		if (i && ci->i_nr_by_mode[i] > 1)
-			is_opened = true;
+		if (i && ci->i_nr_by_mode[i])
+			already_opened = true;
+
+		if (bits & (1 << i))
+			ci->i_nr_by_mode[i] += count;
 	}
 
-	if (!is_opened)
+	if (!already_opened)
 		percpu_counter_inc(&mdsc->metric.opened_inodes);
 	spin_unlock(&ci->i_ceph_lock);
 }

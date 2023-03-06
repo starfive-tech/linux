@@ -77,7 +77,6 @@ enum wqe_state {
 };
 
 struct rxe_sq {
-	bool			is_user;
 	int			max_wr;
 	int			max_sge;
 	int			max_inline;
@@ -86,7 +85,6 @@ struct rxe_sq {
 };
 
 struct rxe_rq {
-	bool			is_user;
 	int			max_wr;
 	int			max_sge;
 	spinlock_t		producer_lock; /* guard queue producer */
@@ -100,7 +98,6 @@ struct rxe_srq {
 	struct rxe_pd		*pd;
 	struct rxe_rq		rq;
 	u32			srq_num;
-	bool			is_user;
 
 	int			limit;
 	int			error;
@@ -313,6 +310,8 @@ struct rxe_mr {
 
 	struct ib_umem		*umem;
 
+	u32			lkey;
+	u32			rkey;
 	enum rxe_mr_state	state;
 	enum rxe_mr_type	type;
 	u64			va;
@@ -350,6 +349,7 @@ struct rxe_mw {
 	enum rxe_mw_state	state;
 	struct rxe_qp		*qp; /* Type 2 only */
 	struct rxe_mr		*mr;
+	u32			rkey;
 	int			access;
 	u64			addr;
 	u64			length;
@@ -474,24 +474,9 @@ static inline struct rxe_pd *mr_pd(struct rxe_mr *mr)
 	return to_rpd(mr->ibmr.pd);
 }
 
-static inline u32 mr_lkey(struct rxe_mr *mr)
-{
-	return mr->ibmr.lkey;
-}
-
-static inline u32 mr_rkey(struct rxe_mr *mr)
-{
-	return mr->ibmr.rkey;
-}
-
 static inline struct rxe_pd *rxe_mw_pd(struct rxe_mw *mw)
 {
 	return to_rpd(mw->ibmw.pd);
-}
-
-static inline u32 rxe_mw_rkey(struct rxe_mw *mw)
-{
-	return mw->ibmw.rkey;
 }
 
 int rxe_register_device(struct rxe_dev *rxe, const char *ibdev_name);

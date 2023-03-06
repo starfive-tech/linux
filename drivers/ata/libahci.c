@@ -1552,7 +1552,7 @@ int ahci_do_hardreset(struct ata_link *link, unsigned int *class,
 
 	/* clear D2H reception area to properly wait for D2H FIS */
 	ata_tf_init(link->device, &tf);
-	tf.command = ATA_BUSY;
+	tf.status = ATA_BUSY;
 	ata_tf_to_fis(&tf, 0, 0, d2h_fis);
 
 	rc = sata_link_hardreset(link, timing, deadline, online,
@@ -2038,7 +2038,7 @@ static bool ahci_qc_fill_rtf(struct ata_queued_cmd *qc)
 	if (qc->tf.protocol == ATA_PROT_PIO && qc->dma_dir == DMA_FROM_DEVICE &&
 	    !(qc->flags & ATA_QCFLAG_FAILED)) {
 		ata_tf_from_fis(rx_fis + RX_FIS_PIO_SETUP, &qc->result_tf);
-		qc->result_tf.command = (rx_fis + RX_FIS_PIO_SETUP)[15];
+		qc->result_tf.status = (rx_fis + RX_FIS_PIO_SETUP)[15];
 	} else
 		ata_tf_from_fis(rx_fis + RX_FIS_D2H_REG, &qc->result_tf);
 
@@ -2305,6 +2305,18 @@ int ahci_port_resume(struct ata_port *ap)
 EXPORT_SYMBOL_GPL(ahci_port_resume);
 
 #ifdef CONFIG_PM
+static void ahci_handle_s2idle(struct ata_port *ap)
+{
+	void __iomem *port_mmio = ahci_port_base(ap);
+	u32 devslp;
+
+	if (pm_suspend_via_firmware())
+		return;
+	devslp = readl(port_mmio + PORT_DEVSLP);
+	if ((devslp & PORT_DEVSLP_ADSE))
+		ata_msleep(ap, devslp_idle_timeout);
+}
+
 static int ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 {
 	const char *emsg = NULL;
@@ -2317,6 +2329,9 @@ static int ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 		ata_port_err(ap, "%s (%d)\n", emsg, rc);
 		ata_port_freeze(ap);
 	}
+
+	if (acpi_storage_d3(ap->host->dev))
+		ahci_handle_s2idle(ap);
 
 	ahci_rpm_put_port(ap);
 	return rc;

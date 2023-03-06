@@ -29,7 +29,8 @@ void qla2x00_bsg_job_done(srb_t *sp, int res)
 	    "%s: sp hdl %x, result=%x bsg ptr %p\n",
 	    __func__, sp->handle, res, bsg_job);
 
-	sp->free(sp);
+	/* ref: INIT */
+	kref_put(&sp->cmd_kref, qla2x00_sp_release);
 
 	bsg_reply->result = res;
 	bsg_job_done(bsg_job, bsg_reply->result,
@@ -2971,6 +2972,13 @@ qla24xx_bsg_timeout(struct bsg_job *bsg_job)
 
 	ql_log(ql_log_info, vha, 0x708b, "%s CMD timeout. bsg ptr %p.\n",
 	    __func__, bsg_job);
+
+	if (qla2x00_isp_reg_stat(ha)) {
+		ql_log(ql_log_info, vha, 0x9007,
+		    "PCI/Register disconnect.\n");
+		qla_pci_set_eeh_busy(vha);
+	}
+
 	/* find the bsg job from the active list of commands */
 	spin_lock_irqsave(&ha->hardware_lock, flags);
 	for (que = 0; que < ha->max_req_queues; que++) {
@@ -2988,7 +2996,8 @@ qla24xx_bsg_timeout(struct bsg_job *bsg_job)
 			    sp->u.bsg_job == bsg_job) {
 				req->outstanding_cmds[cnt] = NULL;
 				spin_unlock_irqrestore(&ha->hardware_lock, flags);
-				if (ha->isp_ops->abort_command(sp)) {
+
+				if (!ha->flags.eeh_busy && ha->isp_ops->abort_command(sp)) {
 					ql_log(ql_log_warn, vha, 0x7089,
 					    "mbx abort_command failed.\n");
 					bsg_reply->result = -EIO;
@@ -3010,6 +3019,7 @@ qla24xx_bsg_timeout(struct bsg_job *bsg_job)
 
 done:
 	spin_unlock_irqrestore(&ha->hardware_lock, flags);
-	sp->free(sp);
+	/* ref: INIT */
+	kref_put(&sp->cmd_kref, qla2x00_sp_release);
 	return 0;
 }

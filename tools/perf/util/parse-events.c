@@ -196,9 +196,12 @@ static int tp_event_has_id(const char *dir_path, struct dirent *evt_dir)
 void parse_events__handle_error(struct parse_events_error *err, int idx,
 				char *str, char *help)
 {
-	if (WARN(!str, "WARNING: failed to provide error string\n")) {
-		free(help);
-		return;
+	if (WARN(!str, "WARNING: failed to provide error string\n"))
+		goto out_free;
+	if (!err) {
+		/* Assume caller does not want message printed */
+		pr_debug("event syntax error: %s\n", str);
+		goto out_free;
 	}
 	switch (err->num_errors) {
 	case 0:
@@ -224,6 +227,11 @@ void parse_events__handle_error(struct parse_events_error *err, int idx,
 		break;
 	}
 	err->num_errors++;
+	return;
+
+out_free:
+	free(str);
+	free(help);
 }
 
 struct tracepoint_path *tracepoint_id_to_path(u64 config)
@@ -364,6 +372,9 @@ __add_event(struct list_head *list, int *idx,
 	struct evsel *evsel;
 	struct perf_cpu_map *cpus = pmu ? perf_cpu_map__get(pmu->cpus) :
 			       cpu_list ? perf_cpu_map__new(cpu_list) : NULL;
+
+	if (pmu)
+		perf_pmu__warn_invalid_formats(pmu);
 
 	if (pmu && attr->type == PERF_TYPE_RAW)
 		perf_pmu__warn_invalid_config(pmu, attr->config, name);
@@ -1529,7 +1540,9 @@ int parse_events_add_pmu(struct parse_events_state *parse_state,
 	bool use_uncore_alias;
 	LIST_HEAD(config_terms);
 
-	if (verbose > 1) {
+	pmu = parse_state->fake_pmu ?: perf_pmu__find(name);
+
+	if (verbose > 1 && !(pmu && pmu->selectable)) {
 		fprintf(stderr, "Attempting to add event pmu '%s' with '",
 			name);
 		if (head_config) {
@@ -1542,7 +1555,6 @@ int parse_events_add_pmu(struct parse_events_state *parse_state,
 		fprintf(stderr, "' that may result in non-fatal errors\n");
 	}
 
-	pmu = parse_state->fake_pmu ?: perf_pmu__find(name);
 	if (!pmu) {
 		char *err_str;
 

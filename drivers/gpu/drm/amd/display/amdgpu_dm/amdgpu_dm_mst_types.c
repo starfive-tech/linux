@@ -36,6 +36,8 @@
 #include "dm_helpers.h"
 
 #include "dc_link_ddc.h"
+#include "ddc_service_types.h"
+#include "dpcd_defs.h"
 
 #include "i2caux_interface.h"
 #include "dmub_cmd.h"
@@ -53,6 +55,8 @@ static ssize_t dm_dp_aux_transfer(struct drm_dp_aux *aux,
 	ssize_t result = 0;
 	struct aux_payload payload;
 	enum aux_return_code_type operation_result;
+	struct amdgpu_device *adev;
+	struct ddc_service *ddc;
 
 	if (WARN_ON(msg->size > 16))
 		return -E2BIG;
@@ -68,6 +72,21 @@ static ssize_t dm_dp_aux_transfer(struct drm_dp_aux *aux,
 
 	result = dc_link_aux_transfer_raw(TO_DM_AUX(aux)->ddc_service, &payload,
 				      &operation_result);
+
+	/*
+	 * w/a on certain intel platform where hpd is unexpected to pull low during
+	 * 1st sideband message transaction by return AUX_RET_ERROR_HPD_DISCON
+	 * aux transaction is succuess in such case, therefore bypass the error
+	 */
+	ddc = TO_DM_AUX(aux)->ddc_service;
+	adev = ddc->ctx->driver_context;
+	if (adev->dm.aux_hpd_discon_quirk) {
+		if (msg->address == DP_SIDEBAND_MSG_DOWN_REQ_BASE &&
+			operation_result == AUX_RET_ERROR_HPD_DISCON) {
+			result = 0;
+			operation_result = AUX_RET_SUCCESS;
+		}
+	}
 
 	if (payload.write && result >= 0)
 		result = msg->size;
@@ -155,6 +174,16 @@ static const struct drm_connector_funcs dm_dp_mst_connector_funcs = {
 };
 
 #if defined(CONFIG_DRM_AMD_DC_DCN)
+static bool needs_dsc_aux_workaround(struct dc_link *link)
+{
+	if (link->dpcd_caps.branch_dev_id == DP_BRANCH_DEVICE_ID_90CC24 &&
+	    (link->dpcd_caps.dpcd_rev.raw == DPCD_REV_14 || link->dpcd_caps.dpcd_rev.raw == DPCD_REV_12) &&
+	    link->dpcd_caps.sink_count.bits.SINK_COUNT >= 2)
+		return true;
+
+	return false;
+}
+
 static bool validate_dsc_caps_on_connector(struct amdgpu_dm_connector *aconnector)
 {
 	struct dc_sink *dc_sink = aconnector->dc_sink;
@@ -164,7 +193,7 @@ static bool validate_dsc_caps_on_connector(struct amdgpu_dm_connector *aconnecto
 	u8 *dsc_branch_dec_caps = NULL;
 
 	aconnector->dsc_aux = drm_dp_mst_dsc_aux_for_port(port);
-#if defined(CONFIG_HP_HOOK_WORKAROUND)
+
 	/*
 	 * drm_dp_mst_dsc_aux_for_port() will return NULL for certain configs
 	 * because it only check the dsc/fec caps of the "port variable" and not the dock
@@ -174,10 +203,10 @@ static bool validate_dsc_caps_on_connector(struct amdgpu_dm_connector *aconnecto
 	 * Workaround: explicitly check the use case above and use the mst dock's aux as dsc_aux
 	 *
 	 */
-
-	if (!aconnector->dsc_aux && !port->parent->port_parent)
+	if (!aconnector->dsc_aux && !port->parent->port_parent &&
+	    needs_dsc_aux_workaround(aconnector->dc_link))
 		aconnector->dsc_aux = &aconnector->mst_port->dm_dp_aux.aux;
-#endif
+
 	if (!aconnector->dsc_aux)
 		return false;
 
@@ -356,7 +385,6 @@ static const struct drm_connector_helper_funcs dm_dp_mst_connector_helper_funcs 
 static void amdgpu_dm_encoder_destroy(struct drm_encoder *encoder)
 {
 	drm_encoder_cleanup(encoder);
-	kfree(encoder);
 }
 
 static const struct drm_encoder_funcs amdgpu_dm_encoder_funcs = {

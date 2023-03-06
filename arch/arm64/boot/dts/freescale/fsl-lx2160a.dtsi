@@ -719,7 +719,7 @@
 			clock-names = "i2c";
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(16)>;
-			scl-gpio = <&gpio2 15 GPIO_ACTIVE_HIGH>;
+			scl-gpios = <&gpio2 15 GPIO_ACTIVE_HIGH>;
 			status = "disabled";
 		};
 
@@ -768,7 +768,7 @@
 			clock-names = "i2c";
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(16)>;
-			scl-gpio = <&gpio2 16 GPIO_ACTIVE_HIGH>;
+			scl-gpios = <&gpio2 16 GPIO_ACTIVE_HIGH>;
 			status = "disabled";
 		};
 
@@ -1369,6 +1369,9 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			little-endian;
+			clock-frequency = <2500000>;
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(2)>;
 			status = "disabled";
 		};
 
@@ -1379,6 +1382,9 @@
 			little-endian;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			clock-frequency = <2500000>;
+			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
+					    QORIQ_CLK_PLL_DIV(2)>;
 			status = "disabled";
 		};
 

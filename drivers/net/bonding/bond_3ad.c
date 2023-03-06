@@ -87,8 +87,9 @@ static const u8 null_mac_addr[ETH_ALEN + 2] __long_aligned = {
 static u16 ad_ticks_per_sec;
 static const int ad_delta_in_ticks = (AD_TIMER_INTERVAL * HZ) / 1000;
 
-static const u8 lacpdu_mcast_addr[ETH_ALEN + 2] __long_aligned =
-	MULTICAST_LACPDU_ADDR;
+const u8 lacpdu_mcast_addr[ETH_ALEN + 2] __long_aligned = {
+	0x01, 0x80, 0xC2, 0x00, 0x00, 0x02
+};
 
 /* ================= main 802.3ad protocol functions ================== */
 static int ad_lacpdu_send(struct port *port);
@@ -225,7 +226,7 @@ static inline int __check_agg_selection_timer(struct port *port)
 	if (bond == NULL)
 		return 0;
 
-	return BOND_AD_INFO(bond).agg_select_timer ? 1 : 0;
+	return atomic_read(&BOND_AD_INFO(bond).agg_select_timer) ? 1 : 0;
 }
 
 /**
@@ -1021,8 +1022,8 @@ static void ad_mux_machine(struct port *port, bool *update_slave_arr)
 				if (port->aggregator &&
 				    port->aggregator->is_active &&
 				    !__port_is_enabled(port)) {
-
 					__enable_port(port);
+					*update_slave_arr = true;
 				}
 			}
 			break;
@@ -1538,6 +1539,7 @@ static void ad_port_selection_logic(struct port *port, bool *update_slave_arr)
 			slave_err(bond->dev, port->slave->dev,
 				  "Port %d did not find a suitable aggregator\n",
 				  port->actor_port_number);
+			return;
 		}
 	}
 	/* if all aggregator's ports are READY_N == TRUE, set ready=TRUE
@@ -1779,6 +1781,7 @@ static void ad_agg_selection_logic(struct aggregator *agg,
 			     port = port->next_port_in_aggregator) {
 				__enable_port(port);
 			}
+			*update_slave_arr = true;
 		}
 	}
 
@@ -1994,7 +1997,7 @@ static void ad_marker_response_received(struct bond_marker *marker,
  */
 void bond_3ad_initiate_agg_selection(struct bonding *bond, int timeout)
 {
-	BOND_AD_INFO(bond).agg_select_timer = timeout;
+	atomic_set(&BOND_AD_INFO(bond).agg_select_timer, timeout);
 }
 
 /**
@@ -2006,30 +2009,24 @@ void bond_3ad_initiate_agg_selection(struct bonding *bond, int timeout)
  */
 void bond_3ad_initialize(struct bonding *bond, u16 tick_resolution)
 {
-	/* check that the bond is not initialized yet */
-	if (!MAC_ADDRESS_EQUAL(&(BOND_AD_INFO(bond).system.sys_mac_addr),
-				bond->dev->dev_addr)) {
+	BOND_AD_INFO(bond).aggregator_identifier = 0;
+	BOND_AD_INFO(bond).system.sys_priority =
+		bond->params.ad_actor_sys_prio;
+	if (is_zero_ether_addr(bond->params.ad_actor_system))
+		BOND_AD_INFO(bond).system.sys_mac_addr =
+		    *((struct mac_addr *)bond->dev->dev_addr);
+	else
+		BOND_AD_INFO(bond).system.sys_mac_addr =
+		    *((struct mac_addr *)bond->params.ad_actor_system);
 
-		BOND_AD_INFO(bond).aggregator_identifier = 0;
+	/* initialize how many times this module is called in one
+	 * second (should be about every 100ms)
+	 */
+	ad_ticks_per_sec = tick_resolution;
 
-		BOND_AD_INFO(bond).system.sys_priority =
-			bond->params.ad_actor_sys_prio;
-		if (is_zero_ether_addr(bond->params.ad_actor_system))
-			BOND_AD_INFO(bond).system.sys_mac_addr =
-			    *((struct mac_addr *)bond->dev->dev_addr);
-		else
-			BOND_AD_INFO(bond).system.sys_mac_addr =
-			    *((struct mac_addr *)bond->params.ad_actor_system);
-
-		/* initialize how many times this module is called in one
-		 * second (should be about every 100ms)
-		 */
-		ad_ticks_per_sec = tick_resolution;
-
-		bond_3ad_initiate_agg_selection(bond,
-						AD_AGGREGATOR_SELECTION_TIMER *
-						ad_ticks_per_sec);
-	}
+	bond_3ad_initiate_agg_selection(bond,
+					AD_AGGREGATOR_SELECTION_TIMER *
+					ad_ticks_per_sec);
 }
 
 /**
@@ -2227,7 +2224,8 @@ void bond_3ad_unbind_slave(struct slave *slave)
 				temp_aggregator->num_of_ports--;
 				if (__agg_active_ports(temp_aggregator) == 0) {
 					select_new_active_agg = temp_aggregator->is_active;
-					ad_clear_agg(temp_aggregator);
+					if (temp_aggregator->num_of_ports == 0)
+						ad_clear_agg(temp_aggregator);
 					if (select_new_active_agg) {
 						slave_info(bond->dev, slave->dev, "Removing an active aggregator\n");
 						/* select new active aggregator */
@@ -2278,6 +2276,28 @@ void bond_3ad_update_ad_actor_settings(struct bonding *bond)
 }
 
 /**
+ * bond_agg_timer_advance - advance agg_select_timer
+ * @bond:  bonding structure
+ *
+ * Return true when agg_select_timer reaches 0.
+ */
+static bool bond_agg_timer_advance(struct bonding *bond)
+{
+	int val, nval;
+
+	while (1) {
+		val = atomic_read(&BOND_AD_INFO(bond).agg_select_timer);
+		if (!val)
+			return false;
+		nval = val - 1;
+		if (atomic_cmpxchg(&BOND_AD_INFO(bond).agg_select_timer,
+				   val, nval) == val)
+			break;
+	}
+	return nval == 0;
+}
+
+/**
  * bond_3ad_state_machine_handler - handle state machines timeout
  * @work: work context to fetch bonding struct to work on from
  *
@@ -2312,9 +2332,7 @@ void bond_3ad_state_machine_handler(struct work_struct *work)
 	if (!bond_has_slaves(bond))
 		goto re_arm;
 
-	/* check if agg_select_timer timer after initialize is timed out */
-	if (BOND_AD_INFO(bond).agg_select_timer &&
-	    !(--BOND_AD_INFO(bond).agg_select_timer)) {
+	if (bond_agg_timer_advance(bond)) {
 		slave = bond_first_slave_rcu(bond);
 		port = slave ? &(SLAVE_AD_INFO(slave)->port) : NULL;
 

@@ -107,6 +107,8 @@ static void sparx5_xtr_grp(struct sparx5 *sparx5, u8 grp, bool byte_swap)
 			/* This assumes STATUS_WORD_POS == 1, Status
 			 * just after last data
 			 */
+			if (!byte_swap)
+				val = ntohl((__force __be32)val);
 			byte_cnt -= (4 - XTR_VALID_BYTES(val));
 			eof_flag = true;
 			break;
@@ -145,9 +147,9 @@ static void sparx5_xtr_grp(struct sparx5 *sparx5, u8 grp, bool byte_swap)
 	skb_put(skb, byte_cnt - ETH_FCS_LEN);
 	eth_skb_pad(skb);
 	skb->protocol = eth_type_trans(skb, netdev);
-	netif_rx(skb);
 	netdev->stats.rx_bytes += skb->len;
 	netdev->stats.rx_packets++;
+	netif_rx(skb);
 }
 
 static int sparx5_inject(struct sparx5 *sparx5,

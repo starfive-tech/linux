@@ -38,7 +38,6 @@
 		powerdn {
 			label = "External Power Down";
 			gpios = <&gpio1 17 GPIO_ACTIVE_LOW>;
-			interrupts = <&gpio1 17 IRQ_TYPE_EDGE_FALLING>;
 			linux,code = <KEY_POWER>;
 		};
 
@@ -46,7 +45,6 @@
 		admin {
 			label = "ADMIN button";
 			gpios = <&gpio3 8 GPIO_ACTIVE_HIGH>;
-			interrupts = <&gpio3 8 IRQ_TYPE_EDGE_RISING>;
 			linux,code = <KEY_WPS_BUTTON>;
 		};
 	};
@@ -247,7 +245,7 @@
 &i2c3 {
 	status = "okay";
 
-	i2c-switch@70 {
+	i2c-mux@70 {
 		compatible = "nxp,pca9540";
 		#address-cells = <1>;
 		#size-cells = <0>;

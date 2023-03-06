@@ -164,6 +164,36 @@ static int mlx5_esw_bridge_port_changeupper(struct notifier_block *nb, void *ptr
 	return err;
 }
 
+static int
+mlx5_esw_bridge_changeupper_validate_netdev(void *ptr)
+{
+	struct net_device *dev = netdev_notifier_info_to_dev(ptr);
+	struct netdev_notifier_changeupper_info *info = ptr;
+	struct net_device *upper = info->upper_dev;
+	struct net_device *lower;
+	struct list_head *iter;
+
+	if (!netif_is_bridge_master(upper) || !netif_is_lag_master(dev))
+		return 0;
+
+	netdev_for_each_lower_dev(dev, lower, iter) {
+		struct mlx5_core_dev *mdev;
+		struct mlx5e_priv *priv;
+
+		if (!mlx5e_eswitch_rep(lower))
+			continue;
+
+		priv = netdev_priv(lower);
+		mdev = priv->mdev;
+		if (!mlx5_lag_is_active(mdev))
+			return -EAGAIN;
+		if (!mlx5_lag_is_shared_fdb(mdev))
+			return -EOPNOTSUPP;
+	}
+
+	return 0;
+}
+
 static int mlx5_esw_bridge_switchdev_port_event(struct notifier_block *nb,
 						unsigned long event, void *ptr)
 {
@@ -171,6 +201,7 @@ static int mlx5_esw_bridge_switchdev_port_event(struct notifier_block *nb,
 
 	switch (event) {
 	case NETDEV_PRECHANGEUPPER:
+		err = mlx5_esw_bridge_changeupper_validate_netdev(ptr);
 		break;
 
 	case NETDEV_CHANGEUPPER:
@@ -401,10 +432,6 @@ static int mlx5_esw_bridge_switchdev_event(struct notifier_block *nb,
 
 	switch (event) {
 	case SWITCHDEV_FDB_ADD_TO_BRIDGE:
-		/* only handle the event on native eswtich of representor */
-		if (!mlx5_esw_bridge_is_local(dev, rep, esw))
-			break;
-
 		fdb_info = container_of(info,
 					struct switchdev_notifier_fdb_info,
 					info);
@@ -491,7 +518,7 @@ void mlx5e_rep_bridge_init(struct mlx5e_priv *priv)
 	}
 
 	br_offloads->netdev_nb.notifier_call = mlx5_esw_bridge_switchdev_port_event;
-	err = register_netdevice_notifier(&br_offloads->netdev_nb);
+	err = register_netdevice_notifier_net(&init_net, &br_offloads->netdev_nb);
 	if (err) {
 		esw_warn(mdev, "Failed to register bridge offloads netdevice notifier (err=%d)\n",
 			 err);
@@ -509,7 +536,9 @@ err_register_swdev_blk:
 err_register_swdev:
 	destroy_workqueue(br_offloads->wq);
 err_alloc_wq:
+	rtnl_lock();
 	mlx5_esw_bridge_cleanup(esw);
+	rtnl_unlock();
 }
 
 void mlx5e_rep_bridge_cleanup(struct mlx5e_priv *priv)
@@ -524,7 +553,7 @@ void mlx5e_rep_bridge_cleanup(struct mlx5e_priv *priv)
 		return;
 
 	cancel_delayed_work_sync(&br_offloads->update_work);
-	unregister_netdevice_notifier(&br_offloads->netdev_nb);
+	unregister_netdevice_notifier_net(&init_net, &br_offloads->netdev_nb);
 	unregister_switchdev_blocking_notifier(&br_offloads->nb_blk);
 	unregister_switchdev_notifier(&br_offloads->nb);
 	destroy_workqueue(br_offloads->wq);

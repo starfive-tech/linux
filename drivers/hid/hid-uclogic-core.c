@@ -164,11 +164,15 @@ static int uclogic_probe(struct hid_device *hdev,
 	struct uclogic_drvdata *drvdata = NULL;
 	bool params_initialized = false;
 
+	if (!hid_is_usb(hdev))
+		return -EINVAL;
+
 	/*
 	 * libinput requires the pad interface to be on a different node
 	 * than the pen, so use QUIRK_MULTI_INPUT for all tablets.
 	 */
 	hdev->quirks |= HID_QUIRK_MULTI_INPUT;
+	hdev->quirks |= HID_QUIRK_HIDINPUT_FORCE;
 
 	/* Allocate and assign driver data */
 	drvdata = devm_kzalloc(&hdev->dev, sizeof(*drvdata), GFP_KERNEL);

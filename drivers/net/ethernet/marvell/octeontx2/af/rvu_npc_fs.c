@@ -445,7 +445,8 @@ do {									       \
 	NPC_SCAN_HDR(NPC_VLAN_TAG1, NPC_LID_LB, NPC_LT_LB_CTAG, 2, 2);
 	NPC_SCAN_HDR(NPC_VLAN_TAG2, NPC_LID_LB, NPC_LT_LB_STAG_QINQ, 2, 2);
 	NPC_SCAN_HDR(NPC_DMAC, NPC_LID_LA, la_ltype, la_start, 6);
-	NPC_SCAN_HDR(NPC_SMAC, NPC_LID_LA, la_ltype, la_start, 6);
+	/* SMAC follows the DMAC(which is 6 bytes) */
+	NPC_SCAN_HDR(NPC_SMAC, NPC_LID_LA, la_ltype, la_start + 6, 6);
 	/* PF_FUNC is 2 bytes at 0th byte of NPC_LT_LA_IH_NIX_ETHER */
 	NPC_SCAN_HDR(NPC_PF_FUNC, NPC_LID_LA, NPC_LT_LA_IH_NIX_ETHER, 0, 2);
 }
@@ -1098,14 +1099,6 @@ find_rule:
 		write_req.cntr = rule->cntr;
 	}
 
-	err = rvu_mbox_handler_npc_mcam_write_entry(rvu, &write_req,
-						    &write_rsp);
-	if (err) {
-		rvu_mcam_remove_counter_from_rule(rvu, owner, rule);
-		if (new)
-			kfree(rule);
-		return err;
-	}
 	/* update rule */
 	memcpy(&rule->packet, &dummy.packet, sizeof(rule->packet));
 	memcpy(&rule->mask, &dummy.mask, sizeof(rule->mask));
@@ -1128,6 +1121,18 @@ find_rule:
 		rvu_mcam_add_rule(mcam, rule);
 	if (req->default_rule)
 		pfvf->def_ucast_rule = rule;
+
+	/* write to mcam entry registers */
+	err = rvu_mbox_handler_npc_mcam_write_entry(rvu, &write_req,
+						    &write_rsp);
+	if (err) {
+		rvu_mcam_remove_counter_from_rule(rvu, owner, rule);
+		if (new) {
+			list_del(&rule->list);
+			kfree(rule);
+		}
+		return err;
+	}
 
 	/* VF's MAC address is being changed via PF  */
 	if (pf_set_vfs_mac) {

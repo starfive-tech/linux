@@ -71,12 +71,13 @@ static int pt_core_execute_cmd(struct ptdma_desc *desc, struct pt_cmd_queue *cmd
 	bool soc = FIELD_GET(DWORD0_SOC, desc->dw0);
 	u8 *q_desc = (u8 *)&cmd_q->qbase[cmd_q->qidx];
 	u32 tail;
+	unsigned long flags;
 
 	if (soc) {
 		desc->dw0 |= FIELD_PREP(DWORD0_IOC, desc->dw0);
 		desc->dw0 &= ~DWORD0_SOC;
 	}
-	mutex_lock(&cmd_q->q_mutex);
+	spin_lock_irqsave(&cmd_q->q_lock, flags);
 
 	/* Copy 32-byte command descriptor to hw queue. */
 	memcpy(q_desc, desc, 32);
@@ -91,7 +92,7 @@ static int pt_core_execute_cmd(struct ptdma_desc *desc, struct pt_cmd_queue *cmd
 
 	/* Turn the queue back on using our cached control register */
 	pt_start_queue(cmd_q);
-	mutex_unlock(&cmd_q->q_mutex);
+	spin_unlock_irqrestore(&cmd_q->q_lock, flags);
 
 	return 0;
 }
@@ -197,7 +198,7 @@ int pt_core_init(struct pt_device *pt)
 
 	cmd_q->pt = pt;
 	cmd_q->dma_pool = dma_pool;
-	mutex_init(&cmd_q->q_mutex);
+	spin_lock_init(&cmd_q->q_lock);
 
 	/* Page alignment satisfies our needs for N <= 128 */
 	cmd_q->qsize = Q_SIZE(Q_DESC_SIZE);
@@ -207,7 +208,7 @@ int pt_core_init(struct pt_device *pt)
 	if (!cmd_q->qbase) {
 		dev_err(dev, "unable to allocate command queue\n");
 		ret = -ENOMEM;
-		goto e_dma_alloc;
+		goto e_destroy_pool;
 	}
 
 	cmd_q->qidx = 0;
@@ -229,8 +230,10 @@ int pt_core_init(struct pt_device *pt)
 
 	/* Request an irq */
 	ret = request_irq(pt->pt_irq, pt_core_irq_handler, 0, dev_name(pt->dev), pt);
-	if (ret)
-		goto e_pool;
+	if (ret) {
+		dev_err(dev, "unable to allocate an IRQ\n");
+		goto e_free_dma;
+	}
 
 	/* Update the device registers with queue information. */
 	cmd_q->qcontrol &= ~CMD_Q_SIZE;
@@ -250,21 +253,20 @@ int pt_core_init(struct pt_device *pt)
 	/* Register the DMA engine support */
 	ret = pt_dmaengine_register(pt);
 	if (ret)
-		goto e_dmaengine;
+		goto e_free_irq;
 
 	/* Set up debugfs entries */
 	ptdma_debugfs_setup(pt);
 
 	return 0;
 
-e_dmaengine:
+e_free_irq:
 	free_irq(pt->pt_irq, pt);
 
-e_dma_alloc:
+e_free_dma:
 	dma_free_coherent(dev, cmd_q->qsize, cmd_q->qbase, cmd_q->qbase_dma);
 
-e_pool:
-	dev_err(dev, "unable to allocate an IRQ\n");
+e_destroy_pool:
 	dma_pool_destroy(pt->cmd_q.dma_pool);
 
 	return ret;

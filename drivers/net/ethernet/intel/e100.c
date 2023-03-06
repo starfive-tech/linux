@@ -1742,11 +1742,8 @@ static int e100_xmit_prepare(struct nic *nic, struct cb *cb,
 	dma_addr = dma_map_single(&nic->pdev->dev, skb->data, skb->len,
 				  DMA_TO_DEVICE);
 	/* If we can't map the skb, have the upper layer try later */
-	if (dma_mapping_error(&nic->pdev->dev, dma_addr)) {
-		dev_kfree_skb_any(skb);
-		skb = NULL;
+	if (dma_mapping_error(&nic->pdev->dev, dma_addr))
 		return -ENOMEM;
-	}
 
 	/*
 	 * Use the last 4 bytes of the SKB payload packet as the CRC, used for
@@ -3003,9 +3000,10 @@ static void __e100_shutdown(struct pci_dev *pdev, bool *enable_wake)
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct nic *nic = netdev_priv(netdev);
 
+	netif_device_detach(netdev);
+
 	if (netif_running(netdev))
 		e100_down(nic);
-	netif_device_detach(netdev);
 
 	if ((nic->flags & wol_magic) | e100_asf(nic)) {
 		/* enable reverse auto-negotiation */
@@ -3022,7 +3020,7 @@ static void __e100_shutdown(struct pci_dev *pdev, bool *enable_wake)
 		*enable_wake = false;
 	}
 
-	pci_clear_master(pdev);
+	pci_disable_device(pdev);
 }
 
 static int __e100_power_off(struct pci_dev *pdev, bool wake)
@@ -3042,8 +3040,6 @@ static int __maybe_unused e100_suspend(struct device *dev_d)
 
 	__e100_shutdown(to_pci_dev(dev_d), &wake);
 
-	device_wakeup_disable(dev_d);
-
 	return 0;
 }
 
@@ -3051,6 +3047,14 @@ static int __maybe_unused e100_resume(struct device *dev_d)
 {
 	struct net_device *netdev = dev_get_drvdata(dev_d);
 	struct nic *nic = netdev_priv(netdev);
+	int err;
+
+	err = pci_enable_device(to_pci_dev(dev_d));
+	if (err) {
+		netdev_err(netdev, "Resume cannot enable PCI device, aborting\n");
+		return err;
+	}
+	pci_set_master(to_pci_dev(dev_d));
 
 	/* disable reverse auto-negotiation */
 	if (nic->phy == phy_82552_v) {
@@ -3062,9 +3066,10 @@ static int __maybe_unused e100_resume(struct device *dev_d)
 		           smartspeed & ~(E100_82552_REV_ANEG));
 	}
 
-	netif_device_attach(netdev);
 	if (netif_running(netdev))
 		e100_up(nic);
+
+	netif_device_attach(netdev);
 
 	return 0;
 }

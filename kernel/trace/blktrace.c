@@ -310,10 +310,20 @@ record_it:
 	local_irq_restore(flags);
 }
 
-static void blk_trace_free(struct blk_trace *bt)
+static void blk_trace_free(struct request_queue *q, struct blk_trace *bt)
 {
 	relay_close(bt->rchan);
-	debugfs_remove(bt->dir);
+
+	/*
+	 * If 'bt->dir' is not set, then both 'dropped' and 'msg' are created
+	 * under 'q->debugfs_dir', thus lookup and remove them.
+	 */
+	if (!bt->dir) {
+		debugfs_remove(debugfs_lookup("dropped", q->debugfs_dir));
+		debugfs_remove(debugfs_lookup("msg", q->debugfs_dir));
+	} else {
+		debugfs_remove(bt->dir);
+	}
 	free_percpu(bt->sequence);
 	free_percpu(bt->msg_data);
 	kfree(bt);
@@ -335,10 +345,10 @@ static void put_probe_ref(void)
 	mutex_unlock(&blk_probe_mutex);
 }
 
-static void blk_trace_cleanup(struct blk_trace *bt)
+static void blk_trace_cleanup(struct request_queue *q, struct blk_trace *bt)
 {
 	synchronize_rcu();
-	blk_trace_free(bt);
+	blk_trace_free(q, bt);
 	put_probe_ref();
 }
 
@@ -352,7 +362,7 @@ static int __blk_trace_remove(struct request_queue *q)
 		return -EINVAL;
 
 	if (bt->trace_state != Blktrace_running)
-		blk_trace_cleanup(bt);
+		blk_trace_cleanup(q, bt);
 
 	return 0;
 }
@@ -572,7 +582,7 @@ static int do_blk_trace_setup(struct request_queue *q, char *name, dev_t dev,
 	ret = 0;
 err:
 	if (ret)
-		blk_trace_free(bt);
+		blk_trace_free(q, bt);
 	return ret;
 }
 
@@ -1048,7 +1058,7 @@ static void blk_add_trace_rq_remap(void *ignore, struct request *rq, dev_t dev,
 	r.sector_from = cpu_to_be64(from);
 
 	__blk_add_trace(bt, blk_rq_pos(rq), blk_rq_bytes(rq),
-			rq_data_dir(rq), 0, BLK_TA_REMAP, 0,
+			req_op(rq), rq->cmd_flags, BLK_TA_REMAP, 0,
 			sizeof(r), &r, blk_trace_request_get_cgid(rq));
 	rcu_read_unlock();
 }
@@ -1537,7 +1547,8 @@ blk_trace_event_print_binary(struct trace_iterator *iter, int flags,
 
 static enum print_line_t blk_tracer_print_line(struct trace_iterator *iter)
 {
-	if (!(blk_tracer_flags.val & TRACE_BLK_OPT_CLASSIC))
+	if ((iter->ent->type != TRACE_BLK) ||
+	    !(blk_tracer_flags.val & TRACE_BLK_OPT_CLASSIC))
 		return TRACE_TYPE_UNHANDLED;
 
 	return print_one_line(iter, true);
@@ -1615,7 +1626,7 @@ static int blk_trace_remove_queue(struct request_queue *q)
 
 	put_probe_ref();
 	synchronize_rcu();
-	blk_trace_free(bt);
+	blk_trace_free(q, bt);
 	return 0;
 }
 
@@ -1646,7 +1657,7 @@ static int blk_trace_setup_queue(struct request_queue *q,
 	return 0;
 
 free_bt:
-	blk_trace_free(bt);
+	blk_trace_free(q, bt);
 	return ret;
 }
 

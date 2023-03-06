@@ -210,10 +210,15 @@ void nfs_set_cache_invalid(struct inode *inode, unsigned long flags)
 		flags &= ~NFS_INO_INVALID_XATTR;
 	if (flags & NFS_INO_INVALID_DATA)
 		nfs_fscache_invalidate(inode);
-	if (inode->i_mapping->nrpages == 0)
-		flags &= ~(NFS_INO_INVALID_DATA|NFS_INO_DATA_INVAL_DEFER);
 	flags &= ~(NFS_INO_REVAL_PAGECACHE | NFS_INO_REVAL_FORCED);
+
 	nfsi->cache_validity |= flags;
+
+	if (inode->i_mapping->nrpages == 0)
+		nfsi->cache_validity &= ~(NFS_INO_INVALID_DATA |
+					  NFS_INO_DATA_INVAL_DEFER);
+	else if (nfsi->cache_validity & NFS_INO_INVALID_DATA)
+		nfsi->cache_validity &= ~NFS_INO_DATA_INVAL_DEFER;
 }
 EXPORT_SYMBOL_GPL(nfs_set_cache_invalid);
 
@@ -426,6 +431,23 @@ nfs_ilookup(struct super_block *sb, struct nfs_fattr *fattr, struct nfs_fh *fh)
 	return inode;
 }
 
+static void nfs_inode_init_regular(struct nfs_inode *nfsi)
+{
+	atomic_long_set(&nfsi->nrequests, 0);
+	atomic_long_set(&nfsi->redirtied_pages, 0);
+	INIT_LIST_HEAD(&nfsi->commit_info.list);
+	atomic_long_set(&nfsi->commit_info.ncommit, 0);
+	atomic_set(&nfsi->commit_info.rpcs_out, 0);
+	mutex_init(&nfsi->commit_mutex);
+}
+
+static void nfs_inode_init_dir(struct nfs_inode *nfsi)
+{
+	nfsi->cache_change_attribute = 0;
+	memset(nfsi->cookieverf, 0, sizeof(nfsi->cookieverf));
+	init_rwsem(&nfsi->rmdir_sem);
+}
+
 /*
  * This is our front-end to iget that looks up inodes by file handle
  * instead of inode number.
@@ -480,10 +502,12 @@ nfs_fhget(struct super_block *sb, struct nfs_fh *fh, struct nfs_fattr *fattr, st
 		if (S_ISREG(inode->i_mode)) {
 			inode->i_fop = NFS_SB(sb)->nfs_client->rpc_ops->file_ops;
 			inode->i_data.a_ops = &nfs_file_aops;
+			nfs_inode_init_regular(nfsi);
 		} else if (S_ISDIR(inode->i_mode)) {
 			inode->i_op = NFS_SB(sb)->nfs_client->rpc_ops->dir_inode_ops;
 			inode->i_fop = &nfs_dir_operations;
 			inode->i_data.a_ops = &nfs_dir_aops;
+			nfs_inode_init_dir(nfsi);
 			/* Deal with crossing mountpoints */
 			if (fattr->valid & NFS_ATTR_FATTR_MOUNTPOINT ||
 					fattr->valid & NFS_ATTR_FATTR_V4_REFERRAL) {
@@ -509,7 +533,6 @@ nfs_fhget(struct super_block *sb, struct nfs_fh *fh, struct nfs_fattr *fattr, st
 		inode->i_uid = make_kuid(&init_user_ns, -2);
 		inode->i_gid = make_kgid(&init_user_ns, -2);
 		inode->i_blocks = 0;
-		memset(nfsi->cookieverf, 0, sizeof(nfsi->cookieverf));
 		nfsi->write_io = 0;
 		nfsi->read_io = 0;
 
@@ -835,12 +858,9 @@ int nfs_getattr(struct user_namespace *mnt_userns, const struct path *path,
 	}
 
 	/* Flush out writes to the server in order to update c/mtime.  */
-	if ((request_mask & (STATX_CTIME|STATX_MTIME)) &&
-			S_ISREG(inode->i_mode)) {
-		err = filemap_write_and_wait(inode->i_mapping);
-		if (err)
-			goto out;
-	}
+	if ((request_mask & (STATX_CTIME | STATX_MTIME)) &&
+	    S_ISREG(inode->i_mode))
+		filemap_write_and_wait(inode->i_mapping);
 
 	/*
 	 * We may force a getattr if the user cares about atime.
@@ -1165,7 +1185,6 @@ int nfs_open(struct inode *inode, struct file *filp)
 	nfs_fscache_open_file(inode, filp);
 	return 0;
 }
-EXPORT_SYMBOL_GPL(nfs_open);
 
 /*
  * This function is called whenever some part of NFS notices that
@@ -1579,18 +1598,37 @@ struct nfs_fattr *nfs_alloc_fattr(void)
 {
 	struct nfs_fattr *fattr;
 
-	fattr = kmalloc(sizeof(*fattr), GFP_NOFS);
-	if (fattr != NULL)
+	fattr = kmalloc(sizeof(*fattr), GFP_KERNEL);
+	if (fattr != NULL) {
 		nfs_fattr_init(fattr);
+		fattr->label = NULL;
+	}
 	return fattr;
 }
 EXPORT_SYMBOL_GPL(nfs_alloc_fattr);
+
+struct nfs_fattr *nfs_alloc_fattr_with_label(struct nfs_server *server)
+{
+	struct nfs_fattr *fattr = nfs_alloc_fattr();
+
+	if (!fattr)
+		return NULL;
+
+	fattr->label = nfs4_label_alloc(server, GFP_KERNEL);
+	if (IS_ERR(fattr->label)) {
+		kfree(fattr);
+		return NULL;
+	}
+
+	return fattr;
+}
+EXPORT_SYMBOL_GPL(nfs_alloc_fattr_with_label);
 
 struct nfs_fh *nfs_alloc_fhandle(void)
 {
 	struct nfs_fh *fh;
 
-	fh = kmalloc(sizeof(struct nfs_fh), GFP_NOFS);
+	fh = kmalloc(sizeof(struct nfs_fh), GFP_KERNEL);
 	if (fh != NULL)
 		fh->size = 0;
 	return fh;
@@ -1777,8 +1815,10 @@ static int nfs_inode_finish_partial_attr_update(const struct nfs_fattr *fattr,
 		NFS_INO_INVALID_BLOCKS | NFS_INO_INVALID_OTHER |
 		NFS_INO_INVALID_NLINK;
 	unsigned long cache_validity = NFS_I(inode)->cache_validity;
+	enum nfs4_change_attr_type ctype = NFS_SERVER(inode)->change_attr_type;
 
-	if (!(cache_validity & NFS_INO_INVALID_CHANGE) &&
+	if (ctype != NFS4_CHANGE_TYPE_IS_UNDEFINED &&
+	    !(cache_validity & NFS_INO_INVALID_CHANGE) &&
 	    (cache_validity & check_valid) != 0 &&
 	    (fattr->valid & NFS_ATTR_FATTR_CHANGE) != 0 &&
 	    nfs_inode_attrs_cmp_monotonic(fattr, inode) == 0)
@@ -2260,14 +2300,7 @@ static void init_once(void *foo)
 	INIT_LIST_HEAD(&nfsi->open_files);
 	INIT_LIST_HEAD(&nfsi->access_cache_entry_lru);
 	INIT_LIST_HEAD(&nfsi->access_cache_inode_lru);
-	INIT_LIST_HEAD(&nfsi->commit_info.list);
-	atomic_long_set(&nfsi->nrequests, 0);
-	atomic_long_set(&nfsi->commit_info.ncommit, 0);
-	atomic_set(&nfsi->commit_info.rpcs_out, 0);
-	init_rwsem(&nfsi->rmdir_sem);
-	mutex_init(&nfsi->commit_mutex);
 	nfs4_init_once(nfsi);
-	nfsi->cache_change_attribute = 0;
 }
 
 static int __init nfs_init_inodecache(void)

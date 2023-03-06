@@ -29,6 +29,7 @@
 
 #include "i915_drv.h"
 #include "intel_audio.h"
+#include "intel_backlight.h"
 #include "intel_combo_phy.h"
 #include "intel_connector.h"
 #include "intel_crtc.h"
@@ -40,6 +41,7 @@
 #include "intel_dp_link_training.h"
 #include "intel_dp_mst.h"
 #include "intel_dpio_phy.h"
+#include "intel_drrs.h"
 #include "intel_dsi.h"
 #include "intel_fdi.h"
 #include "intel_fifo_underrun.h"
@@ -48,7 +50,6 @@
 #include "intel_hdmi.h"
 #include "intel_hotplug.h"
 #include "intel_lspcon.h"
-#include "intel_panel.h"
 #include "intel_pps.h"
 #include "intel_psr.h"
 #include "intel_snps_phy.h"
@@ -4432,6 +4433,7 @@ static void intel_ddi_encoder_shutdown(struct intel_encoder *encoder)
 	enum phy phy = intel_port_to_phy(i915, encoder->port);
 
 	intel_dp_encoder_shutdown(encoder);
+	intel_hdmi_encoder_shutdown(encoder);
 
 	if (!intel_phy_is_tc(i915, phy))
 		return;

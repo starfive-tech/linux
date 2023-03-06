@@ -29,22 +29,25 @@ static int irdma_query_device(struct ib_device *ibdev,
 	props->vendor_part_id = pcidev->device;
 
 	props->hw_ver = rf->pcidev->revision;
-	props->page_size_cap = SZ_4K | SZ_2M | SZ_1G;
+	props->page_size_cap = hw_attrs->page_size_cap;
 	props->max_mr_size = hw_attrs->max_mr_size;
 	props->max_qp = rf->max_qp - rf->used_qps;
 	props->max_qp_wr = hw_attrs->max_qp_wr;
 	props->max_send_sge = hw_attrs->uk_attrs.max_hw_wq_frags;
 	props->max_recv_sge = hw_attrs->uk_attrs.max_hw_wq_frags;
 	props->max_cq = rf->max_cq - rf->used_cqs;
-	props->max_cqe = rf->max_cqe;
+	props->max_cqe = rf->max_cqe - 1;
 	props->max_mr = rf->max_mr - rf->used_mrs;
 	props->max_mw = props->max_mr;
 	props->max_pd = rf->max_pd - rf->used_pds;
 	props->max_sge_rd = hw_attrs->uk_attrs.max_hw_read_sges;
 	props->max_qp_rd_atom = hw_attrs->max_hw_ird;
 	props->max_qp_init_rd_atom = hw_attrs->max_hw_ord;
-	if (rdma_protocol_roce(ibdev, 1))
+	if (rdma_protocol_roce(ibdev, 1)) {
+		props->device_cap_flags |= IB_DEVICE_RC_RNR_NAK_GEN;
 		props->max_pkeys = IRDMA_PKEY_TBL_SZ;
+	}
+
 	props->max_ah = rf->max_ah;
 	props->max_mcast_grp = rf->max_mcg;
 	props->max_mcast_qp_attach = IRDMA_MAX_MGS_PER_CTX;
@@ -55,36 +58,6 @@ static int irdma_query_device(struct ib_device *ibdev,
 		props->timestamp_mask = HCA_CLOCK_TIMESTAMP_MASK;
 
 	return 0;
-}
-
-/**
- * irdma_get_eth_speed_and_width - Get IB port speed and width from netdev speed
- * @link_speed: netdev phy link speed
- * @active_speed: IB port speed
- * @active_width: IB port width
- */
-static void irdma_get_eth_speed_and_width(u32 link_speed, u16 *active_speed,
-					  u8 *active_width)
-{
-	if (link_speed <= SPEED_1000) {
-		*active_width = IB_WIDTH_1X;
-		*active_speed = IB_SPEED_SDR;
-	} else if (link_speed <= SPEED_10000) {
-		*active_width = IB_WIDTH_1X;
-		*active_speed = IB_SPEED_FDR10;
-	} else if (link_speed <= SPEED_20000) {
-		*active_width = IB_WIDTH_4X;
-		*active_speed = IB_SPEED_DDR;
-	} else if (link_speed <= SPEED_25000) {
-		*active_width = IB_WIDTH_1X;
-		*active_speed = IB_SPEED_EDR;
-	} else if (link_speed <= SPEED_40000) {
-		*active_width = IB_WIDTH_4X;
-		*active_speed = IB_SPEED_FDR10;
-	} else {
-		*active_width = IB_WIDTH_4X;
-		*active_speed = IB_SPEED_EDR;
-	}
 }
 
 /**
@@ -114,8 +87,9 @@ static int irdma_query_port(struct ib_device *ibdev, u32 port,
 		props->state = IB_PORT_DOWN;
 		props->phys_state = IB_PORT_PHYS_STATE_DISABLED;
 	}
-	irdma_get_eth_speed_and_width(SPEED_100000, &props->active_speed,
-				      &props->active_width);
+
+	ib_get_eth_speed(ibdev, port, &props->active_speed,
+			 &props->active_width);
 
 	if (rdma_protocol_roce(ibdev, 1)) {
 		props->gid_tbl_len = 32;
@@ -1617,13 +1591,13 @@ int irdma_modify_qp(struct ib_qp *ibqp, struct ib_qp_attr *attr, int attr_mask,
 
 	if (issue_modify_qp && iwqp->ibqp_state > IB_QPS_RTS) {
 		if (dont_wait) {
-			if (iwqp->cm_id && iwqp->hw_tcp_state) {
+			if (iwqp->hw_tcp_state) {
 				spin_lock_irqsave(&iwqp->lock, flags);
 				iwqp->hw_tcp_state = IRDMA_TCP_STATE_CLOSED;
 				iwqp->last_aeq = IRDMA_AE_RESET_SENT;
 				spin_unlock_irqrestore(&iwqp->lock, flags);
-				irdma_cm_disconn(iwqp);
 			}
+			irdma_cm_disconn(iwqp);
 		} else {
 			int close_timer_started;
 
@@ -1759,11 +1733,11 @@ static int irdma_destroy_cq(struct ib_cq *ib_cq, struct ib_udata *udata)
 	spin_unlock_irqrestore(&iwcq->lock, flags);
 
 	irdma_cq_wq_destroy(iwdev->rf, cq);
-	irdma_cq_free_rsrc(iwdev->rf, iwcq);
 
 	spin_lock_irqsave(&iwceq->ce_lock, flags);
 	irdma_sc_cleanup_ceqes(cq, ceq);
 	spin_unlock_irqrestore(&iwceq->ce_lock, flags);
+	irdma_cq_free_rsrc(iwdev->rf, iwcq);
 
 	return 0;
 }
@@ -2506,7 +2480,7 @@ static int irdma_dealloc_mw(struct ib_mw *ibmw)
 	cqp_info = &cqp_request->info;
 	info = &cqp_info->in.u.dealloc_stag.info;
 	memset(info, 0, sizeof(*info));
-	info->pd_id = iwpd->sc_pd.pd_id & 0x00007fff;
+	info->pd_id = iwpd->sc_pd.pd_id;
 	info->stag_idx = ibmw->rkey >> IRDMA_CQPSQ_STAG_IDX_S;
 	info->mr = false;
 	cqp_info->cqp_cmd = IRDMA_OP_DEALLOC_STAG;
@@ -2776,7 +2750,7 @@ static struct ib_mr *irdma_reg_user_mr(struct ib_pd *pd, u64 start, u64 len,
 
 	if (req.reg_type == IRDMA_MEMREG_TYPE_MEM) {
 		iwmr->page_size = ib_umem_find_best_pgsz(region,
-							 SZ_4K | SZ_2M | SZ_1G,
+							 iwdev->rf->sc_dev.hw_attrs.page_size_cap,
 							 virt);
 		if (unlikely(!iwmr->page_size)) {
 			kfree(iwmr);
@@ -3018,7 +2992,7 @@ static int irdma_dereg_mr(struct ib_mr *ib_mr, struct ib_udata *udata)
 	cqp_info = &cqp_request->info;
 	info = &cqp_info->in.u.dealloc_stag.info;
 	memset(info, 0, sizeof(*info));
-	info->pd_id = iwpd->sc_pd.pd_id & 0x00007fff;
+	info->pd_id = iwpd->sc_pd.pd_id;
 	info->stag_idx = ib_mr->rkey >> IRDMA_CQPSQ_STAG_IDX_S;
 	info->mr = true;
 	if (iwpbl->pbl_allocated)
@@ -3356,6 +3330,8 @@ static enum ib_wc_status irdma_flush_err_to_ib_wc_status(enum irdma_flush_opcode
 		return IB_WC_RETRY_EXC_ERR;
 	case FLUSH_MW_BIND_ERR:
 		return IB_WC_MW_BIND_ERR;
+	case FLUSH_REM_INV_REQ_ERR:
+		return IB_WC_REM_INV_REQ_ERR;
 	case FLUSH_FATAL_ERR:
 	default:
 		return IB_WC_FATAL_ERR;
@@ -3604,18 +3580,31 @@ static int irdma_req_notify_cq(struct ib_cq *ibcq,
 	struct irdma_cq *iwcq;
 	struct irdma_cq_uk *ukcq;
 	unsigned long flags;
-	enum irdma_cmpl_notify cq_notify = IRDMA_CQ_COMPL_EVENT;
+	enum irdma_cmpl_notify cq_notify;
+	bool promo_event = false;
+	int ret = 0;
 
+	cq_notify = notify_flags == IB_CQ_SOLICITED ?
+		    IRDMA_CQ_COMPL_SOLICITED : IRDMA_CQ_COMPL_EVENT;
 	iwcq = to_iwcq(ibcq);
 	ukcq = &iwcq->sc_cq.cq_uk;
-	if (notify_flags == IB_CQ_SOLICITED)
-		cq_notify = IRDMA_CQ_COMPL_SOLICITED;
 
 	spin_lock_irqsave(&iwcq->lock, flags);
-	irdma_uk_cq_request_notification(ukcq, cq_notify);
+	/* Only promote to arm the CQ for any event if the last arm event was solicited. */
+	if (iwcq->last_notify == IRDMA_CQ_COMPL_SOLICITED && notify_flags != IB_CQ_SOLICITED)
+		promo_event = true;
+
+	if (!iwcq->armed || promo_event) {
+		iwcq->armed = true;
+		iwcq->last_notify = cq_notify;
+		irdma_uk_cq_request_notification(ukcq, cq_notify);
+	}
+
+	if ((notify_flags & IB_CQ_REPORT_MISSED_EVENTS) && !irdma_cq_empty(iwcq))
+		ret = 1;
 	spin_unlock_irqrestore(&iwcq->lock, flags);
 
-	return 0;
+	return ret;
 }
 
 static int irdma_roce_port_immutable(struct ib_device *ibdev, u32 port_num,

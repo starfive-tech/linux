@@ -739,6 +739,7 @@ static int ib_uverbs_reg_mr(struct uverbs_attr_bundle *attrs)
 	mr->uobject = uobj;
 	atomic_inc(&pd->usecnt);
 	mr->iova = cmd.hca_va;
+	mr->length = cmd.length;
 
 	rdma_restrack_new(&mr->res, RDMA_RESTRACK_MR);
 	rdma_restrack_set_name(&mr->res, NULL);
@@ -837,11 +838,8 @@ static int ib_uverbs_rereg_mr(struct uverbs_attr_bundle *attrs)
 		new_mr->device = new_pd->device;
 		new_mr->pd = new_pd;
 		new_mr->type = IB_MR_TYPE_USER;
-		new_mr->dm = NULL;
-		new_mr->sig_attrs = NULL;
 		new_mr->uobject = uobj;
 		atomic_inc(&new_pd->usecnt);
-		new_mr->iova = cmd.hca_va;
 		new_uobj->object = new_mr;
 
 		rdma_restrack_new(&new_mr->res, RDMA_RESTRACK_MR);
@@ -864,8 +862,10 @@ static int ib_uverbs_rereg_mr(struct uverbs_attr_bundle *attrs)
 			mr->pd = new_pd;
 			atomic_inc(&new_pd->usecnt);
 		}
-		if (cmd.flags & IB_MR_REREG_TRANS)
+		if (cmd.flags & IB_MR_REREG_TRANS) {
 			mr->iova = cmd.hca_va;
+			mr->length = cmd.length;
+		}
 	}
 
 	memset(&resp, 0, sizeof(resp));

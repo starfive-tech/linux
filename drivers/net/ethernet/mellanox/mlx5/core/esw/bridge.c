@@ -1270,7 +1270,7 @@ void mlx5_esw_bridge_fdb_update_used(struct net_device *dev, u16 vport_num, u16 
 	struct mlx5_esw_bridge *bridge;
 
 	port = mlx5_esw_bridge_port_lookup(vport_num, esw_owner_vhca_id, br_offloads);
-	if (!port || port->flags & MLX5_ESW_BRIDGE_PORT_FLAG_PEER)
+	if (!port)
 		return;
 
 	bridge = port->bridge;
@@ -1385,6 +1385,8 @@ struct mlx5_esw_bridge_offloads *mlx5_esw_bridge_init(struct mlx5_eswitch *esw)
 {
 	struct mlx5_esw_bridge_offloads *br_offloads;
 
+	ASSERT_RTNL();
+
 	br_offloads = kvzalloc(sizeof(*br_offloads), GFP_KERNEL);
 	if (!br_offloads)
 		return ERR_PTR(-ENOMEM);
@@ -1400,6 +1402,8 @@ struct mlx5_esw_bridge_offloads *mlx5_esw_bridge_init(struct mlx5_eswitch *esw)
 void mlx5_esw_bridge_cleanup(struct mlx5_eswitch *esw)
 {
 	struct mlx5_esw_bridge_offloads *br_offloads = esw->br_offloads;
+
+	ASSERT_RTNL();
 
 	if (!br_offloads)
 		return;

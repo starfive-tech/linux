@@ -1581,7 +1581,7 @@ static int rtsx_pci_probe(struct pci_dev *pcidev,
 	pcr->remap_addr = ioremap(base, len);
 	if (!pcr->remap_addr) {
 		ret = -ENOMEM;
-		goto free_handle;
+		goto free_idr;
 	}
 
 	pcr->rtsx_resv_buf = dma_alloc_coherent(&(pcidev->dev),
@@ -1651,6 +1651,10 @@ disable_msi:
 			pcr->rtsx_resv_buf, pcr->rtsx_resv_buf_addr);
 unmap:
 	iounmap(pcr->remap_addr);
+free_idr:
+	spin_lock(&rtsx_pci_lock);
+	idr_remove(&rtsx_pci_idr, pcr->id);
+	spin_unlock(&rtsx_pci_lock);
 free_handle:
 	kfree(handle);
 free_pcr:
@@ -1803,8 +1807,6 @@ static int rtsx_pci_runtime_suspend(struct device *device)
 	mutex_lock(&pcr->pcr_mutex);
 	rtsx_pci_power_off(pcr, HOST_ENTER_S3);
 
-	free_irq(pcr->irq, (void *)pcr);
-
 	mutex_unlock(&pcr->pcr_mutex);
 
 	pcr->is_runtime_suspended = true;
@@ -1825,8 +1827,6 @@ static int rtsx_pci_runtime_resume(struct device *device)
 	mutex_lock(&pcr->pcr_mutex);
 
 	rtsx_pci_write_register(pcr, HOST_SLEEP_STATE, 0x03, 0x00);
-	rtsx_pci_acquire_irq(pcr);
-	synchronize_irq(pcr->irq);
 
 	if (pcr->ops->fetch_vendor_settings)
 		pcr->ops->fetch_vendor_settings(pcr);

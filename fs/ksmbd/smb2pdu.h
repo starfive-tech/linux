@@ -113,8 +113,9 @@
 #define SMB21_DEFAULT_IOSIZE	(1024 * 1024)
 #define SMB3_DEFAULT_IOSIZE	(4 * 1024 * 1024)
 #define SMB3_DEFAULT_TRANS_SIZE	(1024 * 1024)
-#define SMB3_MIN_IOSIZE	(64 * 1024)
-#define SMB3_MAX_IOSIZE	(8 * 1024 * 1024)
+#define SMB3_MIN_IOSIZE		(64 * 1024)
+#define SMB3_MAX_IOSIZE		(8 * 1024 * 1024)
+#define SMB3_MAX_MSGSIZE	(4 * 4096)
 
 /*
  * SMB2 Header Definition
@@ -1647,6 +1648,7 @@ int init_smb3_11_server(struct ksmbd_conn *conn);
 void init_smb2_max_read_size(unsigned int sz);
 void init_smb2_max_write_size(unsigned int sz);
 void init_smb2_max_trans_size(unsigned int sz);
+void init_smb2_max_credits(unsigned int sz);
 
 bool is_smb2_neg_cmd(struct ksmbd_work *work);
 bool is_smb2_rsp(struct ksmbd_work *work);

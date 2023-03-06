@@ -102,7 +102,7 @@ static int stmmac_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 		time.tv_nsec = priv->plat->est->btr_reserve[0];
 		time.tv_sec = priv->plat->est->btr_reserve[1];
 		basetime = timespec64_to_ktime(time);
-		cycle_time = priv->plat->est->ctr[1] * NSEC_PER_SEC +
+		cycle_time = (u64)priv->plat->est->ctr[1] * NSEC_PER_SEC +
 			     priv->plat->est->ctr[0];
 		time = stmmac_calc_tas_basetime(basetime,
 						current_time_ns,
@@ -229,7 +229,10 @@ static int stmmac_enable(struct ptp_clock_info *ptp,
 		}
 		writel(acr_value, ptpaddr + PTP_ACR);
 		mutex_unlock(&priv->aux_ts_lock);
-		ret = 0;
+		/* wait for auxts fifo clear to finish */
+		ret = readl_poll_timeout(ptpaddr + PTP_ACR, acr_value,
+					 !(acr_value & PTP_ACR_ATSFC),
+					 10, 10000);
 		break;
 
 	default:
@@ -296,9 +299,6 @@ static struct ptp_clock_info stmmac_ptp_clock_ops = {
 void stmmac_ptp_register(struct stmmac_priv *priv)
 {
 	int i;
-
-	if (priv->plat->ptp_clk_freq_config)
-		priv->plat->ptp_clk_freq_config(priv);
 
 	for (i = 0; i < priv->dma_cap.pps_out_num; i++) {
 		if (i >= STMMAC_PPS_MAX)

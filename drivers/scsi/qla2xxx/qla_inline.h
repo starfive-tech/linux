@@ -184,6 +184,8 @@ static void qla2xxx_init_sp(srb_t *sp, scsi_qla_host_t *vha,
 	sp->vha = vha;
 	sp->qpair = qpair;
 	sp->cmd_type = TYPE_SRB;
+	/* ref : INIT - normal flow */
+	kref_init(&sp->cmd_kref);
 	INIT_LIST_HEAD(&sp->elem);
 }
 
@@ -223,11 +225,9 @@ static inline srb_t *
 qla2x00_get_sp(scsi_qla_host_t *vha, fc_port_t *fcport, gfp_t flag)
 {
 	srb_t *sp = NULL;
-	uint8_t bail;
 	struct qla_qpair *qpair;
 
-	QLA_VHA_MARK_BUSY(vha, bail);
-	if (unlikely(bail))
+	if (unlikely(qla_vha_mark_busy(vha)))
 		return NULL;
 
 	qpair = vha->hw->base_qpair;

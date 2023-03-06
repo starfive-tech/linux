@@ -62,6 +62,7 @@ static const struct hantro_fmt rockchip_vpu1_postproc_fmts[] = {
 	{
 		.fourcc = V4L2_PIX_FMT_YUYV,
 		.codec_mode = HANTRO_MODE_NONE,
+		.postprocessed = true,
 	},
 };
 
@@ -343,7 +344,7 @@ static const struct hantro_codec_ops rk3066_vpu_codec_ops[] = {
 		.run = hantro_h1_jpeg_enc_run,
 		.reset = rockchip_vpu1_enc_reset,
 		.init = hantro_jpeg_enc_init,
-		.done = hantro_jpeg_enc_done,
+		.done = hantro_h1_jpeg_enc_done,
 		.exit = hantro_jpeg_enc_exit,
 	},
 	[HANTRO_MODE_H264_DEC] = {
@@ -371,7 +372,7 @@ static const struct hantro_codec_ops rk3288_vpu_codec_ops[] = {
 		.run = hantro_h1_jpeg_enc_run,
 		.reset = rockchip_vpu1_enc_reset,
 		.init = hantro_jpeg_enc_init,
-		.done = hantro_jpeg_enc_done,
+		.done = hantro_h1_jpeg_enc_done,
 		.exit = hantro_jpeg_enc_exit,
 	},
 	[HANTRO_MODE_H264_DEC] = {
@@ -399,6 +400,7 @@ static const struct hantro_codec_ops rk3399_vpu_codec_ops[] = {
 		.run = rockchip_vpu2_jpeg_enc_run,
 		.reset = rockchip_vpu2_enc_reset,
 		.init = hantro_jpeg_enc_init,
+		.done = rockchip_vpu2_jpeg_enc_done,
 		.exit = hantro_jpeg_enc_exit,
 	},
 	[HANTRO_MODE_H264_DEC] = {

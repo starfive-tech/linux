@@ -1692,6 +1692,39 @@ static u8 map_ddc_pin(struct drm_i915_private *i915, u8 vbt_pin)
 	return 0;
 }
 
+static u8 dvo_port_type(u8 dvo_port)
+{
+	switch (dvo_port) {
+	case DVO_PORT_HDMIA:
+	case DVO_PORT_HDMIB:
+	case DVO_PORT_HDMIC:
+	case DVO_PORT_HDMID:
+	case DVO_PORT_HDMIE:
+	case DVO_PORT_HDMIF:
+	case DVO_PORT_HDMIG:
+	case DVO_PORT_HDMIH:
+	case DVO_PORT_HDMII:
+		return DVO_PORT_HDMIA;
+	case DVO_PORT_DPA:
+	case DVO_PORT_DPB:
+	case DVO_PORT_DPC:
+	case DVO_PORT_DPD:
+	case DVO_PORT_DPE:
+	case DVO_PORT_DPF:
+	case DVO_PORT_DPG:
+	case DVO_PORT_DPH:
+	case DVO_PORT_DPI:
+		return DVO_PORT_DPA;
+	case DVO_PORT_MIPIA:
+	case DVO_PORT_MIPIB:
+	case DVO_PORT_MIPIC:
+	case DVO_PORT_MIPID:
+		return DVO_PORT_MIPIA;
+	default:
+		return dvo_port;
+	}
+}
+
 static enum port __dvo_port_to_port(int n_ports, int n_dvo,
 				    const int port_mapping[][3], u8 dvo_port)
 {
@@ -1785,6 +1818,22 @@ static enum port dvo_port_to_port(struct drm_i915_private *i915,
 					  ARRAY_SIZE(port_mapping[0]),
 					  port_mapping,
 					  dvo_port);
+}
+
+static enum port
+dsi_dvo_port_to_port(struct drm_i915_private *i915, u8 dvo_port)
+{
+	switch (dvo_port) {
+	case DVO_PORT_MIPIA:
+		return PORT_A;
+	case DVO_PORT_MIPIC:
+		if (DISPLAY_VER(i915) >= 11)
+			return PORT_B;
+		else
+			return PORT_C;
+	default:
+		return PORT_NONE;
+	}
 }
 
 static int parse_bdb_230_dp_max_link_rate(const int vbt_max_link_rate)
@@ -2622,8 +2671,25 @@ bool intel_bios_is_port_edp(struct drm_i915_private *i915, enum port port)
 	return false;
 }
 
-static bool child_dev_is_dp_dual_mode(const struct child_device_config *child,
-				      enum port port)
+static bool child_dev_is_dp_dual_mode(const struct child_device_config *child)
+{
+	if ((child->device_type & DEVICE_TYPE_DP_DUAL_MODE_BITS) !=
+	    (DEVICE_TYPE_DP_DUAL_MODE & DEVICE_TYPE_DP_DUAL_MODE_BITS))
+		return false;
+
+	if (dvo_port_type(child->dvo_port) == DVO_PORT_DPA)
+		return true;
+
+	/* Only accept a HDMI dvo_port as DP++ if it has an AUX channel */
+	if (dvo_port_type(child->dvo_port) == DVO_PORT_HDMIA &&
+	    child->aux_channel != 0)
+		return true;
+
+	return false;
+}
+
+bool intel_bios_is_port_dp_dual_mode(struct drm_i915_private *i915,
+				     enum port port)
 {
 	static const struct {
 		u16 dp, hdmi;
@@ -2638,32 +2704,23 @@ static bool child_dev_is_dp_dual_mode(const struct child_device_config *child,
 		[PORT_E] = { DVO_PORT_DPE, DVO_PORT_HDMIE, },
 		[PORT_F] = { DVO_PORT_DPF, DVO_PORT_HDMIF, },
 	};
+	const struct intel_bios_encoder_data *devdata;
+
+	if (HAS_DDI(i915)) {
+		const struct intel_bios_encoder_data *devdata;
+
+		devdata = intel_bios_encoder_data_lookup(i915, port);
+
+		return devdata && child_dev_is_dp_dual_mode(&devdata->child);
+	}
 
 	if (port == PORT_A || port >= ARRAY_SIZE(port_mapping))
 		return false;
 
-	if ((child->device_type & DEVICE_TYPE_DP_DUAL_MODE_BITS) !=
-	    (DEVICE_TYPE_DP_DUAL_MODE & DEVICE_TYPE_DP_DUAL_MODE_BITS))
-		return false;
-
-	if (child->dvo_port == port_mapping[port].dp)
-		return true;
-
-	/* Only accept a HDMI dvo_port as DP++ if it has an AUX channel */
-	if (child->dvo_port == port_mapping[port].hdmi &&
-	    child->aux_channel != 0)
-		return true;
-
-	return false;
-}
-
-bool intel_bios_is_port_dp_dual_mode(struct drm_i915_private *i915,
-				     enum port port)
-{
-	const struct intel_bios_encoder_data *devdata;
-
 	list_for_each_entry(devdata, &i915->vbt.display_devices, node) {
-		if (child_dev_is_dp_dual_mode(&devdata->child, port))
+		if ((devdata->child.dvo_port == port_mapping[port].dp ||
+		     devdata->child.dvo_port == port_mapping[port].hdmi) &&
+		    child_dev_is_dp_dual_mode(&devdata->child))
 			return true;
 	}
 
@@ -2692,19 +2749,16 @@ bool intel_bios_is_dsi_present(struct drm_i915_private *i915,
 
 		dvo_port = child->dvo_port;
 
-		if (dvo_port == DVO_PORT_MIPIA ||
-		    (dvo_port == DVO_PORT_MIPIB && DISPLAY_VER(i915) >= 11) ||
-		    (dvo_port == DVO_PORT_MIPIC && DISPLAY_VER(i915) < 11)) {
-			if (port)
-				*port = dvo_port - DVO_PORT_MIPIA;
-			return true;
-		} else if (dvo_port == DVO_PORT_MIPIB ||
-			   dvo_port == DVO_PORT_MIPIC ||
-			   dvo_port == DVO_PORT_MIPID) {
+		if (dsi_dvo_port_to_port(i915, dvo_port) == PORT_NONE) {
 			drm_dbg_kms(&i915->drm,
 				    "VBT has unsupported DSI port %c\n",
 				    port_name(dvo_port - DVO_PORT_MIPIA));
+			continue;
 		}
+
+		if (port)
+			*port = dsi_dvo_port_to_port(i915, dvo_port);
+		return true;
 	}
 
 	return false;
@@ -2789,7 +2843,7 @@ bool intel_bios_get_dsc_params(struct intel_encoder *encoder,
 		if (!(child->device_type & DEVICE_TYPE_MIPI_OUTPUT))
 			continue;
 
-		if (child->dvo_port - DVO_PORT_MIPIA == encoder->port) {
+		if (dsi_dvo_port_to_port(i915, child->dvo_port) == encoder->port) {
 			if (!devdata->dsc)
 				return false;
 

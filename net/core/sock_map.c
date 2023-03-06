@@ -167,8 +167,11 @@ static void sock_map_del_link(struct sock *sk,
 		write_lock_bh(&sk->sk_callback_lock);
 		if (strp_stop)
 			sk_psock_stop_strp(sk, psock);
-		else
+		if (verdict_stop)
 			sk_psock_stop_verdict(sk, psock);
+
+		if (psock->psock_update_sk_prot)
+			psock->psock_update_sk_prot(sk, psock, false);
 		write_unlock_bh(&sk->sk_callback_lock);
 	}
 }
@@ -282,32 +285,38 @@ static int sock_map_link(struct bpf_map *map, struct sock *sk)
 
 	if (msg_parser)
 		psock_set_prog(&psock->progs.msg_parser, msg_parser);
+	if (stream_parser)
+		psock_set_prog(&psock->progs.stream_parser, stream_parser);
+	if (stream_verdict)
+		psock_set_prog(&psock->progs.stream_verdict, stream_verdict);
+	if (skb_verdict)
+		psock_set_prog(&psock->progs.skb_verdict, skb_verdict);
 
+	/* msg_* and stream_* programs references tracked in psock after this
+	 * point. Reference dec and cleanup will occur through psock destructor
+	 */
 	ret = sock_map_init_proto(sk, psock);
-	if (ret < 0)
-		goto out_drop;
+	if (ret < 0) {
+		sk_psock_put(sk, psock);
+		goto out;
+	}
 
 	write_lock_bh(&sk->sk_callback_lock);
 	if (stream_parser && stream_verdict && !psock->saved_data_ready) {
 		ret = sk_psock_init_strp(sk, psock);
-		if (ret)
-			goto out_unlock_drop;
-		psock_set_prog(&psock->progs.stream_verdict, stream_verdict);
-		psock_set_prog(&psock->progs.stream_parser, stream_parser);
+		if (ret) {
+			write_unlock_bh(&sk->sk_callback_lock);
+			sk_psock_put(sk, psock);
+			goto out;
+		}
 		sk_psock_start_strp(sk, psock);
 	} else if (!stream_parser && stream_verdict && !psock->saved_data_ready) {
-		psock_set_prog(&psock->progs.stream_verdict, stream_verdict);
 		sk_psock_start_verdict(sk,psock);
 	} else if (!stream_verdict && skb_verdict && !psock->saved_data_ready) {
-		psock_set_prog(&psock->progs.skb_verdict, skb_verdict);
 		sk_psock_start_verdict(sk, psock);
 	}
 	write_unlock_bh(&sk->sk_callback_lock);
 	return 0;
-out_unlock_drop:
-	write_unlock_bh(&sk->sk_callback_lock);
-out_drop:
-	sk_psock_put(sk, psock);
 out_progs:
 	if (skb_verdict)
 		bpf_prog_put(skb_verdict);
@@ -320,6 +329,7 @@ out_put_stream_parser:
 out_put_stream_verdict:
 	if (stream_verdict)
 		bpf_prog_put(stream_verdict);
+out:
 	return ret;
 }
 
@@ -339,11 +349,13 @@ static void sock_map_free(struct bpf_map *map)
 
 		sk = xchg(psk, NULL);
 		if (sk) {
+			sock_hold(sk);
 			lock_sock(sk);
 			rcu_read_lock();
 			sock_map_unref(sk, psk);
 			rcu_read_unlock();
 			release_sock(sk);
+			sock_put(sk);
 		}
 	}
 
@@ -779,13 +791,22 @@ static int sock_map_init_seq_private(void *priv_data,
 {
 	struct sock_map_seq_info *info = priv_data;
 
+	bpf_map_inc_with_uref(aux->map);
 	info->map = aux->map;
 	return 0;
+}
+
+static void sock_map_fini_seq_private(void *priv_data)
+{
+	struct sock_map_seq_info *info = priv_data;
+
+	bpf_map_put_with_uref(info->map);
 }
 
 static const struct bpf_iter_seq_info sock_map_iter_seq_info = {
 	.seq_ops		= &sock_map_seq_ops,
 	.init_seq_private	= sock_map_init_seq_private,
+	.fini_seq_private	= sock_map_fini_seq_private,
 	.seq_priv_size		= sizeof(struct sock_map_seq_info),
 };
 
@@ -1366,18 +1387,27 @@ static const struct seq_operations sock_hash_seq_ops = {
 };
 
 static int sock_hash_init_seq_private(void *priv_data,
-				     struct bpf_iter_aux_info *aux)
+				      struct bpf_iter_aux_info *aux)
 {
 	struct sock_hash_seq_info *info = priv_data;
 
+	bpf_map_inc_with_uref(aux->map);
 	info->map = aux->map;
 	info->htab = container_of(aux->map, struct bpf_shtab, map);
 	return 0;
 }
 
+static void sock_hash_fini_seq_private(void *priv_data)
+{
+	struct sock_hash_seq_info *info = priv_data;
+
+	bpf_map_put_with_uref(info->map);
+}
+
 static const struct bpf_iter_seq_info sock_hash_iter_seq_info = {
 	.seq_ops		= &sock_hash_seq_ops,
 	.init_seq_private	= sock_hash_init_seq_private,
+	.fini_seq_private	= sock_hash_fini_seq_private,
 	.seq_priv_size		= sizeof(struct sock_hash_seq_info),
 };
 
@@ -1484,17 +1514,42 @@ void sock_map_unhash(struct sock *sk)
 	psock = sk_psock(sk);
 	if (unlikely(!psock)) {
 		rcu_read_unlock();
-		if (sk->sk_prot->unhash)
-			sk->sk_prot->unhash(sk);
-		return;
+		saved_unhash = READ_ONCE(sk->sk_prot)->unhash;
+	} else {
+		saved_unhash = psock->saved_unhash;
+		sock_map_remove_links(sk, psock);
+		rcu_read_unlock();
 	}
-
-	saved_unhash = psock->saved_unhash;
-	sock_map_remove_links(sk, psock);
-	rcu_read_unlock();
-	saved_unhash(sk);
+	if (WARN_ON_ONCE(saved_unhash == sock_map_unhash))
+		return;
+	if (saved_unhash)
+		saved_unhash(sk);
 }
 EXPORT_SYMBOL_GPL(sock_map_unhash);
+
+void sock_map_destroy(struct sock *sk)
+{
+	void (*saved_destroy)(struct sock *sk);
+	struct sk_psock *psock;
+
+	rcu_read_lock();
+	psock = sk_psock_get(sk);
+	if (unlikely(!psock)) {
+		rcu_read_unlock();
+		saved_destroy = READ_ONCE(sk->sk_prot)->destroy;
+	} else {
+		saved_destroy = psock->saved_destroy;
+		sock_map_remove_links(sk, psock);
+		rcu_read_unlock();
+		sk_psock_stop(psock);
+		sk_psock_put(sk, psock);
+	}
+	if (WARN_ON_ONCE(saved_destroy == sock_map_destroy))
+		return;
+	if (saved_destroy)
+		saved_destroy(sk);
+}
+EXPORT_SYMBOL_GPL(sock_map_destroy);
 
 void sock_map_close(struct sock *sk, long timeout)
 {
@@ -1507,15 +1562,21 @@ void sock_map_close(struct sock *sk, long timeout)
 	if (unlikely(!psock)) {
 		rcu_read_unlock();
 		release_sock(sk);
-		return sk->sk_prot->close(sk, timeout);
+		saved_close = READ_ONCE(sk->sk_prot)->close;
+	} else {
+		saved_close = psock->saved_close;
+		sock_map_remove_links(sk, psock);
+		rcu_read_unlock();
+		sk_psock_stop(psock);
+		release_sock(sk);
+		cancel_work_sync(&psock->work);
+		sk_psock_put(sk, psock);
 	}
-
-	saved_close = psock->saved_close;
-	sock_map_remove_links(sk, psock);
-	rcu_read_unlock();
-	sk_psock_stop(psock, true);
-	sk_psock_put(sk, psock);
-	release_sock(sk);
+	/* Make sure we do not recurse. This is a bug.
+	 * Leak the socket instead of crashing on a stack overflow.
+	 */
+	if (WARN_ON_ONCE(saved_close == sock_map_close))
+		return;
 	saved_close(sk, timeout);
 }
 EXPORT_SYMBOL_GPL(sock_map_close);
@@ -1565,7 +1626,7 @@ static struct bpf_iter_reg sock_map_iter_reg = {
 	.ctx_arg_info_size	= 2,
 	.ctx_arg_info		= {
 		{ offsetof(struct bpf_iter__sockmap, key),
-		  PTR_TO_RDONLY_BUF_OR_NULL },
+		  PTR_TO_BUF | PTR_MAYBE_NULL | MEM_RDONLY },
 		{ offsetof(struct bpf_iter__sockmap, sk),
 		  PTR_TO_BTF_ID_OR_NULL },
 	},

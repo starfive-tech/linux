@@ -215,6 +215,17 @@ static int btf_dump_resize(struct btf_dump *d)
 	return 0;
 }
 
+static void btf_dump_free_names(struct hashmap *map)
+{
+	size_t bkt;
+	struct hashmap_entry *cur;
+
+	hashmap__for_each_entry(map, cur, bkt)
+		free((void *)cur->key);
+
+	hashmap__free(map);
+}
+
 void btf_dump__free(struct btf_dump *d)
 {
 	int i;
@@ -233,8 +244,8 @@ void btf_dump__free(struct btf_dump *d)
 	free(d->cached_names);
 	free(d->emit_queue);
 	free(d->decl_stack);
-	hashmap__free(d->type_names);
-	hashmap__free(d->ident_names);
+	btf_dump_free_names(d->type_names);
+	btf_dump_free_names(d->ident_names);
 
 	free(d);
 }
@@ -1457,11 +1468,23 @@ static void btf_dump_emit_type_cast(struct btf_dump *d, __u32 id,
 static size_t btf_dump_name_dups(struct btf_dump *d, struct hashmap *name_map,
 				 const char *orig_name)
 {
+	char *old_name, *new_name;
 	size_t dup_cnt = 0;
+	int err;
+
+	new_name = strdup(orig_name);
+	if (!new_name)
+		return 1;
 
 	hashmap__find(name_map, orig_name, (void **)&dup_cnt);
 	dup_cnt++;
-	hashmap__set(name_map, orig_name, (void *)dup_cnt, NULL, NULL);
+
+	err = hashmap__set(name_map, new_name, (void *)dup_cnt,
+			   (const void **)&old_name, NULL);
+	if (err)
+		free(new_name);
+
+	free(old_name);
 
 	return dup_cnt;
 }
@@ -1480,6 +1503,11 @@ static const char *btf_dump_resolve_name(struct btf_dump *d, __u32 id,
 
 	if (s->name_resolved)
 		return *cached_name ? *cached_name : orig_name;
+
+	if (btf_is_fwd(t) || (btf_is_enum(t) && btf_vlen(t) == 0)) {
+		s->name_resolved = 1;
+		return orig_name;
+	}
 
 	dup_cnt = btf_dump_name_dups(d, name_map, orig_name);
 	if (dup_cnt > 1) {
@@ -1829,14 +1857,16 @@ static int btf_dump_array_data(struct btf_dump *d,
 {
 	const struct btf_array *array = btf_array(t);
 	const struct btf_type *elem_type;
-	__u32 i, elem_size = 0, elem_type_id;
+	__u32 i, elem_type_id;
+	__s64 elem_size;
 	bool is_array_member;
 
 	elem_type_id = array->type;
 	elem_type = skip_mods_and_typedefs(d->btf, elem_type_id, NULL);
 	elem_size = btf__resolve_size(d->btf, elem_type_id);
 	if (elem_size <= 0) {
-		pr_warn("unexpected elem size %d for array type [%u]\n", elem_size, id);
+		pr_warn("unexpected elem size %zd for array type [%u]\n",
+			(ssize_t)elem_size, id);
 		return -EINVAL;
 	}
 
@@ -1885,7 +1915,7 @@ static int btf_dump_struct_data(struct btf_dump *d,
 {
 	const struct btf_member *m = btf_members(t);
 	__u16 n = btf_vlen(t);
-	int i, err;
+	int i, err = 0;
 
 	/* note that we increment depth before calling btf_dump_print() below;
 	 * this is intentional.  btf_dump_data_newline() will not print a
@@ -2186,7 +2216,7 @@ static int btf_dump_dump_type_data(struct btf_dump *d,
 				   __u8 bits_offset,
 				   __u8 bit_sz)
 {
-	int size, err;
+	int size, err = 0;
 
 	size = btf_dump_type_data_check_overflow(d, t, id, data, bits_offset);
 	if (size < 0)

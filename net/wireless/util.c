@@ -1044,6 +1044,7 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
 
 		switch (otype) {
 		case NL80211_IFTYPE_AP:
+		case NL80211_IFTYPE_P2P_GO:
 			cfg80211_stop_ap(rdev, dev, true);
 			break;
 		case NL80211_IFTYPE_ADHOC:
@@ -1352,7 +1353,7 @@ static u32 cfg80211_calculate_bitrate_he(struct rate_info *rate)
 		 25599, /*  4.166666... */
 		 17067, /*  2.777777... */
 		 12801, /*  2.083333... */
-		 11769, /*  1.851851... */
+		 11377, /*  1.851725... */
 		 10239, /*  1.666666... */
 		  8532, /*  1.388888... */
 		  7680, /*  1.250000... */

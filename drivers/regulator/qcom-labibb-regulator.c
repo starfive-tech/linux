@@ -260,7 +260,7 @@ static irqreturn_t qcom_labibb_ocp_isr(int irq, void *chip)
 
 	/* If the regulator is not enabled, this is a fake event */
 	if (!ops->is_enabled(vreg->rdev))
-		return 0;
+		return IRQ_HANDLED;
 
 	/* If we tried to recover for too many times it's not getting better */
 	if (vreg->ocp_irq_count > LABIBB_MAX_OCP_COUNT)
@@ -822,6 +822,7 @@ static int qcom_labibb_regulator_probe(struct platform_device *pdev)
 			if (irq == 0)
 				irq = -EINVAL;
 
+			of_node_put(reg_node);
 			return dev_err_probe(vreg->dev, irq,
 					     "Short-circuit irq not found.\n");
 		}

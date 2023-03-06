@@ -578,7 +578,8 @@ static const struct ocelot_stat_layout vsc9959_stats_layout[] = {
 	{ .offset = 0x87,	.name = "tx_frames_below_65_octets", },
 	{ .offset = 0x88,	.name = "tx_frames_65_to_127_octets", },
 	{ .offset = 0x89,	.name = "tx_frames_128_255_octets", },
-	{ .offset = 0x8B,	.name = "tx_frames_256_511_octets", },
+	{ .offset = 0x8A,	.name = "tx_frames_256_511_octets", },
+	{ .offset = 0x8B,	.name = "tx_frames_512_1023_octets", },
 	{ .offset = 0x8C,	.name = "tx_frames_1024_1526_octets", },
 	{ .offset = 0x8D,	.name = "tx_frames_over_1526_octets", },
 	{ .offset = 0x8E,	.name = "tx_yellow_prio_0", },
@@ -1066,7 +1067,7 @@ static int vsc9959_mdio_bus_alloc(struct ocelot *ocelot)
 		return PTR_ERR(hw);
 	}
 
-	bus = devm_mdiobus_alloc_size(dev, sizeof(*mdio_priv));
+	bus = mdiobus_alloc_size(sizeof(*mdio_priv));
 	if (!bus)
 		return -ENOMEM;
 
@@ -1086,6 +1087,7 @@ static int vsc9959_mdio_bus_alloc(struct ocelot *ocelot)
 	rc = mdiobus_register(bus);
 	if (rc < 0) {
 		dev_err(dev, "failed to register MDIO bus\n");
+		mdiobus_free(bus);
 		return rc;
 	}
 
@@ -1135,6 +1137,7 @@ static void vsc9959_mdio_bus_free(struct ocelot *ocelot)
 		lynx_pcs_destroy(pcs);
 	}
 	mdiobus_unregister(felix->imdio);
+	mdiobus_free(felix->imdio);
 }
 
 static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
@@ -1453,7 +1456,7 @@ static int felix_pci_probe(struct pci_dev *pdev,
 
 	err = dsa_register_switch(ds);
 	if (err) {
-		dev_err(&pdev->dev, "Failed to register DSA switch: %d\n", err);
+		dev_err_probe(&pdev->dev, err, "Failed to register DSA switch\n");
 		goto err_register_ds;
 	}
 

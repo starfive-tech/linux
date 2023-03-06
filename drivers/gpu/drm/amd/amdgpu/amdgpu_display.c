@@ -1110,6 +1110,7 @@ int amdgpu_display_gem_fb_verify_and_init(
 		goto err;
 
 	ret = drm_framebuffer_init(dev, &rfb->base, &amdgpu_fb_funcs);
+
 	if (ret)
 		goto err;
 
@@ -1145,7 +1146,7 @@ int amdgpu_display_framebuffer_init(struct drm_device *dev,
 	if (ret)
 		return ret;
 
-	if (!dev->mode_config.allow_fb_modifiers) {
+	if (!dev->mode_config.allow_fb_modifiers && !adev->enable_virtual_display) {
 		drm_WARN_ONCE(dev, adev->family >= AMDGPU_FAMILY_AI,
 			      "GFX9+ requires FB check based on format modifier\n");
 		ret = check_tiling_flags_gfx6(rfb);

@@ -1697,7 +1697,7 @@ static noinline_for_stack int ethtool_set_coalesce(struct net_device *dev,
 	struct ethtool_coalesce coalesce;
 	int ret;
 
-	if (!dev->ethtool_ops->set_coalesce && !dev->ethtool_ops->get_coalesce)
+	if (!dev->ethtool_ops->set_coalesce || !dev->ethtool_ops->get_coalesce)
 		return -EOPNOTSUPP;
 
 	ret = dev->ethtool_ops->get_coalesce(dev, &coalesce, &kernel_coalesce,
@@ -1988,7 +1988,8 @@ static int ethtool_phys_id(struct net_device *dev, void __user *useraddr)
 	} else {
 		/* Driver expects to be called at twice the frequency in rc */
 		int n = rc * 2, interval = HZ / n;
-		u64 count = n * id.data, i = 0;
+		u64 count = mul_u32_u32(n, id.data);
+		u64 i = 0;
 
 		do {
 			rtnl_lock();
@@ -2073,7 +2074,8 @@ static int ethtool_get_phy_stats(struct net_device *dev, void __user *useraddr)
 		return n_stats;
 	if (n_stats > S32_MAX / sizeof(u64))
 		return -ENOMEM;
-	WARN_ON_ONCE(!n_stats);
+	if (WARN_ON_ONCE(!n_stats))
+		return -EOPNOTSUPP;
 
 	if (copy_from_user(&stats, useraddr, sizeof(stats)))
 		return -EFAULT;

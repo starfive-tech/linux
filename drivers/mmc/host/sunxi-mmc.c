@@ -377,8 +377,9 @@ static void sunxi_mmc_init_idma_des(struct sunxi_mmc_host *host,
 		pdes[i].buf_addr_ptr1 =
 			cpu_to_le32(sg_dma_address(&data->sg[i]) >>
 				    host->cfg->idma_des_shift);
-		pdes[i].buf_addr_ptr2 = cpu_to_le32((u32)next_desc >>
-						    host->cfg->idma_des_shift);
+		pdes[i].buf_addr_ptr2 =
+			cpu_to_le32(next_desc >>
+				    host->cfg->idma_des_shift);
 	}
 
 	pdes[0].config |= cpu_to_le32(SDXC_IDMAC_DES0_FD);
@@ -1482,9 +1483,11 @@ static int sunxi_mmc_remove(struct platform_device *pdev)
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
 
 	mmc_remove_host(mmc);
-	pm_runtime_force_suspend(&pdev->dev);
-	disable_irq(host->irq);
-	sunxi_mmc_disable(host);
+	pm_runtime_disable(&pdev->dev);
+	if (!pm_runtime_status_suspended(&pdev->dev)) {
+		disable_irq(host->irq);
+		sunxi_mmc_disable(host);
+	}
 	dma_free_coherent(&pdev->dev, PAGE_SIZE, host->sg_cpu, host->sg_dma);
 	mmc_free_host(mmc);
 

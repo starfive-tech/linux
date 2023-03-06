@@ -552,9 +552,6 @@ void amdgpu_fence_driver_hw_fini(struct amdgpu_device *adev)
 		if (!ring || !ring->fence_drv.initialized)
 			continue;
 
-		if (!ring->no_scheduler)
-			drm_sched_stop(&ring->sched, NULL);
-
 		/* You can't wait for HW to signal if it's gone */
 		if (!drm_dev_is_unplugged(&adev->ddev))
 			r = amdgpu_fence_wait_empty(ring);
@@ -582,7 +579,13 @@ void amdgpu_fence_driver_sw_fini(struct amdgpu_device *adev)
 		if (!ring || !ring->fence_drv.initialized)
 			continue;
 
-		if (!ring->no_scheduler)
+		/*
+		 * Notice we check for sched.ops since there's some
+		 * override on the meaning of sched.ready by amdgpu.
+		 * The natural check would be sched.ready, which is
+		 * set as drm_sched_init() finishes...
+		 */
+		if (ring->sched.ops)
 			drm_sched_fini(&ring->sched);
 
 		for (j = 0; j <= ring->fence_drv.num_fences_mask; ++j)
@@ -613,11 +616,6 @@ void amdgpu_fence_driver_hw_init(struct amdgpu_device *adev)
 		struct amdgpu_ring *ring = adev->rings[i];
 		if (!ring || !ring->fence_drv.initialized)
 			continue;
-
-		if (!ring->no_scheduler) {
-			drm_sched_resubmit_jobs(&ring->sched);
-			drm_sched_start(&ring->sched, true);
-		}
 
 		/* enable the interrupt */
 		if (ring->fence_drv.irq_src)

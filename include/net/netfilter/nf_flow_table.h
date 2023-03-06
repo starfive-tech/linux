@@ -10,6 +10,8 @@
 #include <linux/netfilter/nf_conntrack_tuple_common.h>
 #include <net/flow_offload.h>
 #include <net/dst.h>
+#include <linux/if_pppox.h>
+#include <linux/ppp_defs.h>
 
 struct nf_flowtable;
 struct nf_flow_rule;
@@ -264,6 +266,7 @@ void flow_offload_refresh(struct nf_flowtable *flow_table,
 
 struct flow_offload_tuple_rhash *flow_offload_lookup(struct nf_flowtable *flow_table,
 						     struct flow_offload_tuple *tuple);
+void nf_flow_table_gc_run(struct nf_flowtable *flow_table);
 void nf_flow_table_gc_cleanup(struct nf_flowtable *flowtable,
 			      struct net_device *dev);
 void nf_flow_table_cleanup(struct net_device *dev);
@@ -300,6 +303,8 @@ void nf_flow_offload_stats(struct nf_flowtable *flowtable,
 			   struct flow_offload *flow);
 
 void nf_flow_table_offload_flush(struct nf_flowtable *flowtable);
+void nf_flow_table_offload_flush_cleanup(struct nf_flowtable *flowtable);
+
 int nf_flow_table_offload_setup(struct nf_flowtable *flowtable,
 				struct net_device *dev,
 				enum flow_block_command cmd);
@@ -312,5 +317,21 @@ int nf_flow_rule_route_ipv6(struct net *net, const struct flow_offload *flow,
 
 int nf_flow_table_offload_init(void);
 void nf_flow_table_offload_exit(void);
+
+static inline __be16 nf_flow_pppoe_proto(const struct sk_buff *skb)
+{
+	__be16 proto;
+
+	proto = *((__be16 *)(skb_mac_header(skb) + ETH_HLEN +
+			     sizeof(struct pppoe_hdr)));
+	switch (proto) {
+	case htons(PPP_IP):
+		return htons(ETH_P_IP);
+	case htons(PPP_IPV6):
+		return htons(ETH_P_IPV6);
+	}
+
+	return 0;
+}
 
 #endif /* _NF_FLOW_TABLE_H */

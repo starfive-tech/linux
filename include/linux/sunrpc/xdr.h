@@ -405,8 +405,8 @@ static inline int xdr_stream_encode_item_absent(struct xdr_stream *xdr)
  */
 static inline __be32 *xdr_encode_bool(__be32 *p, u32 n)
 {
-	*p = n ? xdr_one : xdr_zero;
-	return p++;
+	*p++ = n ? xdr_one : xdr_zero;
+	return p;
 }
 
 /**
@@ -730,6 +730,8 @@ xdr_stream_decode_uint32_array(struct xdr_stream *xdr,
 	ssize_t retval;
 
 	if (unlikely(xdr_stream_decode_u32(xdr, &len) < 0))
+		return -EBADMSG;
+	if (len > SIZE_MAX / sizeof(*p))
 		return -EBADMSG;
 	p = xdr_inline_decode(xdr, len * sizeof(*p));
 	if (unlikely(!p))

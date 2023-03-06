@@ -26,7 +26,7 @@ static __always_inline void kvm_guest_enter_irqoff(void)
 	 */
 	instrumentation_begin();
 	trace_hardirqs_on_prepare();
-	lockdep_hardirqs_on_prepare(CALLER_ADDR0);
+	lockdep_hardirqs_on_prepare();
 	instrumentation_end();
 
 	guest_enter_irqoff();
@@ -103,6 +103,7 @@ static inline unsigned int __shrink_ple_window(unsigned int val,
 
 #define MSR_IA32_CR_PAT_DEFAULT  0x0007040600070406ULL
 
+void kvm_service_local_tlb_flush_requests(struct kvm_vcpu *vcpu);
 int kvm_check_nested_events(struct kvm_vcpu *vcpu);
 
 static inline void kvm_clear_exception_queue(struct kvm_vcpu *vcpu)
@@ -153,10 +154,22 @@ static inline bool is_64_bit_mode(struct kvm_vcpu *vcpu)
 {
 	int cs_db, cs_l;
 
+	WARN_ON_ONCE(vcpu->arch.guest_state_protected);
+
 	if (!is_long_mode(vcpu))
 		return false;
 	static_call(kvm_x86_get_cs_db_l_bits)(vcpu, &cs_db, &cs_l);
 	return cs_l;
+}
+
+static inline bool is_64_bit_hypercall(struct kvm_vcpu *vcpu)
+{
+	/*
+	 * If running with protected guest state, the CS register is not
+	 * accessible. The hypercall register values will have had to been
+	 * provided in 64-bit mode, so assume the guest is in 64-bit.
+	 */
+	return vcpu->arch.guest_state_protected || is_64_bit_mode(vcpu);
 }
 
 static inline bool x86_exception_has_error_code(unsigned int vector)
@@ -171,12 +184,6 @@ static inline bool x86_exception_has_error_code(unsigned int vector)
 static inline bool mmu_is_nested(struct kvm_vcpu *vcpu)
 {
 	return vcpu->arch.walk_mmu == &vcpu->arch.nested_mmu;
-}
-
-static inline void kvm_vcpu_flush_tlb_current(struct kvm_vcpu *vcpu)
-{
-	++vcpu->stat.tlb_flush;
-	static_call(kvm_x86_tlb_flush_current)(vcpu);
 }
 
 static inline int is_pae(struct kvm_vcpu *vcpu)
@@ -441,7 +448,7 @@ static inline void kvm_machine_check(void)
 void kvm_load_guest_xsave_state(struct kvm_vcpu *vcpu);
 void kvm_load_host_xsave_state(struct kvm_vcpu *vcpu);
 int kvm_spec_ctrl_test_value(u64 value);
-bool kvm_is_valid_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
+bool __kvm_is_valid_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
 int kvm_handle_memory_failure(struct kvm_vcpu *vcpu, int r,
 			      struct x86_exception *e);
 int kvm_handle_invpcid(struct kvm_vcpu *vcpu, unsigned long type, gva_t gva);

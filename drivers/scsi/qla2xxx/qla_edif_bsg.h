@@ -8,7 +8,7 @@
 #define __QLA_EDIF_BSG_H
 
 /* BSG Vendor specific commands */
-#define	ELS_MAX_PAYLOAD		1024
+#define	ELS_MAX_PAYLOAD		2112
 #ifndef	WWN_SIZE
 #define WWN_SIZE		8
 #endif
@@ -216,5 +216,7 @@ struct auth_complete_cmd {
 } __packed;
 
 #define RX_DELAY_DELETE_TIMEOUT 20
+
+#define FCH_EVT_VENDOR_UNIQUE_VPORT_DOWN  1
 
 #endif	/* QLA_EDIF_BSG_H */

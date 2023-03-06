@@ -207,7 +207,7 @@ static void new_line_csv(struct perf_stat_config *config, void *ctx)
 
 	fputc('\n', os->fh);
 	if (os->prefix)
-		fprintf(os->fh, "%s%s", os->prefix, config->csv_sep);
+		fprintf(os->fh, "%s", os->prefix);
 	aggr_printout(config, os->evsel, os->id, os->nr);
 	for (i = 0; i < os->nfields; i++)
 		fputs(config->csv_sep, os->fh);
@@ -584,15 +584,16 @@ static void collect_all_aliases(struct perf_stat_config *config, struct evsel *c
 
 	alias = list_prepare_entry(counter, &(evlist->core.entries), core.node);
 	list_for_each_entry_continue (alias, &evlist->core.entries, core.node) {
-		if (strcmp(evsel__name(alias), evsel__name(counter)) ||
-		    alias->scale != counter->scale ||
-		    alias->cgrp != counter->cgrp ||
-		    strcmp(alias->unit, counter->unit) ||
-		    evsel__is_clock(alias) != evsel__is_clock(counter) ||
-		    !strcmp(alias->pmu_name, counter->pmu_name))
-			break;
-		alias->merged_stat = true;
-		cb(config, alias, data, false);
+		/* Merge events with the same name, etc. but on different PMUs. */
+		if (!strcmp(evsel__name(alias), evsel__name(counter)) &&
+			alias->scale == counter->scale &&
+			alias->cgrp == counter->cgrp &&
+			!strcmp(alias->unit, counter->unit) &&
+			evsel__is_clock(alias) == evsel__is_clock(counter) &&
+			strcmp(alias->pmu_name, counter->pmu_name)) {
+			alias->merged_stat = true;
+			cb(config, alias, data, false);
+		}
 	}
 }
 
