@@ -507,7 +507,8 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	csr_write(CSR_HVIP, csr->hvip);
 	csr_write(CSR_VSATP, csr->vsatp);
 
-	kvm_riscv_vcpu_update_config(vcpu->arch.isa);
+	/* Temporarily commented out while Dubhe is still using Hypervisor ISA v0.6 */
+	/* kvm_riscv_vcpu_update_config(vcpu->arch.isa); */
 
 	kvm_riscv_gstage_update_hgatp(vcpu);
 
