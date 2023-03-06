@@ -469,8 +469,8 @@ struct ecrnx_amsdu_stats {
 struct ecrnx_stats {
     int cfm_balance[NX_TXQ_CNT];
     unsigned long last_rx, last_tx; /* jiffies */
-    int ampdus_tx[IEEE80211_MAX_AMPDU_BUF];
-    int ampdus_rx[IEEE80211_MAX_AMPDU_BUF];
+    int ampdus_tx[IEEE80211_MAX_AMPDU_BUF_HE];
+    int ampdus_rx[IEEE80211_MAX_AMPDU_BUF_HE];
     int ampdus_rx_map[4];
     int ampdus_rx_miss;
     int ampdus_rx_last;

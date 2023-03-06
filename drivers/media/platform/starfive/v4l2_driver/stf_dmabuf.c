@@ -30,15 +30,14 @@ static int dmabuf_create(struct device *dev,
 	dma_addr_t *paddr = NULL;
 	int ret = 0;
 
-	mem_priv = vb2_dma_contig_memops.alloc(dev, vb.vb2_queue->dma_attrs,
-				head->size, vb.vb2_queue->dma_dir, vb.vb2_queue->gfp_flags);
+	mem_priv = vb2_dma_contig_memops.alloc(&vb, dev, head->size);
 	if (IS_ERR_OR_NULL(mem_priv)) {
 		if (mem_priv)
 			ret = PTR_ERR(mem_priv);
 		goto exit;
 	}
 
-	dmabuf = vb2_dma_contig_memops.get_dmabuf(mem_priv, O_RDWR);
+	dmabuf = vb2_dma_contig_memops.get_dmabuf(&vb, mem_priv, O_RDWR);
 	if (IS_ERR(dmabuf)) {
 		ret = PTR_ERR(dmabuf);
 		goto free;
@@ -51,7 +50,7 @@ static int dmabuf_create(struct device *dev,
 		goto free;
 	}
 
-	paddr = vb2_dma_contig_memops.cookie(mem_priv);
+	paddr = vb2_dma_contig_memops.cookie(&vb, mem_priv);
 	head->paddr = *paddr;
 	return 0;
 free:

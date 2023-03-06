@@ -1751,7 +1751,7 @@ int ecrnx_txdatacfm(void *pthis, void *host_id)
     }
 
     if (txhdr->hw_hdr.cfm.ampdu_size &&
-        txhdr->hw_hdr.cfm.ampdu_size < IEEE80211_MAX_AMPDU_BUF)
+        txhdr->hw_hdr.cfm.ampdu_size < IEEE80211_MAX_AMPDU_BUF_HE)
         ecrnx_hw->stats.ampdus_tx[txhdr->hw_hdr.cfm.ampdu_size - 1]++;
 
 #ifdef CONFIG_ECRNX_AMSDUS_TX
