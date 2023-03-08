@@ -25,7 +25,7 @@
 			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
 			reg = <0x0>;
-			riscv,isa = "rv64imafdcbhnv";
+			riscv,isa = "rv64imafdcbhn";
 			tlb-split;
 			cpu0_intc: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -47,7 +47,7 @@
 			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
 			reg = <0x1>;
-			riscv,isa = "rv64imafdcbhnv";
+			riscv,isa = "rv64imafdcbhn";
 			tlb-split;
 			cpu1_intc: interrupt-controller {
 				#interrupt-cells = <1>;
