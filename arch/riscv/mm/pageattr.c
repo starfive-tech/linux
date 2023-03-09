@@ -128,6 +128,12 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 	return ret;
 }
 
+int set_memory_rw_nx(unsigned long addr, int numpages)
+{
+	return __set_memory(addr, numpages, __pgprot(_PAGE_READ | _PAGE_WRITE),
+			    __pgprot(_PAGE_EXEC));
+}
+
 int set_memory_ro(unsigned long addr, int numpages)
 {
 	return __set_memory(addr, numpages, __pgprot(_PAGE_READ),
@@ -205,12 +211,6 @@ bool kernel_page_present(struct page *page)
 	p4d_t *p4d;
 	pmd_t *pmd;
 	pte_t *pte;
-
-	/* Workaround for Kernel 5.10. Address 0xffffffe000204000 and below are
-	 * not overwrite-able
-	 */
-	if (addr <= 0xffffffe000204000)
-		return false;
 
 	pgd = pgd_offset_k(addr);
 	if (!pgd_present(*pgd))
