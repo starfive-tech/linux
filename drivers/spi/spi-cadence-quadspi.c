@@ -1253,10 +1253,8 @@ static int cqspi_exec_mem_op(struct spi_mem *mem, const struct spi_mem_op *op)
 	struct cqspi_st *cqspi = spi_master_get_devdata(mem->spi->master);
 
 	if (op->cmd.opcode == SPINOR_OP_RDCR) {
-		void __iomem	*reset_res;
-
-		reset_res = ioremap(STARFIVE_RESET_REG_BASE_ADDR, 0x300);
-		writel(0X7E7FE00, reset_res + QSPI_RESET_REG_OFFSET);
+		reset_control_assert(cqspi->qspi_rst);
+		reset_control_deassert(cqspi->qspi_rst);
 	}
 	ret = cqspi_mem_process(mem, op);
 
