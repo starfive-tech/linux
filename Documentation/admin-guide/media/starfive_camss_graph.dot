@@ -1,0 +1,28 @@
+digraph board {
+	rankdir=TB
+	n00000001 [label="{{<port0> 0} | stf_isp0\n/dev/v4l-subdev0 | {<port1> 1 | <port2> 2 | <port3> 3 | <port4> 4}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000001:port1 -> n00000010:port0
+	n00000001:port2 -> n00000019:port0 [style=dashed]
+	n00000001:port3 -> n00000022:port0 [style=dashed]
+	n00000001:port4 -> n0000002b:port0 [style=dashed]
+	n00000007 [label="{{<port0> 0} | stf_vin0_wr\n/dev/v4l-subdev1 | {<port1> 1}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000007:port1 -> n0000000a [style=bold]
+	n0000000a [label="stf_vin0_wr_video0\n/dev/video0", shape=box, style=filled, fillcolor=yellow]
+	n00000010 [label="{{<port0> 0} | stf_vin0_isp0\n/dev/v4l-subdev2 | {<port1> 1}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000010:port1 -> n00000013 [style=bold]
+	n00000013 [label="stf_vin0_isp0_video1\n/dev/video1", shape=box, style=filled, fillcolor=yellow]
+	n00000019 [label="{{<port0> 0} | stf_vin0_isp0_ss0\n/dev/v4l-subdev3 | {<port1> 1}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000019:port1 -> n0000001c [style=bold]
+	n0000001c [label="stf_vin0_isp0_ss0_video2\n/dev/video2", shape=box, style=filled, fillcolor=yellow]
+	n00000022 [label="{{<port0> 0} | stf_vin0_isp0_ss1\n/dev/v4l-subdev4 | {<port1> 1}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000022:port1 -> n00000025 [style=bold]
+	n00000025 [label="stf_vin0_isp0_ss1_video3\n/dev/video3", shape=box, style=filled, fillcolor=yellow]
+	n0000002b [label="{{<port0> 0} | stf_vin0_isp0_raw\n/dev/v4l-subdev5 | {<port1> 1}}", shape=Mrecord, style=filled, fillcolor=green]
+	n0000002b:port1 -> n0000002e [style=bold]
+	n0000002e [label="stf_vin0_isp0_raw_video4\n/dev/video4", shape=box, style=filled, fillcolor=yellow]
+	n0000003c [label="{{<port0> 0} | cdns_csi2rx.19800000.csi-bridge\n/dev/v4l-subdev6 | {<port1> 1 | <port2> 2 | <port3> 3 | <port4> 4}}", shape=Mrecord, style=filled, fillcolor=green]
+	n0000003c:port1 -> n00000007:port0 [style=dashed]
+	n0000003c:port1 -> n00000001:port0
+	n00000054 [label="{{} | imx219 6-0010\n/dev/v4l-subdev7 | {<port0> 0}}", shape=Mrecord, style=filled, fillcolor=green]
+	n00000054:port0 -> n0000003c:port0 [style=bold]
+}
