@@ -1251,7 +1251,6 @@ static int cqspi_mem_process(struct spi_mem *mem, const struct spi_mem_op *op)
 static int cqspi_exec_mem_op(struct spi_mem *mem, const struct spi_mem_op *op)
 {
 	int ret;
-	struct cqspi_st *cqspi = spi_master_get_devdata(mem->spi->master);
 
 	if (op->cmd.opcode == SPINOR_OP_RDCR) {
 		reset_control_assert(cqspi->qspi_rst);
