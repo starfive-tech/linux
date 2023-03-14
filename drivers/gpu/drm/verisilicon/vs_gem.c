@@ -121,7 +121,7 @@ static int vs_gem_alloc_buf(struct vs_gem_object *vs_obj)
 						&vs_obj->dma_addr, GFP_KERNEL,
 						vs_obj->dma_attrs);
 
-	DRM_DEV_DEBUG(dev->dev,"Allocated coherent memory, vaddr: 0x%0llX, paddr: 0x%0llX, size: %d\n", 
+	DRM_DEV_DEBUG(dev->dev,"Allocated coherent memory, vaddr: 0x%0llX, paddr: 0x%0llX, size: %d\n",
 		(u64)vs_obj->cookie,vs_obj->dma_addr,vs_obj->size);
 	if (!vs_obj->cookie) {
 #ifdef CONFIG_VERISILICON_MMU
@@ -388,7 +388,12 @@ struct sg_table *vs_gem_prime_get_sg_table(struct drm_gem_object *obj)
 
 static void *vs_gem_prime_vmap(struct drm_gem_object *obj)
 {
-    return NULL;
+	struct vs_gem_object *vs_obj = to_vs_gem_object(obj);
+
+	void *vaddr = vs_obj->dma_attrs & DMA_ATTR_NO_KERNEL_MAPPING ?
+		      page_address(vs_obj->cookie) : vs_obj->cookie;
+
+	return vaddr;
 }
 
 static void vs_gem_prime_vunmap(struct drm_gem_object *obj, void *vaddr)
