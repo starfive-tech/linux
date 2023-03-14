@@ -35,6 +35,12 @@ static const struct jh7110_reset_info jh7110_stg_info = {
 	.status_offset = 0x78,
 };
 
+static const struct jh7110_reset_info jh7110_isp_info = {
+	.nr_resets = JH7110_ISPRST_END,
+	.assert_offset = 0x38,
+	.status_offset = 0x3C,
+};
+
 static int jh7110_reset_probe(struct auxiliary_device *adev,
 			      const struct auxiliary_device_id *id)
 {
@@ -64,6 +70,10 @@ static const struct auxiliary_device_id jh7110_reset_ids[] = {
 	{
 		.name = "clk_starfive_jh71x0.reset-stg",
 		.driver_data = (kernel_ulong_t)&jh7110_stg_info,
+	},
+	{
+		.name = "clk_starfive_jh71x0.reset-isp",
+		.driver_data = (kernel_ulong_t)&jh7110_isp_info,
 	},
 	{ /* sentinel */ }
 };
