@@ -326,3 +326,10 @@
 	pinctrl-0 = <&uart0_pins>;
 	status = "okay";
 };
+
+&usb0 {
+	status = "okay";
+	usbdrd_cdns3: usb@0 {
+		dr_mode = "peripheral";
+	};
+};
