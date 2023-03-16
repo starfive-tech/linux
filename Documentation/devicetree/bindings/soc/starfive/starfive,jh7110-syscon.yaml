@@ -15,15 +15,30 @@ description: |
 
 properties:
   compatible:
-    items:
-      - enum:
-          - starfive,jh7110-aon-syscon
-          - starfive,jh7110-stg-syscon
-          - starfive,jh7110-sys-syscon
-      - const: syscon
+    oneOf:
+      - items:
+          - enum:
+              - starfive,jh7110-aon-syscon
+              - starfive,jh7110-stg-syscon
+              - starfive,jh7110-sys-syscon
+          - const: syscon
+      - items:
+          - enum:
+              - starfive,jh7110-aon-syscon
+              - starfive,jh7110-stg-syscon
+              - starfive,jh7110-sys-syscon
+          - const: syscon
+          - const: simple-mfd
 
   reg:
     maxItems: 1
+
+patternProperties:
+  # Optional children
+  "pll-clock-controller":
+    type: object
+    $ref: /schemas/clock/starfive,jh7110-pll.yaml#
+    description: Clock provider for PLL.
 
 required:
   - compatible
@@ -36,6 +51,18 @@ examples:
     syscon@10240000 {
         compatible = "starfive,jh7110-stg-syscon", "syscon";
         reg = <0x10240000 0x1000>;
+    };
+
+  - |
+    syscon@13030000 {
+        compatible = "starfive,jh7110-sys-syscon", "syscon", "simple-mfd";
+        reg = <0x13030000 0x1000>;
+
+        pll-clock-controller {
+            compatible = "starfive,jh7110-pll";
+            clocks = <&osc>;
+            #clock-cells = <1>;
+        };
     };
 
 ...
