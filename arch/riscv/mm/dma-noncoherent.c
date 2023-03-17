@@ -18,6 +18,7 @@ static bool noncoherent_supported;
 #ifdef CONFIG_SOC_STARFIVE_DUBHE
 
 #define DUBHE_UNCACHED_OFFSET 0x400000000
+static bool noncoherent_supported = true;
 
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size, enum dma_data_direction dir)
 {
