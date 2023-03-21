@@ -2,181 +2,181 @@
   {
     "EventName": "LSU_C_LD_NUM",
     "EventCode": "0x86",
-    "BriefDescription": "Cacheable load instruction",
+    "BriefDescription": "Cacheable load instruction"
   },
   {
     "EventName": "LSU_LD_REPLAY_NUM",
     "EventCode": "0x87",
-    "BriefDescription": "Load instruction replay",
+    "BriefDescription": "Load instruction replay"
   },
   {
     "EventName": "LSU_C_ST_NUM",
     "EventCode": "0x88",
-    "BriefDescription": "Cacheable store instruction",
+    "BriefDescription": "Cacheable store instruction"
   },
   {
     "EventName": "LSU_ST_ALLOC_MB_FULL_NUM",
     "EventCode": "0x89",
-    "BriefDescription": "Cacheable store allocates MB but MB (merge buffer) is full",
+    "BriefDescription": "Cacheable store allocates MB but MB (merge buffer) is full"
   },
   {
     "EventName": "LSU_NC_ST_ALLOC_WCB_FULL_NUM",
     "EventCode": "0x8A",
-    "BriefDescription": "Uncacheable store allocates WCB (Write Combination Buffer) but WCB is full.",
+    "BriefDescription": "Uncacheable store allocates WCB (Write Combination Buffer) but WCB is full."
   },
   {
     "EventName": "LSU_ST_HAS_PA_NO_DAT_NUM",
     "EventCode": "0x8B",
-    "BriefDescription": "Store instruction get PA but no data",
+    "BriefDescription": "Store instruction get PA but no data"
   },
   {
     "EventName": "LSU_BP_DAT_ALU_NUM",
     "EventCode": "0x8C",
-    "BriefDescription": "Bypass data from ALU",
+    "BriefDescription": "Bypass data from ALU"
   },
   {
     "EventName": "LSU_BP_DAT_BRU_NUM",
     "EventCode": "0x8D",
-    "BriefDescription": "Bypass data from BRU",
+    "BriefDescription": "Bypass data from BRU"
   },
   {
     "EventName": "LSU_BP_DAT_MDIV_NUM",
     "EventCode": "0x8E",
-    "BriefDescription": "Bypass data from MDIV",
+    "BriefDescription": "Bypass data from MDIV"
   },
   {
     "EventName": "LSU_BP_DAT_FPU_NUM",
     "EventCode": "0x8F",
-    "BriefDescription": "Bypass data from FPU",
+    "BriefDescription": "Bypass data from FPU"
   },
   {
     "EventName": "LSU_BP_DAT_VEC_NUM",
     "EventCode": "0x90",
-    "BriefDescription": "Bypass data from VEC",
+    "BriefDescription": "Bypass data from VEC"
   },
   {
     "EventName": "LSU_BP_DAT_LSU_NUM",
     "EventCode": "0x91",
-    "BriefDescription": "Bypass data from LSU",
+    "BriefDescription": "Bypass data from LSU"
   },
   {
     "EventName": "LSU_BP_DAT_LSU_MISPREDICT_NUM",
     "EventCode": "0x92",
-    "BriefDescription": "Load wakeup by release but mispredict",
+    "BriefDescription": "Load wakeup by release but mispredict"
   },
   {
     "EventName": "LSU_LD_REQ_L1D_NUM",
     "EventCode": "0x93",
-    "BriefDescription": "Load request DCache",
+    "BriefDescription": "Load request DCache"
   },
   {
     "EventName": "LSU_LD_MISS_L1D_NUM",
     "EventCode": "0x94",
-    "BriefDescription": "Load miss DCache",
+    "BriefDescription": "Load miss DCache"
   },
   {
     "EventName": "LSU_LD_MISS_L1D_EVICT_PF_N UM",
     "EventCode": "0x95",
-    "BriefDescription": "Load misses in DCache and the cache line is evicted by the prefetcher",
+    "BriefDescription": "Load misses in DCache and the cache line is evicted by the prefetcher"
   },
   {
     "EventName": "LSU_LD_HIT_L1D_NUM",
     "EventCode": "0x96",
-    "BriefDescription": "Load hit DCache",
+    "BriefDescription": "Load hit DCache"
   },
   {
     "EventName": "LSU_LD_HIT_L1D_PF_NUM",
     "EventCode": "0x97",
-    "BriefDescription": "Load hit DCache and the cache line is prefetch",
+    "BriefDescription": "Load hit DCache and the cache line is prefetch"
   },
   {
     "EventName": "LSU_PF_REQ_L2C_NUM",
     "EventCode": "0x98",
-    "BriefDescription": "Prefetcher request L2C",
+    "BriefDescription": "Prefetcher request L2C"
   },
   {
     "EventName": "LSU_ST_REQ_L1D_NUM",
     "EventCode": "0x99",
-    "BriefDescription": "Store request DCache",
+    "BriefDescription": "Store request DCache"
   },
   {
     "EventName": "LSU_ST_MISS_L1D_NUM",
     "EventCode": "0x9A",
-    "BriefDescription": "Store miss DCache",
+    "BriefDescription": "Store miss DCache"
   },
   {
     "EventName": "LSU_ST_HIT_L1D_NUM",
     "EventCode": "0x9B",
-    "BriefDescription": "Store hit DCache",
+    "BriefDescription": "Store hit DCache"
   },
   {
     "EventName": "LSU_ST_HIT_L1D_SN_NUM",
     "EventCode": "0x9C",
-    "BriefDescription": "Store hit DCache MESI is S state",
+    "BriefDescription": "Store hit DCache MESI is S state"
   },
   {
     "EventName": "LSU_LD_ALLOC_MQ_FULL_NUM",
     "EventCode": "0x9D",
-    "BriefDescription": "Load allocate MISSQ but MISSQ is full",
+    "BriefDescription": "Load allocate MISSQ but MISSQ is full"
   },
   {
     "EventName": "LSU_LD_ALLOC_MQ_WAYLOCK_NUM",
     "EventCode": "0x9E",
-    "BriefDescription": "Load allocate MISSQ meet way-lock",
+    "BriefDescription": "Load allocate MISSQ meet way-lock"
   },
   {
     "EventName": "LSU_DTLB_REQ",
     "EventCode": "0x9F",
-    "BriefDescription": "Request DTLB",
+    "BriefDescription": "Request DTLB"
   },
   {
     "EventName": "LSU_DTLB_MISS",
     "EventCode": "0xA0",
-    "BriefDescription": "Miss DTLB",
+    "BriefDescription": "Miss DTLB"
   },
   {
     "EventName": "LSU_SLOT_REQ",
     "EventCode": "0xA1",
-    "BriefDescription": "DTLB miss to request MMU",
+    "BriefDescription": "DTLB miss to request MMU"
   },
   {
     "EventName": "LSU_SLOT_STALL",
     "EventCode": "0xA2",
-    "BriefDescription": "DTLB request MMU cycles",
+    "BriefDescription": "DTLB request MMU cycles"
   },
   {
     "EventName": "LSU_SLOT_ABORT",
     "EventCode": "0xA3",
-    "BriefDescription": "DTLB flying miss is abort",
+    "BriefDescription": "DTLB flying miss is abort"
   },
   {
     "EventName": "LSU_RV_EMPTY",
     "EventCode": "0xA4",
-    "BriefDescription": "RV empty when allocate and source data is ready (can bypass)",
+    "BriefDescription": "RV empty when allocate and source data is ready (can bypass)"
   },
   {
     "EventName": "LSU_LD_BP_LD_NUM",
     "EventCode": "0xA5",
-    "BriefDescription": "Load bypass load",
+    "BriefDescription": "Load bypass load"
   },
   {
     "EventName": "LSU_LD_BP_ST_NUM",
     "EventCode": "0xA6",
-    "BriefDescription": "Load bypass store",
+    "BriefDescription": "Load bypass store"
   },
   {
     "EventName": "LSU_NUKE_LD_LD_NUM",
     "EventCode": "0xA7",
-    "BriefDescription": "Load bypass load cause nuke flush",
+    "BriefDescription": "Load bypass load cause nuke flush"
   },
   {
     "EventName": "LSU_NUKE_LD_ST_NUM",
     "EventCode": "0xA8",
-    "BriefDescription": "Load bypass store cause nuke flush",
+    "BriefDescription": "Load bypass store cause nuke flush"
   },
   {
     "EventName": "LSU_LD_HIT_MDB_NUM",
     "EventCode": "0xA9",
-    "BriefDescription": "Load hit MDB (Memory Disambiguation Buffer)",
-  },
+    "BriefDescription": "Load hit MDB (Memory Disambiguation Buffer)"
+  }
 ]
