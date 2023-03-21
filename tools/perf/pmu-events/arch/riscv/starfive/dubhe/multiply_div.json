@@ -2,51 +2,51 @@
   {
     "EventName": "MDIV_DIV_INSTR",
     "EventCode": "0x64",
-    "BriefDescription": "Divide instruction number",
+    "BriefDescription": "Divide instruction number"
   },
   {
     "EventName": "MDIV_WAKEUP_BY_LOAD",
     "EventCode": "0x65",
-    "BriefDescription": "Wakeup by load instruction",
+    "BriefDescription": "Wakeup by load instruction"
   },
   {
     "EventName": "MDIV_WAKEUP_BY_FP",
     "EventCode": "0x66",
-    "BriefDescription": "Wakeup by FP instruction",
+    "BriefDescription": "Wakeup by FP instruction"
   },
   {
     "EventName": "MDIV_WAKEUP_BY_FX",
     "EventCode": "0x67",
-    "BriefDescription": "Wakeup by INT instruction",
+    "BriefDescription": "Wakeup by INT instruction"
   },
   {
     "EventName": "MDIV_DIV_BUSY",
     "EventCode": "0x68",
-    "BriefDescription": "The total cycles of divide instruction execution",
+    "BriefDescription": "The total cycles of divide instruction execution"
   },
   {
     "EventName": "MDIV_EARLY_EXIT",
     "EventCode": "0x69",
-    "BriefDescription": "Divide instructions finished ahead of time",
+    "BriefDescription": "Divide instructions finished ahead of time"
   },
   {
     "EventName": "MDIV_COMMIT_WAIT",
     "EventCode": "0x6A",
-    "BriefDescription": "The total cycles of the oldest basic block which is waiting for MDIV",
+    "BriefDescription": "The total cycles of the oldest basic block which is waiting for MDIV"
   },
   {
     "EventName": "MDIV_UNCOMMIT_WAKEUP_BY_LOAD",
     "EventCode": "0x6B",
-    "BriefDescription": "The oldest MDIV's instruction is woken up by load",
+    "BriefDescription": "The oldest MDIV's instruction is woken up by load"
   },
   {
     "EventName": "MDIV_UNCOMMIT_WAKEUP_BY_FX",
     "EventCode": "0x6C",
-    "BriefDescription": "The oldest MDIV's instruction is woken up by INT",
+    "BriefDescription": "The oldest MDIV's instruction is woken up by INT"
   },
   {
     "EventName": "MDIV_UNCOMMIT_WAKEUP_BY_FP",
     "EventCode": "0x6D",
-    "BriefDescription": "The oldest MDIV's instruction is woken up by FP",
-  },
+    "BriefDescription": "The oldest MDIV's instruction is woken up by FP"
+  }
 ]
