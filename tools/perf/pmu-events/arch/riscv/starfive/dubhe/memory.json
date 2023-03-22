@@ -2,61 +2,61 @@
   {
     "EventName": "MMU_IFU_REQ",
     "EventCode": "0x36",
-    "BriefDescription": "ITLB miss to access MMU TLBs",
+    "BriefDescription": "ITLB miss to access MMU TLBs"
   },
   {
     "EventName": "MMU_IFU_MISS",
     "EventCode": "0x37",
-    "BriefDescription": "ITLB miss to access MMU TLBs, which also miss",
+    "BriefDescription": "ITLB miss to access MMU TLBs, which also miss"
   },
   {
     "EventName": "MMU_LSU_REQ",
     "EventCode": "0x38",
-    "BriefDescription": "DTLB miss to access MMU TLBs",
+    "BriefDescription": "DTLB miss to access MMU TLBs"
   },
   {
     "EventName": "MMU_LSU_MISS",
     "EventCode": "0x39",
-    "BriefDescription": "DTLB miss to access MMU TLBs, which also miss",
+    "BriefDescription": "DTLB miss to access MMU TLBs, which also miss"
   },
   {
     "EventName": "MMU_IFU_PTEC_REQ",
     "EventCode": "0x3A",
-    "BriefDescription": "ITLB miss to walk PTW then access PTE-Cache",
+    "BriefDescription": "ITLB miss to walk PTW then access PTE-Cache"
   },
   {
     "EventName": "MMU_IFU_PTEC_HIT",
     "EventCode": "0x3B",
-    "BriefDescription": "ITLB miss to walk PTW then hit PTE-Cache",
+    "BriefDescription": "ITLB miss to walk PTW then hit PTE-Cache"
   },
   {
     "EventName": "MMU_IFU_L2C_REQ",
     "EventCode": "0x3C",
-    "BriefDescription": "ITLB miss to walk PTW then request L2C",
+    "BriefDescription": "ITLB miss to walk PTW then request L2C"
   },
   {
     "EventName": "MMU_IFU_L2C_WAIT",
     "EventCode": "0x3D",
-    "BriefDescription": "ITLB miss to walk PTW then wait for L2C to stall cycles",
+    "BriefDescription": "ITLB miss to walk PTW then wait for L2C to stall cycles"
   },
   {
     "EventName": "MMU_LSU_PTEC_REQ",
     "EventCode": "0x3E",
-    "BriefDescription": "DTLB miss to walk PTW and then access PTE-Cache",
+    "BriefDescription": "DTLB miss to walk PTW and then access PTE-Cache"
   },
   {
     "EventName": "MMU_LSU_PTEC_HIT",
     "EventCode": "0x3F",
-    "BriefDescription": "DTLB miss to walk PTW and then hit PTE-Cache",
+    "BriefDescription": "DTLB miss to walk PTW and then hit PTE-Cache"
   },
   {
     "EventName": "MMU_LSU_L2C_REQ",
     "EventCode": "0x40",
-    "BriefDescription": "DTLB miss to walk PTW and then request L2C",
+    "BriefDescription": "DTLB miss to walk PTW and then request L2C"
   },
   {
     "EventName": "MMU_LSU_L2C_WAIT",
     "EventCode": "0x41",
-    "BriefDescription": "DTLB miss to walk PTW and then wait for L2C to stall cycles",
-  },
+    "BriefDescription": "DTLB miss to walk PTW and then wait for L2C to stall cycles"
+  }
 ]
