@@ -113,12 +113,12 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				reg = <0x000000 0x1730000>;
+				reg = <0x000000 0x2000000>;
 				label = "Boot images";
 			};
 
-			partition@1730000 {
-				reg = <0x1730000 0x68D0000>;
+			partition@2000000 {
+				reg = <0x2000000 0x6000000>;
 				label = "Rootfs";
 			};
 		};
