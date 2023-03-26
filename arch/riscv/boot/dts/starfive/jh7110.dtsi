@@ -1662,7 +1662,7 @@
 			status = "disabled";
 		};
 
-		 mipi_dsi: mipi@295d0000 {
+		mipi_dsi: mipi@295d0000 {
 			compatible = "starfive,jh7110-mipi_dsi","cdns,dsi";
 			reg = <0x0 0x295d0000 0x0 0x10000>;
 			interrupts = <98>;
