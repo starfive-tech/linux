@@ -348,6 +348,7 @@ static void plda_pcie_isr(struct irq_desc *desc)
 	chained_irq_enter(chip, desc);
 	pcie = irq_desc_get_handler_data(desc);
 
+	// msleep(100);
 	status = plda_readl(pcie, ISTATUS_LOCAL);
 	while ((status = (plda_readl(pcie, ISTATUS_LOCAL) & INT_MASK))) {
 		if (status & INT_INTX_MASK)
@@ -860,6 +861,10 @@ static void plda_pcie_hw_init(struct plda_pcie *pcie)
 	}
 }
 
+/* Parameters for the waiting for PCIe PHY PLL to lock */
+#define PHY_PLL_LOCK_WAIT_USLEEP_MAX	10 * 1000
+#define PHY_PLL_LOCK_WAIT_TIMEOUT	(40 * PHY_PLL_LOCK_WAIT_USLEEP_MAX)
+
 static int plda_pcie_is_link_up(struct plda_pcie *pcie)
 {
 	struct device *dev = &pcie->pdev->dev;
@@ -871,7 +876,8 @@ static int plda_pcie_is_link_up(struct plda_pcie *pcie)
 					pcie->stg_lnksta,
 					stg_reg_val,
 					stg_reg_val & PLDA_DATA_LINK_ACTIVE,
-					10 * 1000, 100 * 1000);
+					PHY_PLL_LOCK_WAIT_USLEEP_MAX,
+          PHY_PLL_LOCK_WAIT_TIMEOUT);
 
 	/* If the link is down (no device in slot), then exit. */
 	if (ret == -ETIMEDOUT) {
