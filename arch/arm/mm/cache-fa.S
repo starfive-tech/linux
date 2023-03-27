@@ -166,7 +166,7 @@ ENTRY(fa_flush_kern_dcache_area)
  *	- start  - virtual start address
  *	- end	 - virtual end address
  */
-fa_dma_inv_range:
+ENTRY(fa_dma_inv_range)
 	tst	r0, #CACHE_DLINESIZE - 1
 	bic	r0, r0, #CACHE_DLINESIZE - 1
 	mcrne	p15, 0, r0, c7, c14, 1		@ clean & invalidate D entry
@@ -189,7 +189,7 @@ fa_dma_inv_range:
  *	- start  - virtual start address
  *	- end	 - virtual end address
  */
-fa_dma_clean_range:
+ENTRY(fa_dma_clean_range)
 	bic	r0, r0, #CACHE_DLINESIZE - 1
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	add	r0, r0, #CACHE_DLINESIZE

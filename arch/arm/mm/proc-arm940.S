@@ -177,7 +177,7 @@ ENTRY(arm940_flush_kern_dcache_area)
  *	- start	- virtual start address
  *	- end	- virtual end address
  */
-arm940_dma_inv_range:
+ENTRY(arm940_dma_inv_range)
 	mov	ip, #0
 	mov	r1, #(CACHE_DSEGMENTS - 1) << 4	@ 4 segments
 1:	orr	r3, r1, #(CACHE_DENTRIES - 1) << 26 @ 64 entries
@@ -198,7 +198,7 @@ arm940_dma_inv_range:
  *	- start	- virtual start address
  *	- end	- virtual end address
  */
-arm940_dma_clean_range:
+ENTRY(arm940_dma_clean_range)
 ENTRY(cpu_arm940_dcache_clean_area)
 	mov	ip, #0
 #ifndef CONFIG_CPU_DCACHE_WRITETHROUGH

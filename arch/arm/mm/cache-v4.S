@@ -103,17 +103,22 @@ ENTRY(v4_flush_kern_dcache_area)
 
 /*
  *	dma_flush_range(start, end)
+ *	dma_inv_range(start, end)
  *
  *	Clean and invalidate the specified virtual address range.
+ *	As only write-through caches are supported here, this is the
+ *	same as invalidate, while the clean operation does nothing.
  *
  *	- start  - virtual start address
  *	- end	 - virtual end address
  */
+ENTRY(v4_dma_inv_range)
 ENTRY(v4_dma_flush_range)
 #ifdef CONFIG_CPU_CP15
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c7, 0		@ flush ID cache
 #endif
+ENTRY(v4_dma_clean_range)
 	ret	lr
 
 /*

@@ -32,6 +32,12 @@ ENDPROC(nop_coherent_user_range)
 	.globl nop_flush_kern_dcache_area
 	.equ nop_flush_kern_dcache_area, nop_flush_icache_all
 
+	.globl nop_dma_clean_range
+	.equ nop_dma_clean_range, nop_flush_icache_all
+
+	.globl nop_dma_inv_range
+	.equ nop_dma_inv_range, nop_flush_icache_all
+
 	.globl nop_dma_flush_range
 	.equ nop_dma_flush_range, nop_flush_icache_all
 

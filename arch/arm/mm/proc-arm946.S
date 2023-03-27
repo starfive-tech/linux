@@ -222,7 +222,7 @@ ENTRY(arm946_flush_kern_dcache_area)
  *	- end	- virtual end address
  * (same as arm926)
  */
-arm946_dma_inv_range:
+ENTRY(arm946_dma_inv_range)
 #ifndef CONFIG_CPU_DCACHE_WRITETHROUGH
 	tst	r0, #CACHE_DLINESIZE - 1
 	mcrne	p15, 0, r0, c7, c10, 1		@ clean D entry
@@ -247,7 +247,7 @@ arm946_dma_inv_range:
  *
  * (same as arm926)
  */
-arm946_dma_clean_range:
+ENTRY(arm946_dma_clean_range)
 #ifndef CONFIG_CPU_DCACHE_WRITETHROUGH
 	bic	r0, r0, #CACHE_DLINESIZE - 1
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry

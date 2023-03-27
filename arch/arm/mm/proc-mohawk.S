@@ -216,7 +216,7 @@ ENTRY(mohawk_flush_kern_dcache_area)
  *
  * (same as v4wb)
  */
-mohawk_dma_inv_range:
+ENTRY(mohawk_dma_inv_range)
 	tst	r0, #CACHE_DLINESIZE - 1
 	mcrne	p15, 0, r0, c7, c10, 1		@ clean D entry
 	tst	r1, #CACHE_DLINESIZE - 1
@@ -239,7 +239,7 @@ mohawk_dma_inv_range:
  *
  * (same as v4wb)
  */
-mohawk_dma_clean_range:
+ENTRY(mohawk_dma_clean_range)
 	bic	r0, r0, #CACHE_DLINESIZE - 1
 1:	mcr	p15, 0, r0, c7, c10, 1		@ clean D entry
 	add	r0, r0, #CACHE_DLINESIZE

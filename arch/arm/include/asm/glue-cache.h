@@ -139,6 +139,8 @@ static inline int nop_coherent_user_range(unsigned long a,
 		unsigned long b) { return 0; }
 static inline void nop_flush_kern_dcache_area(void *a, size_t s) { }
 
+static inline void nop_dma_clean_range(const void *a, const void *b) { }
+static inline void nop_dma_inv_range(const void *a, const void *b) { }
 static inline void nop_dma_flush_range(const void *a, const void *b) { }
 
 static inline void nop_dma_map_area(const void *s, size_t l, int f) { }
@@ -155,6 +157,8 @@ static inline void nop_dma_unmap_area(const void *s, size_t l, int f) { }
 #define __cpuc_coherent_user_range	__glue(_CACHE,_coherent_user_range)
 #define __cpuc_flush_dcache_area	__glue(_CACHE,_flush_kern_dcache_area)
 
+#define dmac_clean_range		__glue(_CACHE,_dma_clean_range)
+#define dmac_inv_range			__glue(_CACHE,_dma_inv_range)
 #define dmac_flush_range		__glue(_CACHE,_dma_flush_range)
 #endif
 
