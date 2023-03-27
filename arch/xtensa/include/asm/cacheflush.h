@@ -61,9 +61,9 @@ static inline void __flush_dcache_page(unsigned long va)
 static inline void __flush_dcache_range(unsigned long va, unsigned long sz)
 {
 }
-# define __flush_invalidate_dcache_all()	__invalidate_dcache_all()
-# define __flush_invalidate_dcache_page(p)	__invalidate_dcache_page(p)
-# define __flush_invalidate_dcache_range(p,s)	__invalidate_dcache_range(p,s)
+# define __flush_invalidate_dcache_all		__invalidate_dcache_all
+# define __flush_invalidate_dcache_page		__invalidate_dcache_page
+# define __flush_invalidate_dcache_range	__invalidate_dcache_range
 #endif
 
 #if defined(CONFIG_MMU) && (DCACHE_WAY_SIZE > PAGE_SIZE)
