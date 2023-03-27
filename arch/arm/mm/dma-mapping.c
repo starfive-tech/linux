@@ -623,8 +623,7 @@ static void __arm_dma_free(struct device *dev, size_t size, void *cpu_addr,
 }
 
 static void dma_cache_maint(phys_addr_t paddr,
-	size_t size, enum dma_data_direction dir,
-	void (*op)(const void *, size_t, int))
+	size_t size, void (*op)(const void *, const void *))
 {
 	unsigned long pfn = PFN_DOWN(paddr);
 	unsigned long offset = paddr % PAGE_SIZE;
@@ -647,23 +646,35 @@ static void dma_cache_maint(phys_addr_t paddr,
 
 			if (cache_is_vipt_nonaliasing()) {
 				vaddr = kmap_atomic(page);
-				op(vaddr + offset, len, dir);
+				op(vaddr + offset, vaddr + offset + len);
 				kunmap_atomic(vaddr);
 			} else {
 				vaddr = kmap_high_get(page);
 				if (vaddr) {
-					op(vaddr + offset, len, dir);
+					op(vaddr + offset, vaddr + offset + len);
 					kunmap_high(page);
 				}
 			}
 		} else {
 			vaddr = page_address(page) + offset;
-			op(vaddr, len, dir);
+			op(vaddr, vaddr + len);
 		}
 		offset = 0;
 		pfn++;
 		left -= len;
 	} while (left);
+}
+
+static bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	if (IS_ENABLED(CONFIG_CPU_V6) ||
+	    IS_ENABLED(CONFIG_CPU_V6K) ||
+	    IS_ENABLED(CONFIG_CPU_V7) ||
+	    IS_ENABLED(CONFIG_CPU_V7M))
+		return true;
+
+	/* FIXME: runtime detection */
+	return false;
 }
 
 /*
@@ -674,25 +685,35 @@ static void dma_cache_maint(phys_addr_t paddr,
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 		enum dma_data_direction dir)
 {
-	dma_cache_maint(paddr, size, dir, dmac_map_area);
-
-	if (dir == DMA_FROM_DEVICE) {
-		outer_inv_range(paddr, paddr + size);
-	} else {
+	switch (dir) {
+	case DMA_TO_DEVICE:
+		dma_cache_maint(paddr, size, dmac_clean_range);
 		outer_clean_range(paddr, paddr + size);
+		break;
+	case DMA_FROM_DEVICE:
+		dma_cache_maint(paddr, size, dmac_inv_range);
+		outer_inv_range(paddr, paddr + size);
+		break;
+	case DMA_BIDIRECTIONAL:
+		if (arch_sync_dma_cpu_needs_post_dma_flush()) {
+			dma_cache_maint(paddr, size, dmac_clean_range);
+			outer_clean_range(paddr, paddr + size);
+		} else {
+			dma_cache_maint(paddr, size, dmac_flush_range);
+			outer_flush_range(paddr, paddr + size);
+		}
+		break;
+	default:
+		break;
 	}
-	/* FIXME: non-speculating: flush on bidirectional mappings? */
 }
 
 void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 		enum dma_data_direction dir)
 {
-	/* FIXME: non-speculating: not required */
-	/* in any case, don't bother invalidating if DMA to device */
-	if (dir != DMA_TO_DEVICE) {
+	if (dir != DMA_TO_DEVICE && arch_sync_dma_cpu_needs_post_dma_flush()) {
 		outer_inv_range(paddr, paddr + size);
-
-		dma_cache_maint(paddr, size, dir, dmac_unmap_area);
+		dma_cache_maint(paddr, size, dmac_inv_range);
 	}
 
 	/*

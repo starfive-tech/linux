@@ -16,12 +16,13 @@
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 		enum dma_data_direction dir)
 {
-	dmac_map_area(__va(paddr), size, dir);
-
-	if (dir == DMA_FROM_DEVICE)
+	if (dir == DMA_FROM_DEVICE) {
+		dmac_inv_range(__va(paddr), __va(paddr + size));
 		outer_inv_range(paddr, paddr + size);
-	else
+	} else {
+		dmac_clean_range(__va(paddr), __va(paddr + size));
 		outer_clean_range(paddr, paddr + size);
+	}
 }
 
 void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
@@ -29,7 +30,7 @@ void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 {
 	if (dir != DMA_TO_DEVICE) {
 		outer_inv_range(paddr, paddr + size);
-		dmac_unmap_area(__va(paddr), size, dir);
+		dmac_inv_range(__va(paddr), __va(paddr));
 	}
 }
 
