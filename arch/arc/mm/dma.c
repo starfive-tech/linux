@@ -40,7 +40,7 @@ void arch_dma_prep_coherent(struct page *page, size_t size)
  *          |----------------------------------------------------------------
  * TO_DEV   |   writeback        writeback      |   none          none
  * FROM_DEV |   invalidate       invalidate     |   invalidate*   invalidate*
- * BIDIR    |   writeback+inv    writeback+inv  |   invalidate    invalidate
+ * BIDIR    |   writeback        writeback      |   invalidate    invalidate
  *
  *     [*] needed for CPU speculative prefetches
  *
@@ -61,7 +61,7 @@ void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 		break;
 
 	case DMA_BIDIRECTIONAL:
-		dma_cache_wback_inv(paddr, size);
+		dma_cache_wback(paddr, size);
 		break;
 
 	default:
