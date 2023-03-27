@@ -103,10 +103,10 @@ void arch_sync_dma_for_device(phys_addr_t addr, size_t size,
 
 	switch (dir) {
 	case DMA_TO_DEVICE:
-		/* Flush the dcache for the requested range */
+		/* Write back the dcache for the requested range */
 		for (cl = addr; cl < addr + size;
 		     cl += cpuinfo->dcache_block_size)
-			mtspr(SPR_DCBFR, cl);
+			mtspr(SPR_DCBWR, cl);
 		break;
 	case DMA_FROM_DEVICE:
 		/* Invalidate the dcache for the requested range */
@@ -114,12 +114,13 @@ void arch_sync_dma_for_device(phys_addr_t addr, size_t size,
 		     cl += cpuinfo->dcache_block_size)
 			mtspr(SPR_DCBIR, cl);
 		break;
+	case DMA_BIDIRECTIONAL:
+		/* Flush the dcache for the requested range */
+		for (cl = addr; cl < addr + size;
+		     cl += cpuinfo->dcache_block_size)
+			mtspr(SPR_DCBFR, cl);
+		break;
 	default:
-		/*
-		 * NOTE: If dir == DMA_BIDIRECTIONAL then there's no need to
-		 * flush nor invalidate the cache here as the area will need
-		 * to be manually synced anyway.
-		 */
 		break;
 	}
 }
