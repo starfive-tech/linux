@@ -665,6 +665,28 @@ static void dma_cache_maint(phys_addr_t paddr,
 	} while (left);
 }
 
+/*
+ * Mark the D-cache clean for these pages to avoid extra flushing.
+ */
+void arch_dma_mark_clean(phys_addr_t paddr, size_t size)
+{
+	unsigned long pfn = PFN_UP(paddr);
+	unsigned long off = paddr & (PAGE_SIZE - 1);
+	size_t left = size;
+
+	if (size < PAGE_SIZE)
+		return;
+
+	if (off)
+		left -= PAGE_SIZE - off;
+
+	while (left >= PAGE_SIZE) {
+		struct page *page = pfn_to_page(pfn++);
+		set_bit(PG_dcache_clean, &page->flags);
+		left -= PAGE_SIZE;
+	}
+}
+
 static bool arch_sync_dma_cpu_needs_post_dma_flush(void)
 {
 	if (IS_ENABLED(CONFIG_CPU_V6) ||
@@ -714,24 +736,6 @@ void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 	if (dir != DMA_TO_DEVICE && arch_sync_dma_cpu_needs_post_dma_flush()) {
 		outer_inv_range(paddr, paddr + size);
 		dma_cache_maint(paddr, size, dmac_inv_range);
-	}
-
-	/*
-	 * Mark the D-cache clean for these pages to avoid extra flushing.
-	 */
-	if (dir != DMA_TO_DEVICE && size >= PAGE_SIZE) {
-		unsigned long pfn = PFN_UP(paddr);
-		unsigned long off = paddr & (PAGE_SIZE - 1);
-		size_t left = size;
-
-		if (off)
-			left -= PAGE_SIZE - off;
-
-		while (left >= PAGE_SIZE) {
-			struct page *page = pfn_to_page(pfn++);
-			set_bit(PG_dcache_clean, &page->flags);
-			left -= PAGE_SIZE;
-		}
 	}
 }
 
@@ -1294,6 +1298,17 @@ bad_mapping:
 	return -EINVAL;
 }
 
+static void arm_iommu_sync_dma_for_cpu(phys_addr_t phys, size_t len,
+				       enum dma_data_direction dir,
+				       bool dma_coherent)
+{
+	if (!dma_coherent)
+		arch_sync_dma_for_cpu(phys, len, dir);
+
+	if (dir == DMA_FROM_DEVICE)
+		arch_dma_mark_clean(phys, len);
+}
+
 /**
  * arm_iommu_unmap_sg - unmap a set of SG buffers mapped by dma_map_sg
  * @dev: valid struct device pointer
@@ -1316,8 +1331,9 @@ static void arm_iommu_unmap_sg(struct device *dev,
 		if (sg_dma_len(s))
 			__iommu_remove_mapping(dev, sg_dma_address(s),
 					       sg_dma_len(s));
-		if (!dev->dma_coherent && !(attrs & DMA_ATTR_SKIP_CPU_SYNC))
-			arch_sync_dma_for_cpu(sg_phys(s), s->length, dir);
+		if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC))
+			arm_iommu_sync_dma_for_cpu(sg_phys(s), s->length, dir,
+						   dev->dma_coherent);
 	}
 }
 
@@ -1335,12 +1351,9 @@ static void arm_iommu_sync_sg_for_cpu(struct device *dev,
 	struct scatterlist *s;
 	int i;
 
-	if (dev->dma_coherent)
-		return;
-
 	for_each_sg(sg, s, nents, i)
-		arch_sync_dma_for_cpu(sg_phys(s), s->length, dir);
-
+		arm_iommu_sync_dma_for_cpu(sg_phys(s), s->length, dir,
+					   dev->dma_coherent);
 }
 
 /**
@@ -1425,9 +1438,9 @@ static void arm_iommu_unmap_page(struct device *dev, dma_addr_t handle,
 	if (!iova)
 		return;
 
-	if (!dev->dma_coherent && !(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
+	if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
 		phys = iommu_iova_to_phys(mapping->domain, handle);
-		arch_sync_dma_for_cpu(phys, size, dir);
+		arm_iommu_sync_dma_for_cpu(phys, size, dir, dev->dma_coherent);
 	}
 
 	iommu_unmap(mapping->domain, iova, len);
@@ -1497,11 +1510,11 @@ static void arm_iommu_sync_single_for_cpu(struct device *dev,
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(dev);
 	phys_addr_t phys;
 
-	if (dev->dma_coherent || !(handle & PAGE_MASK))
+	if (!(handle & PAGE_MASK))
 		return;
 
 	phys = iommu_iova_to_phys(mapping->domain, handle);
-	arch_sync_dma_for_cpu(phys, size, dir);
+	arm_iommu_sync_dma_for_cpu(phys, size, dir, dev->dma_coherent);
 }
 
 static void arm_iommu_sync_single_for_device(struct device *dev,
