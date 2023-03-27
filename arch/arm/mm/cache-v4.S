@@ -117,23 +117,23 @@ ENTRY(v4_dma_flush_range)
 	ret	lr
 
 /*
- *	dma_unmap_area(start, size, dir)
- *	- start	- kernel virtual start address
- *	- size	- size of region
- *	- dir	- DMA direction
- */
-ENTRY(v4_dma_unmap_area)
-	teq	r2, #DMA_TO_DEVICE
-	bne	v4_dma_flush_range
-	/* FALLTHROUGH */
-
-/*
  *	dma_map_area(start, size, dir)
  *	- start	- kernel virtual start address
  *	- size	- size of region
  *	- dir	- DMA direction
  */
 ENTRY(v4_dma_map_area)
+	teq	r2, #DMA_TO_DEVICE
+	bne	v4_dma_flush_range
+	/* FALLTHROUGH */
+
+/*
+ *	dma_unmap_area(start, size, dir)
+ *	- start	- kernel virtual start address
+ *	- size	- size of region
+ *	- dir	- DMA direction
+ */
+ENTRY(v4_dma_unmap_area)
 	ret	lr
 ENDPROC(v4_dma_unmap_area)
 ENDPROC(v4_dma_map_area)
