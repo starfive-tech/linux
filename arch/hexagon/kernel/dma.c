@@ -9,28 +9,32 @@
 #include <linux/memblock.h>
 #include <asm/page.h>
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	void *addr = phys_to_virt(paddr);
-
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		hexagon_clean_dcache_range((unsigned long) addr,
-		(unsigned long) addr + size);
-		break;
-	case DMA_FROM_DEVICE:
-		hexagon_inv_dcache_range((unsigned long) addr,
-		(unsigned long) addr + size);
-		break;
-	case DMA_BIDIRECTIONAL:
-		flush_dcache_range((unsigned long) addr,
-		(unsigned long) addr + size);
-		break;
-	default:
-		BUG();
-	}
+	hexagon_clean_dcache_range(paddr, paddr + size);
 }
+
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
+{
+	hexagon_inv_dcache_range(paddr, paddr + size);
+}
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	flush_dcache_range(paddr, paddr + size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return false;
+}
+
+#include <linux/dma-sync.h>
 
 /*
  * Our max_low_pfn should have been backed off by 16MB in mm/init.c to create

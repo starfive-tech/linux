@@ -14,32 +14,30 @@
 #include <linux/bug.h>
 #include <asm/cacheflush.h>
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	switch (direction) {
-	case DMA_TO_DEVICE:
-	case DMA_BIDIRECTIONAL:
-		flush_dcache_range(paddr, paddr + size);
-		break;
-	case DMA_FROM_DEVICE:
-		invalidate_dcache_range(paddr, paddr + size);
-		break;
-	default:
-		BUG();
-	}
+	/* writeback plus invalidate, could be a nop on WT caches */
+	flush_dcache_range(paddr, paddr + size);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	switch (direction) {
-	case DMA_TO_DEVICE:
-		break;
-	case DMA_BIDIRECTIONAL:
-	case DMA_FROM_DEVICE:
-		invalidate_dcache_range(paddr, paddr + size);
-		break;
-	default:
-		BUG();
-	}}
+	invalidate_dcache_range(paddr, paddr + size);
+}
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	flush_dcache_range(paddr, paddr + size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>

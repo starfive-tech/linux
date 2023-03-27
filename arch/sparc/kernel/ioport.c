@@ -300,20 +300,38 @@ arch_initcall(sparc_register_ioport);
 
 #endif /* CONFIG_SBUS */
 
-/*
- * IIep is write-through, not flushing on cpu to device transfer.
- *
- * On LEON systems without cache snooping, the entire D-CACHE must be flushed to
- * make DMA to cacheable memory coherent.
- */
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	if (dir != DMA_TO_DEVICE &&
-	    sparc_cpu_model == sparc_leon &&
+	/* IIep is write-through, not flushing on cpu to device transfer. */
+}
+
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
+{
+	/*
+	 * On LEON systems without cache snooping, the entire D-CACHE must be
+	 * flushed to make DMA to cacheable memory coherent.
+	 */
+	if (sparc_cpu_model == sparc_leon &&
 	    !sparc_leon3_snooping_enabled())
 		leon_flush_dcache_all();
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	arch_dma_cache_inv(paddr, size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return true;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return false;
+}
+
+#include <linux/dma-sync.h>
 
 #ifdef CONFIG_PROC_FS
 

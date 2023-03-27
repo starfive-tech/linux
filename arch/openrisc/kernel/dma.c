@@ -95,32 +95,47 @@ void arch_dma_clear_uncached(void *cpu_addr, size_t size)
 	mmap_write_unlock(&init_mm);
 }
 
-void arch_sync_dma_for_device(phys_addr_t addr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
 	unsigned long cl;
 	struct cpuinfo_or1k *cpuinfo = &cpuinfo_or1k[smp_processor_id()];
 
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		/* Write back the dcache for the requested range */
-		for (cl = addr; cl < addr + size;
-		     cl += cpuinfo->dcache_block_size)
-			mtspr(SPR_DCBWR, cl);
-		break;
-	case DMA_FROM_DEVICE:
-		/* Invalidate the dcache for the requested range */
-		for (cl = addr; cl < addr + size;
-		     cl += cpuinfo->dcache_block_size)
-			mtspr(SPR_DCBIR, cl);
-		break;
-	case DMA_BIDIRECTIONAL:
-		/* Flush the dcache for the requested range */
-		for (cl = addr; cl < addr + size;
-		     cl += cpuinfo->dcache_block_size)
-			mtspr(SPR_DCBFR, cl);
-		break;
-	default:
-		break;
-	}
+	/* Write back the dcache for the requested range */
+	for (cl = paddr; cl < paddr + size;
+	     cl += cpuinfo->dcache_block_size)
+		mtspr(SPR_DCBWR, cl);
 }
+
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
+{
+	unsigned long cl;
+	struct cpuinfo_or1k *cpuinfo = &cpuinfo_or1k[smp_processor_id()];
+
+	/* Invalidate the dcache for the requested range */
+	for (cl = paddr; cl < paddr + size;
+	     cl += cpuinfo->dcache_block_size)
+		mtspr(SPR_DCBIR, cl);
+}
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	unsigned long cl;
+	struct cpuinfo_or1k *cpuinfo = &cpuinfo_or1k[smp_processor_id()];
+
+	/* Flush the dcache for the requested range */
+	for (cl = paddr; cl < paddr + size;
+	     cl += cpuinfo->dcache_block_size)
+		mtspr(SPR_DCBFR, cl);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return false;
+}
+
+#include <linux/dma-sync.h>

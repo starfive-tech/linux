@@ -13,24 +13,32 @@
 #include <asm/cacheflush.h>
 #include <asm/xen/xen-ops.h>
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-			      enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	unsigned long start = (unsigned long)phys_to_virt(paddr);
-
-	dcache_clean_poc(start, start + size);
+	dcache_clean_poc(paddr, paddr + size);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-			   enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	unsigned long start = (unsigned long)phys_to_virt(paddr);
-
-	if (dir == DMA_TO_DEVICE)
-		return;
-
-	dcache_inval_poc(start, start + size);
+	dcache_inval_poc(paddr, paddr + size);
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	dcache_clean_inval_poc(paddr, paddr + size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return true;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>
 
 void arch_dma_prep_coherent(struct page *page, size_t size)
 {

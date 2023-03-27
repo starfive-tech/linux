@@ -213,6 +213,9 @@ config LOCKDEP_SUPPORT
 	bool
 	default y
 
+config ARCH_DMA_MARK_DCACHE_CLEAN
+	def_bool y
+
 config ARCH_HAS_ILOG2_U32
 	bool
 

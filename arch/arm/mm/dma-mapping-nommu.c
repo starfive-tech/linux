@@ -13,26 +13,35 @@
 
 #include "dma.h"
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	if (dir == DMA_FROM_DEVICE) {
-		dmac_inv_range(__va(paddr), __va(paddr + size));
-		outer_inv_range(paddr, paddr + size);
-	} else {
-		dmac_clean_range(__va(paddr), __va(paddr + size));
-		outer_clean_range(paddr, paddr + size);
-	}
+	dmac_clean_range(__va(paddr), __va(paddr + size));
+	outer_clean_range(paddr, paddr + size);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	if (dir != DMA_TO_DEVICE) {
-		outer_inv_range(paddr, paddr + size);
-		dmac_inv_range(__va(paddr), __va(paddr));
-	}
+	dmac_inv_range(__va(paddr), __va(paddr + size));
+	outer_inv_range(paddr, paddr + size);
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	dmac_flush_range(__va(paddr), __va(paddr + size));
+	outer_flush_range(paddr, paddr + size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>
 
 void arch_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 			const struct iommu_ops *iommu, bool coherent)

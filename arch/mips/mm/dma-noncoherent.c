@@ -85,50 +85,38 @@ static inline void dma_sync_phys(phys_addr_t paddr, size_t size,
 	} while (left);
 }
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		dma_sync_phys(paddr, size, _dma_cache_wback);
-		break;
-	case DMA_FROM_DEVICE:
-		dma_sync_phys(paddr, size, _dma_cache_inv);
-		break;
-	case DMA_BIDIRECTIONAL:
-		if (IS_ENABLED(CONFIG_ARCH_HAS_SYNC_DMA_FOR_CPU) &&
-		    cpu_needs_post_dma_flush())
-			dma_sync_phys(paddr, size, _dma_cache_wback);
-		else
-			dma_sync_phys(paddr, size, _dma_cache_wback_inv);
-		break;
-	default:
-		break;
-	}
+	dma_sync_phys(paddr, size, _dma_cache_wback);
 }
 
-#ifdef CONFIG_ARCH_HAS_SYNC_DMA_FOR_CPU
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		break;
-	case DMA_FROM_DEVICE:
-	case DMA_BIDIRECTIONAL:
-		if (cpu_needs_post_dma_flush())
-			dma_sync_phys(paddr, size, _dma_cache_inv);
-		break;
-	default:
-		break;
-	}
+	dma_sync_phys(paddr, size, _dma_cache_inv);
 }
-#endif
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	dma_sync_phys(paddr, size, _dma_cache_wback_inv);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return IS_ENABLED(CONFIG_ARCH_HAS_SYNC_DMA_FOR_CPU) &&
+                    cpu_needs_post_dma_flush();
+}
+
+#include <linux/dma-sync.h>
 
 #ifdef CONFIG_ARCH_HAS_SETUP_DMA_OPS
 void arch_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
-		const struct iommu_ops *iommu, bool coherent)
+               const struct iommu_ops *iommu, bool coherent)
 {
-	dev->dma_coherent = coherent;
+       dev->dma_coherent = coherent;
 }
 #endif

@@ -687,6 +687,30 @@ void arch_dma_mark_clean(phys_addr_t paddr, size_t size)
 	}
 }
 
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
+{
+	dma_cache_maint(paddr, size, dmac_clean_range);
+	outer_clean_range(paddr, paddr + size);
+}
+
+
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
+{
+	dma_cache_maint(paddr, size, dmac_inv_range);
+	outer_inv_range(paddr, paddr + size);
+}
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	dma_cache_maint(paddr, size, dmac_flush_range);
+	outer_flush_range(paddr, paddr + size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
 static bool arch_sync_dma_cpu_needs_post_dma_flush(void)
 {
 	if (IS_ENABLED(CONFIG_CPU_V6) ||
@@ -699,45 +723,7 @@ static bool arch_sync_dma_cpu_needs_post_dma_flush(void)
 	return false;
 }
 
-/*
- * Make an area consistent for devices.
- * Note: Drivers should NOT use this function directly.
- * Use the driver DMA support - see dma-mapping.h (dma_sync_*)
- */
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
-{
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		dma_cache_maint(paddr, size, dmac_clean_range);
-		outer_clean_range(paddr, paddr + size);
-		break;
-	case DMA_FROM_DEVICE:
-		dma_cache_maint(paddr, size, dmac_inv_range);
-		outer_inv_range(paddr, paddr + size);
-		break;
-	case DMA_BIDIRECTIONAL:
-		if (arch_sync_dma_cpu_needs_post_dma_flush()) {
-			dma_cache_maint(paddr, size, dmac_clean_range);
-			outer_clean_range(paddr, paddr + size);
-		} else {
-			dma_cache_maint(paddr, size, dmac_flush_range);
-			outer_flush_range(paddr, paddr + size);
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
-{
-	if (dir != DMA_TO_DEVICE && arch_sync_dma_cpu_needs_post_dma_flush()) {
-		outer_inv_range(paddr, paddr + size);
-		dma_cache_maint(paddr, size, dmac_inv_range);
-	}
-}
+#include <linux/dma-sync.h>
 
 #ifdef CONFIG_ARM_DMA_USE_IOMMU
 

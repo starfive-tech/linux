@@ -30,62 +30,32 @@ void arch_dma_prep_coherent(struct page *page, size_t size)
 	dma_cache_wback_inv(page_to_phys(page), size);
 }
 
-/*
- * Cache operations depending on function and direction argument, inspired by
- * https://lore.kernel.org/lkml/20180518175004.GF17671@n2100.armlinux.org.uk
- * "dma_sync_*_for_cpu and direction=TO_DEVICE (was Re: [PATCH 02/20]
- * dma-mapping: provide a generic dma-noncoherent implementation)"
- *
- *          |   map          ==  for_device     |   unmap     ==  for_cpu
- *          |----------------------------------------------------------------
- * TO_DEV   |   writeback        writeback      |   none          none
- * FROM_DEV |   invalidate       invalidate     |   invalidate*   invalidate*
- * BIDIR    |   writeback        writeback      |   invalidate    invalidate
- *
- *     [*] needed for CPU speculative prefetches
- *
- * NOTE: we don't check the validity of direction argument as it is done in
- * upper layer functions (in include/linux/dma-mapping.h)
- */
-
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		dma_cache_wback(paddr, size);
-		break;
-
-	case DMA_FROM_DEVICE:
-		dma_cache_inv(paddr, size);
-		break;
-
-	case DMA_BIDIRECTIONAL:
-		dma_cache_wback(paddr, size);
-		break;
-
-	default:
-		break;
-	}
+	dma_cache_wback(paddr, size);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		break;
-
-	/* FROM_DEVICE invalidate needed if speculative CPU prefetch only */
-	case DMA_FROM_DEVICE:
-	case DMA_BIDIRECTIONAL:
-		dma_cache_inv(paddr, size);
-		break;
-
-	default:
-		break;
-	}
+	dma_cache_inv(paddr, size);
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	dma_cache_wback_inv(paddr, size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>
 
 /*
  * Plug in direct dma map ops.

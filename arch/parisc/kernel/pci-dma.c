@@ -443,8 +443,7 @@ void arch_dma_free(struct device *dev, size_t size, void *vaddr,
 	free_pages((unsigned long)__va(dma_handle), order);
 }
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
 	/*
 	 * fdc: The data cache line is written back to memory, if and only if
@@ -453,20 +452,28 @@ void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 	flush_kernel_dcache_range((unsigned long)phys_to_virt(paddr), size);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	unsigned long addr = (unsigned long) phys_to_virt(paddr);
-
-	switch (dir) {
-	case DMA_TO_DEVICE:
-	case DMA_BIDIRECTIONAL:
-		flush_kernel_dcache_range(addr, size);
-		return;
-	case DMA_FROM_DEVICE:
-		purge_kernel_dcache_range_asm(addr, addr + size);
-		return;
-	default:
-		BUG();
-	}
+ 	unsigned long virt = (unsigned long)phys_to_virt(paddr);
+ 
+	purge_kernel_dcache_range(virt, size);
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	unsigned long virt = (unsigned long)phys_to_virt(paddr);
+
+	flush_kernel_dcache_range(virt, size);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return true;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>

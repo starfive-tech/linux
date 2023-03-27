@@ -43,23 +43,33 @@ static void do_cache_op(phys_addr_t paddr, size_t size,
 		}
 }
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	switch (dir) {
-	case DMA_TO_DEVICE:
-		do_cache_op(paddr, size, __flush_dcache_range);
-		break;
-	case DMA_FROM_DEVICE:
-		do_cache_op(paddr, size, __invalidate_dcache_range);
-		break;
-	case DMA_BIDIRECTIONAL:
-		do_cache_op(paddr, size, __flush_invalidate_dcache_range);
-		break;
-	default:
-		break;
-	}
+	do_cache_op(paddr, size, __flush_dcache_range);
 }
+
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
+{
+	do_cache_op(paddr, size, __invalidate_dcache_range);
+}
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	do_cache_op(paddr, size, __flush_invalidate_dcache_range);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return false;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return false;
+}
+
+#include <linux/dma-sync.h>
+
 
 void arch_dma_prep_coherent(struct page *page, size_t size)
 {

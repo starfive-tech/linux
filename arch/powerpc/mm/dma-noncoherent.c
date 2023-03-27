@@ -101,26 +101,32 @@ static void __dma_phys_op(phys_addr_t paddr, size_t size, enum dma_cache_op op)
 #endif
 }
 
-void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_wback(phys_addr_t paddr, size_t size)
 {
-	__dma_phys_op(start, end, DMA_CACHE_CLEAN);
+	__dma_phys_op(paddr, size, DMA_CACHE_CLEAN);
 }
 
-void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
-		enum dma_data_direction dir)
+static inline void arch_dma_cache_inv(phys_addr_t paddr, size_t size)
 {
-	switch (direction) {
-	case DMA_NONE:
-		BUG();
-	case DMA_TO_DEVICE:
-		break;
-	case DMA_FROM_DEVICE:
-	case DMA_BIDIRECTIONAL:
-		__dma_phys_op(start, end, DMA_CACHE_INVAL);
-		break;
-	}
+	__dma_phys_op(paddr, size, DMA_CACHE_INVAL);
 }
+
+static inline void arch_dma_cache_wback_inv(phys_addr_t paddr, size_t size)
+{
+	__dma_phys_op(paddr, size, DMA_CACHE_FLUSH);
+}
+
+static inline bool arch_sync_dma_clean_before_fromdevice(void)
+{
+	return true;
+}
+
+static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
+{
+	return true;
+}
+
+#include <linux/dma-sync.h>
 
 void arch_dma_prep_coherent(struct page *page, size_t size)
 {
