@@ -33,6 +33,7 @@ properties:
               - sifive,e5
               - sifive,e7
               - sifive,e71
+              - sifive,s7
               - sifive,u74-mc
               - sifive,u54
               - sifive,u74
