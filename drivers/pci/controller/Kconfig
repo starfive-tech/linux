@@ -343,6 +343,14 @@ config PCIE_MT7621
 	help
 	  This selects a driver for the MediaTek MT7621 PCIe Controller.
 
+config PCIE_STARFIVE
+	tristate "StarFive JH7110 PCIe controller"
+	depends on PCI_MSI && OF
+	select PCI_MSI_IRQ_DOMAIN
+	help
+	  Say 'Y' here if you want kernel to support the StarFive JH7110
+	  PCIe Host driver.
+
 source "drivers/pci/controller/dwc/Kconfig"
 source "drivers/pci/controller/mobiveil/Kconfig"
 source "drivers/pci/controller/cadence/Kconfig"
