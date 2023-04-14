@@ -1671,7 +1671,6 @@ err_disable_runtime_pm:
 err_disable_pclk:
 	//clk_disable_unprepare(dsi->dsi_p_clk);
 	cdns_dsi_clock_disable(dsi);
-ERROR:
 	return ret;
 }
 
