@@ -236,6 +236,11 @@
  */
 #define YTPHY_WCR_TYPE_PULSE			BIT(0)
 
+#define YTPHY_PAD_DRIVE_STRENGTH_REG		0xA010
+#define YTPHY_RGMII_RXC_DS			GENMASK(15, 13)
+#define YTPHY_RGMII_RXD_DS			GENMASK(5, 4)	/* Bit 1 and 0 of rgmii_rxd_ds */
+#define YTPHY_RGMII_RXD_DS2			BIT(12) 	/* Bit 2 of rgmii_rxd_ds */
+
 #define YTPHY_SYNCE_CFG_REG			0xA012
 #define YT8521_SCR_SYNCE_ENABLE			BIT(5)
 /* 1b0 output 25m clock
@@ -1495,6 +1500,7 @@ static int yt8531_config_init(struct phy_device *phydev)
 {
 	struct device_node *node = phydev->mdio.dev.of_node;
 	int ret;
+	u32 val;
 
 	ret = ytphy_rgmii_clk_delay_config_with_lock(phydev);
 	if (ret < 0)
@@ -1514,6 +1520,32 @@ static int yt8531_config_init(struct phy_device *phydev)
 		ret = ytphy_modify_ext_with_lock(phydev,
 						 YT8521_CLOCK_GATING_REG,
 						 YT8521_CGR_RX_CLK_EN, 0);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (!of_property_read_u32(node, "rx-clk-driver-strength", &val)) {
+		ret = ytphy_modify_ext_with_lock(phydev,
+						 YTPHY_PAD_DRIVE_STRENGTH_REG,
+						 YTPHY_RGMII_RXC_DS,
+						 FIELD_PREP(YTPHY_RGMII_RXC_DS, val));
+		if (ret < 0)
+			return ret;
+	}
+
+	if (!of_property_read_u32(node, "rx-data-driver-strength", &val)) {
+		if (val > FIELD_MAX(YTPHY_RGMII_RXD_DS)) {
+			val &= FIELD_MAX(YTPHY_RGMII_RXD_DS);
+			val = FIELD_PREP(YTPHY_RGMII_RXD_DS, val);
+			val |= YTPHY_RGMII_RXD_DS2;
+		} else {
+			val = FIELD_PREP(YTPHY_RGMII_RXD_DS, val);
+		}
+
+		ret = ytphy_modify_ext_with_lock(phydev,
+						 YTPHY_PAD_DRIVE_STRENGTH_REG,
+						 YTPHY_RGMII_RXD_DS | YTPHY_RGMII_RXD_DS2,
+						 val);
 		if (ret < 0)
 			return ret;
 	}
