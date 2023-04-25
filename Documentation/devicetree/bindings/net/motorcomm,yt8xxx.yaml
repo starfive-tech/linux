@@ -18,6 +18,16 @@ properties:
       - ethernet-phy-id4f51.e91a
       - ethernet-phy-id4f51.e91b
 
+  rx-clk-driver-strength:
+    description: drive strength of rx_clk pad.
+    enum: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+    default: 3
+
+  rx-data-driver-strength:
+    description: drive strength of rxd/rx_ctl rgmii pad.
+    enum: [ 0, 1, 2, 3, 4, 5, 6, 7 ]
+    default: 3
+
   rx-internal-delay-ps:
     description: |
       RGMII RX Clock Delay used only when PHY operates in RGMII mode with
