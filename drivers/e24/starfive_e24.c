@@ -1,23 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
-/*********************************Copyright (c)*********************************************
- **
- **
- **
- **-------------------------------file info-------------------------------------------------
- ** Vrsions:      V1.0
- ** Filename:     starfive_e24.c
- ** Creator:      shanlong.li
- ** Date:         2021/05/20
- ** Description:  boot e24 and communication with u74
- **
- **-------------------------------history----------------------------------------------
- ** Name:         shanlong.li
- ** Versions:     V1.0
- ** Date:         2021/05/20
- ** Description:
- **
- ** ----------------------------------------------------------------------------------------
- ******************************************************************************************/
+/*
+ * e24 driver for StarFive JH7110 SoC
+ *
+ * Copyright (c) 2021 StarFive Technology Co., Ltd.
+ * Author: Shanlong Li <shanlong.li@starfivetech.com>
+ */
 #include <linux/version.h>
 #include <linux/atomic.h>
 #include <linux/acpi.h>
@@ -1532,6 +1519,6 @@ static struct platform_driver e24_driver = {
 
 module_platform_driver(e24_driver);
 
-MODULE_AUTHOR("StarFive Technology Co. Ltd.");
-MODULE_DESCRIPTION("e24 mailbox driver");
+MODULE_DESCRIPTION("StarFive e24 driver");
+MODULE_AUTHOR("Shanlong Li <shanlong.li@starfivetech.com>");
 MODULE_LICENSE("GPL");
