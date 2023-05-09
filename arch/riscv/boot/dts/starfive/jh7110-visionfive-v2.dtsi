@@ -810,7 +810,7 @@
 };
 
 &mipi_dsi {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -847,7 +847,7 @@
 };
 
 &mipi_dphy {
-	status = "disabled";
+	status = "okay";
 };
 
 &co_process {
