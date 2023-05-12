@@ -17,6 +17,7 @@
 
 #include "stf_common.h"
 #include "stf_isp.h"
+#include "stf_vin.h"
 
 #define DRV_NAME     "starfive-camss"
 #define STF_DVP_NAME "stf_dvp"
@@ -72,6 +73,7 @@ struct stfcamss {
 	struct media_device media_dev;
 	struct media_pipeline pipe;
 	struct device *dev;
+	struct stf_vin_dev vin_dev;
 	struct stf_isp_dev isp_dev;
 	struct v4l2_async_notifier notifier;
 	struct host_data host_data;

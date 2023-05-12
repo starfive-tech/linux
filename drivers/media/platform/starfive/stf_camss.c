@@ -142,27 +142,61 @@ static int stfcamss_init_subdevices(struct stfcamss *stfcamss)
 		return ret;
 	}
 
+	ret = stf_vin_subdev_init(stfcamss);
+	if (ret < 0) {
+		dev_err(stfcamss->dev, "Failed to init vin subdev: %d\n", ret);
+		return ret;
+	}
 	return ret;
 }
 
 static int stfcamss_register_subdevices(struct stfcamss *stfcamss)
 {
 	int ret;
+	struct stf_vin_dev *vin_dev = &stfcamss->vin_dev;
 	struct stf_isp_dev *isp_dev = &stfcamss->isp_dev;
 
 	ret = stf_isp_register(isp_dev, &stfcamss->v4l2_dev);
 	if (ret < 0) {
 		dev_err(stfcamss->dev,
 			"Failed to register stf isp%d entity: %d\n", 0, ret);
-		return ret;
+		goto err_reg_isp;
 	}
 
+	ret = stf_vin_register(vin_dev, &stfcamss->v4l2_dev);
+	if (ret < 0) {
+		dev_err(stfcamss->dev,
+			"Failed to register vin entity: %d\n", ret);
+		goto err_reg_vin;
+	}
+
+	ret = media_create_pad_link(&isp_dev->subdev.entity,
+				    STF_ISP_PAD_SRC,
+				    &vin_dev->line[VIN_LINE_ISP].subdev.entity,
+				    STF_VIN_PAD_SINK,
+				    0);
+	if (ret < 0) {
+		dev_err(stfcamss->dev,
+			"Failed to link %s->%s entities: %d\n",
+			isp_dev->subdev.entity.name,
+			vin_dev->line[VIN_LINE_ISP].subdev.entity.name, ret);
+		goto err_link;
+	}
+
+	return ret;
+
+err_link:
+	stf_vin_unregister(&stfcamss->vin_dev);
+err_reg_vin:
+	stf_isp_unregister(&stfcamss->isp_dev);
+err_reg_isp:
 	return ret;
 }
 
 static void stfcamss_unregister_subdevices(struct stfcamss *stfcamss)
 {
 	stf_isp_unregister(&stfcamss->isp_dev);
+	stf_vin_unregister(&stfcamss->vin_dev);
 }
 
 static int stfcamss_subdev_notifier_bound(struct v4l2_async_notifier *async,
@@ -175,11 +209,14 @@ static int stfcamss_subdev_notifier_bound(struct v4l2_async_notifier *async,
 		container_of(asd, struct stfcamss_async_subdev, asd);
 	enum port_num port = csd->port;
 	struct stf_isp_dev *isp_dev = &stfcamss->isp_dev;
+	struct stf_vin_dev *vin_dev = &stfcamss->vin_dev;
 	struct host_data *host_data = &stfcamss->host_data;
 	struct media_entity *source;
 	int i, j;
 
 	if (port == PORT_NUMBER_CSI2RX) {
+		host_data->host_entity[0] =
+			&vin_dev->line[VIN_LINE_WR].subdev.entity;
 		host_data->host_entity[1] = &isp_dev->subdev.entity;
 	} else if (port == PORT_NUMBER_DVP_SENSOR) {
 		dev_err(stfcamss->dev, "Not support DVP sensor\n");
