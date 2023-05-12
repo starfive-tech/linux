@@ -126,15 +126,65 @@ err_cleanup:
 	return ret;
 }
 
+/*
+ * stfcamss_init_subdevices - Initialize subdev structures and resources
+ * @stfcamss: STFCAMSS device
+ *
+ * Return 0 on success or a negative error code on failure
+ */
+static int stfcamss_init_subdevices(struct stfcamss *stfcamss)
+{
+	int ret;
+
+	ret = stf_isp_subdev_init(stfcamss);
+	if (ret < 0) {
+		dev_err(stfcamss->dev, "Failed to init isp subdev: %d\n", ret);
+		return ret;
+	}
+
+	return ret;
+}
+
+static int stfcamss_register_subdevices(struct stfcamss *stfcamss)
+{
+	int ret;
+	struct stf_isp_dev *isp_dev = &stfcamss->isp_dev;
+
+	ret = stf_isp_register(isp_dev, &stfcamss->v4l2_dev);
+	if (ret < 0) {
+		dev_err(stfcamss->dev,
+			"Failed to register stf isp%d entity: %d\n", 0, ret);
+		return ret;
+	}
+
+	return ret;
+}
+
+static void stfcamss_unregister_subdevices(struct stfcamss *stfcamss)
+{
+	stf_isp_unregister(&stfcamss->isp_dev);
+}
+
 static int stfcamss_subdev_notifier_bound(struct v4l2_async_notifier *async,
 					  struct v4l2_subdev *subdev,
 					  struct v4l2_async_subdev *asd)
 {
 	struct stfcamss *stfcamss =
 		container_of(async, struct stfcamss, notifier);
+	struct stfcamss_async_subdev *csd =
+		container_of(asd, struct stfcamss_async_subdev, asd);
+	enum port_num port = csd->port;
+	struct stf_isp_dev *isp_dev = &stfcamss->isp_dev;
 	struct host_data *host_data = &stfcamss->host_data;
 	struct media_entity *source;
 	int i, j;
+
+	if (port == PORT_NUMBER_CSI2RX) {
+		host_data->host_entity[1] = &isp_dev->subdev.entity;
+	} else if (port == PORT_NUMBER_DVP_SENSOR) {
+		dev_err(stfcamss->dev, "Not support DVP sensor\n");
+		return -EPERM;
+	}
 
 	source = &subdev->entity;
 
@@ -266,12 +316,18 @@ static int stfcamss_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	ret = stfcamss_init_subdevices(stfcamss);
+	if (ret < 0) {
+		dev_err(dev, "Failed to init subdevice: %d\n", ret);
+		goto err_cleanup_notifier;
+	}
+
 	stfcamss_mc_init(pdev, stfcamss);
 
 	ret = v4l2_device_register(stfcamss->dev, &stfcamss->v4l2_dev);
 	if (ret < 0) {
 		dev_err(dev, "Failed to register V4L2 device: %d\n", ret);
-		goto err_cleanup_notifier;
+		goto err_cleanup_media_device;
 	}
 
 	ret = media_device_register(&stfcamss->media_dev);
@@ -280,22 +336,32 @@ static int stfcamss_probe(struct platform_device *pdev)
 		goto err_unregister_device;
 	}
 
+	ret = stfcamss_register_subdevices(stfcamss);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdevice: %d\n", ret);
+		goto err_unregister_media_dev;
+	}
+
 	stfcamss->notifier.ops = &stfcamss_subdev_notifier_ops;
 	ret = v4l2_async_nf_register(&stfcamss->v4l2_dev, &stfcamss->notifier);
 	if (ret) {
 		dev_err(dev, "Failed to register async subdev nodes: %d\n",
 			ret);
-		goto err_unregister_media_dev;
+		goto err_unregister_subdevs;
 	}
 
 	pm_runtime_enable(dev);
 
 	return 0;
 
+err_unregister_subdevs:
+	stfcamss_unregister_subdevices(stfcamss);
 err_unregister_media_dev:
 	media_device_unregister(&stfcamss->media_dev);
 err_unregister_device:
 	v4l2_device_unregister(&stfcamss->v4l2_dev);
+err_cleanup_media_device:
+	media_device_cleanup(&stfcamss->media_dev);
 err_cleanup_notifier:
 	v4l2_async_nf_cleanup(&stfcamss->notifier);
 	return ret;
@@ -311,6 +377,7 @@ static int stfcamss_remove(struct platform_device *pdev)
 {
 	struct stfcamss *stfcamss = platform_get_drvdata(pdev);
 
+	stfcamss_unregister_subdevices(stfcamss);
 	v4l2_device_unregister(&stfcamss->v4l2_dev);
 	media_device_cleanup(&stfcamss->media_dev);
 	pm_runtime_disable(&pdev->dev);
