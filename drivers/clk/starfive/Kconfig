@@ -51,3 +51,14 @@ config CLK_STARFIVE_JH7110_AON
 	help
 	  Say yes here to support the always-on clock controller on the
 	  StarFive JH7110 SoC.
+
+config CLK_STARFIVE_JH7110_STG
+	tristate "StarFive JH7110 System-Top-Group clock support"
+	depends on CLK_STARFIVE_JH7110_SYS
+	select AUXILIARY_BUS
+	select CLK_STARFIVE_JH71X0
+	select RESET_STARFIVE_JH7110
+	default m if ARCH_STARFIVE
+	help
+	  Say yes here to support the System-Top-Group clock controller
+	  on the StarFive JH7110 SoC.
