@@ -81,6 +81,11 @@
 		ethernet_phy0: ethernet-phy@0 {
 			reg = <0>;
 			max-speed = <10>;
+			device_type = "ethernet-phy";
+			marvell,reg-init =
+				<0x0 0x4 0 0x0441>, /*Page 0, Reg 4 <- 0x0441*/
+				<0x12 0x14 0 0x0>, /*Page 18, Reg 20 <- 0x0*/
+				<0x0 0x0 0 0x1100>; /*Page 0, Reg 0 <- 0x1100*/
 		};
 	};
 };
