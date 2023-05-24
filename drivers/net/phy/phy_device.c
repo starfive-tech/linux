@@ -1998,8 +1998,7 @@ static int genphy_config_advert(struct phy_device *phydev)
 
 	/* Setup standard advertisement */
 	err = phy_modify_changed(phydev, MII_ADVERTISE,
-				 ADVERTISE_ALL | ADVERTISE_100BASE4 |
-				 ADVERTISE_PAUSE_CAP | ADVERTISE_PAUSE_ASYM,
+				 ADVERTISE_10FULL | ADVERTISE_PAUSE_CAP,
 				 adv);
 	if (err < 0)
 		return err;
