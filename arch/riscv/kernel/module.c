@@ -270,6 +270,20 @@ static int apply_r_riscv_add64_rela(struct module *me, u32 *location,
 	return 0;
 }
 
+static int apply_r_riscv_sub8_rela(struct module *me, u32 *location,
+				   Elf_Addr v)
+{
+	*location -= (u32)v & 0x000000ff;
+	return 0;
+}
+
+static int apply_r_riscv_sub16_rela(struct module *me, u32 *location,
+				    Elf_Addr v)
+{
+	*location -= (u32)v & 0x0000ffff;
+	return 0;
+}
+
 static int apply_r_riscv_sub32_rela(struct module *me, u32 *location,
 				    Elf_Addr v)
 {
@@ -281,6 +295,42 @@ static int apply_r_riscv_sub64_rela(struct module *me, u32 *location,
 				    Elf_Addr v)
 {
 	*(u64 *)location -= (u64)v;
+	return 0;
+}
+
+static int apply_r_riscv_sub6_rela(struct module *me, u32 *location,
+				   Elf_Addr v)
+{
+	*location -= (u32)v & 0x0000003f;
+	return 0;
+}
+
+static int apply_r_riscv_set6_rela(struct module *me, u32 *location,
+				   Elf_Addr v)
+{
+	*location = (u32)v & 0x0000003f;
+	return 0;
+}
+
+static int apply_r_riscv_set8_rela(struct module *me, u32 *location,
+				   Elf_Addr v)
+{
+	*location = (u32)v & 0x000000ff;
+	return 0;
+}
+
+static int apply_r_riscv_set16_rela(struct module *me, u32 *location,
+            			    Elf_Addr v)
+{
+	*location = (u32)v & 0x0000ffff;
+	return 0;
+}
+
+static int apply_r_riscv_32_pcrel_rela(struct module *me, u32 *location,
+ 				      Elf_Addr v)
+{
+	ptrdiff_t offset = (void *)v - (void *)location;
+	*(u32 *)location += (u32)offset;
 	return 0;
 }
 
@@ -305,8 +355,15 @@ static int (*reloc_handlers_rela[]) (struct module *me, u32 *location,
 	[R_RISCV_ALIGN]			= apply_r_riscv_align_rela,
 	[R_RISCV_ADD32]			= apply_r_riscv_add32_rela,
 	[R_RISCV_ADD64]			= apply_r_riscv_add64_rela,
+	[R_RISCV_SUB8]			= apply_r_riscv_sub8_rela,
+	[R_RISCV_SUB16]			= apply_r_riscv_sub16_rela,
 	[R_RISCV_SUB32]			= apply_r_riscv_sub32_rela,
 	[R_RISCV_SUB64]			= apply_r_riscv_sub64_rela,
+	[R_RISCV_SUB6]			= apply_r_riscv_sub6_rela,
+	[R_RISCV_SET6]			= apply_r_riscv_set6_rela,
+	[R_RISCV_SET8]			= apply_r_riscv_set8_rela,
+	[R_RISCV_SET16]			= apply_r_riscv_set16_rela,
+	[R_RISCV_32_PCREL]		= apply_r_riscv_32_pcrel_rela,
 };
 
 int apply_relocate_add(Elf_Shdr *sechdrs, const char *strtab,
