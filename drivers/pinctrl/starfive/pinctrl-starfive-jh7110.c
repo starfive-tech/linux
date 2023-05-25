@@ -966,7 +966,6 @@ static int starfive_jh7110_sys_gpio_register(struct platform_device *pdev,
 
 	platform_set_drvdata(pdev, pctl);
 
-	starfive_jh7110_sys_irqchip.parent_device = dev;
 	starfive_jh7110_sys_irqchip.name = pctl->gc.label;
 
 	pctl->gc.irq.chip = &starfive_jh7110_sys_irqchip;
@@ -1671,7 +1670,6 @@ static int starfive_jh7110_aon_gpio_register(struct platform_device *pdev,
 
 	platform_set_drvdata(pdev, pctl);
 
-	starfive_jh7110_aon_irqchip.parent_device = dev;
 	starfive_jh7110_aon_irqchip.name = pctl->gc.label;
 
 	pctl->gc.irq.chip = &starfive_jh7110_aon_irqchip;
