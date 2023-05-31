@@ -28,8 +28,8 @@
 	motorcomm,tx-clk-adj-enabled;
 	motorcomm,tx-clk-100-inverted;
 	motorcomm,tx-clk-1000-inverted;
-	rx-clk-driver-strength = <0x6>;
-	rx-data-driver-strength = <0x3>;
+	motorcomm,rx-clk-driver-strength = <0x6>;
+	motorcomm,rx-data-driver-strength = <0x3>;
 	rx-internal-delay-ps = <1500>;
 	tx-internal-delay-ps = <1500>;
 };
@@ -37,8 +37,8 @@
 &phy1 {
 	motorcomm,tx-clk-adj-enabled;
 	motorcomm,tx-clk-100-inverted;
-	rx-clk-driver-strength = <0x6>;
-	rx-data-driver-strength = <0x3>;
+	motorcomm,rx-clk-driver-strength = <0x6>;
+	motorcomm,rx-data-driver-strength = <0x3>;
 	rx-internal-delay-ps = <300>;
 	tx-internal-delay-ps = <0>;
 };
