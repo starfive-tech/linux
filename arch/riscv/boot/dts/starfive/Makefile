@@ -1,2 +1,3 @@
 # SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_SOC_STARFIVE) += jh7100-beaglev-starlight.dtb
+subdir-y += evb-overlay
+dtb-$(CONFIG_SOC_STARFIVE_JH7110) += jh7110-evb.dtb
