@@ -90,6 +90,10 @@
        status = "disabled";
 };
 
+&trng {
+	status = "okay";
+};
+
 &i2c0 {
 	clock-frequency = <100000>;
 	i2c-sda-hold-time-ns = <300>;
