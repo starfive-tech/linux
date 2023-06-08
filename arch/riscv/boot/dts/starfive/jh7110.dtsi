@@ -369,6 +369,38 @@
 			status = "okay";
 		};
 
+		mmc0: mmc@16010000 {
+			compatible = "starfive,jh7110-mmc";
+			reg = <0x0 0x16010000 0x0 0x10000>;
+			clocks = <&clkgen JH7110_SDIO0_CLK_AHB>,
+				 <&clkgen JH7110_SDIO0_CLK_SDCARD>;
+			clock-names = "biu","ciu";
+			resets = <&rstgen RSTN_U0_DW_SDIO_AHB>;
+			reset-names = "reset";
+			interrupts = <74>;
+			fifo-depth = <32>;
+			fifo-watermark-aligned;
+			data-addr = <0>;
+			starfive,sys-syscon = <&sys_syscon 0x14 0x1a 0x7c000000>;
+			status = "disabled";
+		};
+
+		mmc1: mmc@16020000 {
+			compatible = "starfive,jh7110-mmc";
+			reg = <0x0 0x16020000 0x0 0x10000>;
+			clocks = <&clkgen JH7110_SDIO1_CLK_AHB>,
+				 <&clkgen JH7110_SDIO1_CLK_SDCARD>;
+			clock-names = "biu","ciu";
+			resets = <&rstgen RSTN_U1_DW_SDIO_AHB>;
+			reset-names = "reset";
+			interrupts = <75>;
+			fifo-depth = <32>;
+			fifo-watermark-aligned;
+			data-addr = <0>;
+			starfive,sys-syscon = <&sys_syscon 0x9c 0x1 0x3e>;
+			status = "disabled";
+		};
+
 		gpioa: gpio@17020000 {
 			compatible = "starfive,jh7110-aon-pinctrl";
 			reg = <0x0 0x17020000 0x0 0x10000>;
