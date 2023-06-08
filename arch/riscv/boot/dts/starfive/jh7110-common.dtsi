@@ -174,3 +174,12 @@
 &spdif_transmitter {
 	status = "disabled";
 };
+
+&mailbox_contrl0 {
+	status = "okay";
+};
+
+&mailbox_client0 {
+	status = "okay";
+};
+
