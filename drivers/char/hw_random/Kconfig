@@ -549,6 +549,17 @@ config HW_RANDOM_CN10K
 	 To compile this driver as a module, choose M here.
 	 The module will be called cn10k_rng. If unsure, say Y.
 
+config HW_RANDOM_STARFIVE
+	tristate "StarFive True Random Number Generator support"
+	depends on SOC_STARFIVE
+	depends on HW_RANDOM
+	help
+	  This driver provides kernel-side support for the Random Number
+	  Generator hardware found on StarFive SoCs.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called starfive-trng.
+
 endif # HW_RANDOM
 
 config UML_RANDOM
