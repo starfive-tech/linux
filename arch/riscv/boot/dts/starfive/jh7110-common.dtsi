@@ -183,3 +183,15 @@
 	status = "okay";
 };
 
+&jpu {
+	status = "okay";
+};
+
+&vpu_dec {
+	status = "okay";
+};
+
+&vpu_enc {
+	status = "okay";
+};
+
