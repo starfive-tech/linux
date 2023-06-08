@@ -21,6 +21,7 @@
 #include <linux/kernel.h>
 #include <linux/log2.h>
 #include <linux/module.h>
+#include <linux/mtd/spi-nor.h>
 #include <linux/of_device.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -46,6 +47,7 @@
 
 #define CQSPI_OP_WIDTH(part) ((part).nbytes ? ilog2((part).buswidth) : 0)
 
+
 struct cqspi_st;
 
 struct cqspi_flash_pdata {
@@ -62,8 +64,10 @@ struct cqspi_flash_pdata {
 struct cqspi_st {
 	struct platform_device	*pdev;
 	struct spi_master	*master;
-	struct clk		*clk;
 	unsigned int		sclk;
+	struct clk_bulk_data	clks[4];
+
+	struct reset_control	*qspi_rst;
 
 	void __iomem		*iobase;
 	void __iomem		*ahb_base;
@@ -276,6 +280,8 @@ struct cqspi_driver_platdata {
 #define CQSPI_DMA_UNALIGN		0x3
 
 #define CQSPI_REG_VERSAL_DMA_VAL		0x602
+
+#define CQSPI_READ_ID_FREQ			1000000
 
 static int cqspi_wait_for_bit(void __iomem *reg, const u32 mask, bool clr)
 {
@@ -1322,7 +1328,11 @@ static int cqspi_mem_process(struct spi_mem *mem, const struct spi_mem_op *op)
 	struct cqspi_flash_pdata *f_pdata;
 
 	f_pdata = &cqspi->f_pdata[mem->spi->chip_select];
-	cqspi_configure(f_pdata, mem->spi->max_speed_hz);
+
+	if (op->cmd.opcode == SPINOR_OP_RDID)
+		cqspi_configure(f_pdata, CQSPI_READ_ID_FREQ);
+	else
+		cqspi_configure(f_pdata, mem->spi->max_speed_hz);
 
 	if (op->data.dir == SPI_MEM_DATA_IN && op->data.buf.in) {
 		if (!op->addr.nbytes)
@@ -1499,6 +1509,7 @@ static void cqspi_controller_init(struct cqspi_st *cqspi)
 
 static int cqspi_request_mmap_dma(struct cqspi_st *cqspi)
 {
+	int ret;
 	dma_cap_mask_t mask;
 
 	dma_cap_zero(mask);
@@ -1506,7 +1517,7 @@ static int cqspi_request_mmap_dma(struct cqspi_st *cqspi)
 
 	cqspi->rx_chan = dma_request_chan_by_mask(&mask);
 	if (IS_ERR(cqspi->rx_chan)) {
-		int ret = PTR_ERR(cqspi->rx_chan);
+		ret = PTR_ERR(cqspi->rx_chan);
 
 		cqspi->rx_chan = NULL;
 		return dev_err_probe(&cqspi->pdev->dev, ret, "No Rx DMA available\n");
@@ -1514,6 +1525,49 @@ static int cqspi_request_mmap_dma(struct cqspi_st *cqspi)
 	init_completion(&cqspi->rx_dma_complete);
 
 	return 0;
+}
+
+static int cadence_quadspi_clk_init(struct platform_device *pdev, struct cqspi_st *cqspi)
+{
+	static struct clk *pclk;
+	int ret = 0;
+
+	cqspi->clks[0].id = "clk_apb";
+	cqspi->clks[1].id = "ahb1";
+	cqspi->clks[2].id = "clk_ahb";
+	cqspi->clks[3].id = "clk_ref";
+
+	ret = devm_clk_bulk_get(&pdev->dev, ARRAY_SIZE(cqspi->clks), cqspi->clks);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to get qspi clocks\n", __func__);
+		return ret;
+	}
+
+	ret = clk_bulk_prepare_enable(ARRAY_SIZE(cqspi->clks), cqspi->clks);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable qspi clocks\n");
+		goto disable_clk;
+	}
+
+	pclk = devm_clk_get(&pdev->dev, "clk_src");
+	if (IS_ERR(pclk)) {
+		dev_err(&pdev->dev, "clock get error for %s: %li\n",
+			"clk_src", PTR_ERR(pclk));
+
+		goto disable_clk;
+	}
+	ret = clk_set_parent(cqspi->clks[3].clk, pclk);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set parent of CLK_QSPI_REF\n", __func__);
+		goto disable_clk;
+	}
+
+	return 0;
+
+disable_clk:
+	clk_bulk_disable_unprepare(ARRAY_SIZE(cqspi->clks), cqspi->clks);
+
+	return ret;
 }
 
 static const char *cqspi_get_name(struct spi_mem *mem)
@@ -1575,7 +1629,6 @@ static int cqspi_setup_flash(struct cqspi_st *cqspi)
 static int cqspi_probe(struct platform_device *pdev)
 {
 	const struct cqspi_driver_platdata *ddata;
-	struct reset_control *rstc, *rstc_ocp;
 	struct device *dev = &pdev->dev;
 	struct spi_master *master;
 	struct resource *res_ahb;
@@ -1608,12 +1661,9 @@ static int cqspi_probe(struct platform_device *pdev)
 	}
 
 	/* Obtain QSPI clock. */
-	cqspi->clk = devm_clk_get(dev, NULL);
-	if (IS_ERR(cqspi->clk)) {
-		dev_err(dev, "Cannot claim QSPI clock.\n");
-		ret = PTR_ERR(cqspi->clk);
-		return ret;
-	}
+	ret = cadence_quadspi_clk_init(pdev, cqspi);
+	if (ret)
+		goto probe_clk_failed;
 
 	/* Obtain and remap controller address. */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1647,34 +1697,19 @@ static int cqspi_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto probe_pm_failed;
 
-	ret = clk_prepare_enable(cqspi->clk);
-	if (ret) {
-		dev_err(dev, "Cannot enable QSPI clock.\n");
-		goto probe_clk_failed;
-	}
 
 	/* Obtain QSPI reset control */
-	rstc = devm_reset_control_get_optional_exclusive(dev, "qspi");
-	if (IS_ERR(rstc)) {
-		ret = PTR_ERR(rstc);
+	cqspi->qspi_rst = devm_reset_control_array_get_exclusive(&pdev->dev);
+	if (IS_ERR(cqspi->qspi_rst)) {
+		ret = PTR_ERR(cqspi->qspi_rst);
 		dev_err(dev, "Cannot get QSPI reset.\n");
 		goto probe_reset_failed;
 	}
 
-	rstc_ocp = devm_reset_control_get_optional_exclusive(dev, "qspi-ocp");
-	if (IS_ERR(rstc_ocp)) {
-		ret = PTR_ERR(rstc_ocp);
-		dev_err(dev, "Cannot get QSPI OCP reset.\n");
-		goto probe_reset_failed;
-	}
+	reset_control_assert(cqspi->qspi_rst);
+	reset_control_deassert(cqspi->qspi_rst);
 
-	reset_control_assert(rstc);
-	reset_control_deassert(rstc);
-
-	reset_control_assert(rstc_ocp);
-	reset_control_deassert(rstc_ocp);
-
-	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->clk);
+	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->clks[3].clk);
 	master->max_speed_hz = cqspi->master_ref_clk_hz;
 
 	/* write completion is supported by default */
@@ -1737,9 +1772,10 @@ static int cqspi_probe(struct platform_device *pdev)
 probe_setup_failed:
 	cqspi_controller_enable(cqspi, 0);
 probe_reset_failed:
-	clk_disable_unprepare(cqspi->clk);
+	clk_bulk_disable_unprepare(ARRAY_SIZE(cqspi->clks), cqspi->clks);
 probe_clk_failed:
 	pm_runtime_put_sync(dev);
+	pm_runtime_disable(dev);
 probe_pm_failed:
 	pm_runtime_disable(dev);
 	return ret;
@@ -1755,7 +1791,7 @@ static int cqspi_remove(struct platform_device *pdev)
 	if (cqspi->rx_chan)
 		dma_release_channel(cqspi->rx_chan);
 
-	clk_disable_unprepare(cqspi->clk);
+	clk_bulk_disable_unprepare(ARRAY_SIZE(cqspi->clks), cqspi->clks);
 
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -1772,8 +1808,6 @@ static int cqspi_suspend(struct device *dev)
 	ret = spi_master_suspend(master);
 	cqspi_controller_enable(cqspi, 0);
 
-	clk_disable_unprepare(cqspi->clk);
-
 	return ret;
 }
 
@@ -1782,7 +1816,6 @@ static int cqspi_resume(struct device *dev)
 	struct cqspi_st *cqspi = dev_get_drvdata(dev);
 	struct spi_master *master = dev_get_drvdata(dev);
 
-	clk_prepare_enable(cqspi->clk);
 	cqspi_wait_idle(cqspi);
 	cqspi_controller_init(cqspi);
 
