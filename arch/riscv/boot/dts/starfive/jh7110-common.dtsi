@@ -161,6 +161,26 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4_pins>;
 	status = "okay";
+
+	sc2235: sc2235@30 {
+		compatible = "smartsens,sc2235";
+		reg = <0x30>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+
+		port {
+			/* Parallel bus endpoint */
+			sc2235_to_parallel: endpoint {
+				remote-endpoint = <&parallel_from_sc2235>;
+				bus-type = <5>;      /* Parallel */
+				bus-width = <8>;
+				data-shift = <2>; /* lines 13:6 are used */
+				hsync-active = <1>;
+				vsync-active = <1>;
+				pclk-sample = <1>;
+			};
+		};
+	};
 };
 
 &i2c5 {
@@ -183,6 +203,64 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c6_pins>;
 	status = "okay";
+
+	ov4689: ov4689@36 {
+		compatible = "ovti,ov4689";
+		reg = <0x36>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		//reset-gpio = <&gpio 18 0>;
+		rotation = <180>;
+
+		port {
+			/* Parallel bus endpoint */
+			ov4689_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_ov4689>;
+				bus-type = <4>;		/* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+
+	imx219: imx219@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		reset-gpio = <&gpio 10 0>;
+		//DOVDD-supply = <&v2v8>;
+		rotation = <0>;
+		orientation = <1>; //CAMERA_ORIENTATION_BACK
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <1 1 1>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+	imx708: imx708@1a {
+		compatible = "sony,imx708";
+		reg = <0x1a>;
+		clocks = <&clk_ext_camera>;
+		reset-gpio = <&gpio 10 0>;
+
+		port {
+			imx708_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx708>;
+				data-lanes = <1 2>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <450000000>;
+			};
+		};
+	};
 };
 
 &spdif_transmitter {
@@ -269,4 +347,69 @@
 &cpu4 {
 	/delete-property/ clocks;
 	/delete-property/ clock-names;
+};
+
+&vin_sysctl {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Parallel bus endpoint */
+			parallel_from_sc2235: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&sc2235_to_parallel>;
+				bus-type = <5>;		/* Parallel */
+				bus-width = <8>;
+				data-shift = <2>;	/* lines 9:2 are used */
+				hsync-active = <1>;
+				vsync-active = <0>;
+				pclk-sample = <1>;
+				status = "okay";
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_ov4689: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&ov4689_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				status = "okay";
+			};
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_imx219: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&imx219_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <1 1 1>;
+				status = "okay";
+			};
+
+			csi2rx0_from_imx708: endpoint@2 {
+				reg = <2>;
+				remote-endpoint = <&imx708_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <1 1 1>;
+				status = "okay";
+			};
+		};
+	};
 };
