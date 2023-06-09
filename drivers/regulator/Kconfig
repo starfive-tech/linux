@@ -1335,6 +1335,16 @@ config REGULATOR_SM5703
 	  This driver provides support for voltage regulators of SM5703
 	  multi-function device.
 
+config REGULATOR_STARFIVE_JH7110
+	tristate "Starfive JH7110 PMIC"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say y here to select this option to enable the power regulator of
+	  Starfive JH7110 PMIC.
+	  This driver supports the control of different power rails of device
+	  through regulator interface.
+
 config REGULATOR_STM32_BOOSTER
 	tristate "STMicroelectronics STM32 BOOSTER"
 	depends on ARCH_STM32 || COMPILE_TEST
