@@ -221,3 +221,11 @@
 		reg = <0>;
 	};
 };
+
+&usbdrd30 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_pins>;
+	dr_mode = "host"; /*host or peripheral*/
+	status = "disabled";
+};
+

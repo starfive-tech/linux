@@ -29,6 +29,10 @@
 	sd-uhs-ddr50;
 	cap-sd-highspeed;
 	post-power-on-delay-ms = <200>;
+};
+
+&usbdrd30 {
+	xhci-lowmem-pool;
 	status = "okay";
 };
 
