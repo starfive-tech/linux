@@ -31,3 +31,13 @@
 	post-power-on-delay-ms = <200>;
 	status = "okay";
 };
+
+&phy0 {
+	rx-internal-delay-ps = <1900>;
+	tx-internal-delay-ps = <1350>;
+};
+
+&phy1 {
+	rxc-skew-ps = <1060>;
+	txc-skew-ps = <1800>;
+};

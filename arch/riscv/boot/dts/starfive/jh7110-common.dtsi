@@ -11,6 +11,8 @@
 / {
 	aliases {
 		gpio0 = &gpio;
+		ethernet0=&gmac0;
+		ethernet1=&gmac1;
 		serial0 = &uart0;
 		serial3 = &uart3;
 		i2c0 = &i2c0;
@@ -195,3 +197,27 @@
 	status = "okay";
 };
 
+&gmac0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	phy0: ethernet-phy@0 {
+		rxc_dly_en = <1>;
+		tx_delay_sel_fe = <5>;
+		tx_delay_sel = <0xb>;
+		tx_inverted_10 = <0x0>;
+		tx_inverted_100 = <0x0>;
+		tx_inverted_1000 = <0x0>;
+	};
+};
+
+&gmac1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	phy1: ethernet-phy@1 {
+		rxc-skew-ps = <1060>;
+		txc-skew-ps = <1800>;
+		reg = <0>;
+	};
+};
