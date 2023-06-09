@@ -999,5 +999,20 @@
 			#thermal-sensor-cells = <0>;
 			status = "disabled";
 		};
+
+		wdog: wdog@13070000 {
+			compatible = "starfive,jh7110-wdt";
+			reg = <0x0 0x13070000 0x0 0x10000>;
+			interrupts = <68>;
+			interrupt-names = "wdog";
+			clocks = <&clkgen JH7110_DSKIT_WDT_CLK_WDT>,
+				 <&clkgen JH7110_DSKIT_WDT_CLK_APB>;
+			clock-names = "core_clk", "apb_clk";
+			resets = <&rstgen RSTN_U0_DSKIT_WDT_APB>,
+				 <&rstgen RSTN_U0_DSKIT_WDT_CORE>;
+			reset-names = "rst_apb", "rst_core";
+			timeout-sec = <15>;
+			status = "okay";
+		};
 	};
 };
