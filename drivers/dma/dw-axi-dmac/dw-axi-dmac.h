@@ -33,6 +33,7 @@ struct dw_axi_dma_hcfg {
 	/* Register map for DMAX_NUM_CHANNELS <= 8 */
 	bool	reg_map_8_channels;
 	bool	restrict_axi_burst_len;
+	bool	use_cfg2;
 };
 
 struct axi_dma_chan {
@@ -69,6 +70,7 @@ struct axi_dma_chip {
 	void __iomem		*apb_regs;
 	struct clk		*core_clk;
 	struct clk		*cfgr_clk;
+	struct clk		*noc_clk;
 	struct dw_axi_dma	*dw;
 };
 
@@ -281,6 +283,9 @@ enum {
 #define CH_CTL_L_SRC_MAST		BIT(0)
 
 /* CH_CFG_H */
+#define CH_CFG_H_DST_OSR_LMT_POS	27
+#define CH_CFG_H_SRC_OSR_LMT_POS	23
+#define CH_CFG_H_MAX_OSR_LMT		0xf
 #define CH_CFG_H_PRIORITY_POS		17
 #define CH_CFG_H_DST_PER_POS		12
 #define CH_CFG_H_SRC_PER_POS		7
