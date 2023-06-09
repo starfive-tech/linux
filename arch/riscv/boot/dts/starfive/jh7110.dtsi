@@ -440,6 +440,26 @@
 			status = "disabled";
 		};
 
+		dma: dma-controller@16050000 {
+			compatible = "starfive,jh7110-axi-dma";
+			reg = <0x0 0x16050000 0x0 0x10000>;
+			clocks = <&clkgen JH7110_DMA1P_CLK_AXI>,
+				 <&clkgen JH7110_DMA1P_CLK_AHB>,
+				 <&clkgen JH7110_NOC_BUS_CLK_STG_AXI>;
+			clock-names = "core-clk", "cfgr-clk", "noc-clk";
+			resets = <&rstgen RSTN_U0_DW_DMA1P_AXI>,
+				 <&rstgen RSTN_U0_DW_DMA1P_AHB>,
+				 <&rstgen RSTN_U0_NOC_BUS_STG_AXI_N>;
+			interrupts = <73>;
+			#dma-cells = <1>;
+			dma-channels = <4>;
+			snps,dma-masters = <1>;
+			snps,data-width = <3>;
+			snps,block-size = <65536 65536 65536 65536>;
+			snps,priority = <0 1 2 3>;
+			snps,axi-max-burst-len = <15>;
+		};
+
 		gpioa: gpio@17020000 {
 			compatible = "starfive,jh7110-aon-pinctrl";
 			reg = <0x0 0x17020000 0x0 0x10000>;
