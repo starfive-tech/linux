@@ -1030,5 +1030,46 @@
 			rtc,cal-clock-freq = <1000000>;
 			status = "okay";
 		};
+
+		clkisp: clock-controller@19810000 {
+			compatible = "starfive,jh7110-clk-isp";
+			reg = <0x0 0x19810000 0x0 0x10000>;
+			reg-names = "isp";
+			#clock-cells = <1>;
+			clocks = <&clkgen JH7110_ISP_TOP_CLK_DVP>,
+				 <&clkgen JH7110_ISP_TOP_CLK_ISPCORE_2X>,
+				 <&clkgen JH7110_ISP_TOP_CLK_ISP_AXI>,
+				 <&clkgen JH7110_NOC_BUS_CLK_ISP_AXI>;
+			clock-names = "u0_dom_isp_top_clk_dom_isp_top_clk_dvp",
+				      "u0_dom_isp_top_clk_dom_isp_top_clk_ispcore_2x",
+				      "u0_dom_isp_top_clk_dom_isp_top_clk_isp_axi",
+				      "u0_sft7110_noc_bus_clk_isp_axi";
+			resets = <&rstgen RSTN_U0_DOM_ISP_TOP_N>,
+				 <&rstgen RSTN_U0_DOM_ISP_TOP_AXI>,
+				 <&rstgen RSTN_U0_NOC_BUS_ISP_AXI_N>;
+			reset-names = "rst_isp_top_n", "rst_isp_top_axi",
+				      "rst_isp_noc_bus_n";
+			power-domains = <&pwrc JH7110_PD_ISP>;
+		};
+
+		clkvout: clock-controller@295C0000 {
+			compatible = "starfive,jh7110-clk-vout";
+			reg = <0x0 0x295C0000 0x0 0x10000>;
+			reg-names = "vout";
+			clocks = <&hdmitx0_pixelclk>,
+				 <&mipitx_dphy_rxesc>,
+				 <&mipitx_dphy_txbytehs>,
+				 <&clkgen JH7110_VOUT_SRC>,
+				 <&clkgen JH7110_VOUT_TOP_CLK_VOUT_AHB>;
+			clock-names = "hdmitx0_pixelclk",
+				      "mipitx_dphy_rxesc",
+				      "mipitx_dphy_txbytehs",
+				      "vout_src",
+				      "vout_top_ahb";
+			resets = <&rstgen RSTN_U0_DOM_VOUT_TOP_SRC>;
+			reset-names = "vout_src";
+			#clock-cells = <1>;
+			power-domains = <&pwrc JH7110_PD_VOUT>;
+		};
 	};
 };
