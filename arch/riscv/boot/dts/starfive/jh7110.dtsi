@@ -20,7 +20,28 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		cpu_opp: opp-table-0 {
+			compatible = "operating-points-v2";
+			opp-shared;
+			opp-375000000 {
+					opp-hz = /bits/ 64 <375000000>;
+					opp-microvolt = <800000>;
+			};
+			opp-500000000 {
+					opp-hz = /bits/ 64 <500000000>;
+					opp-microvolt = <800000>;
+			};
+			opp-750000000 {
+					opp-hz = /bits/ 64 <750000000>;
+					opp-microvolt = <800000>;
+					opp-suspend;
+			};
+			opp-1500000000 {
+					opp-hz = /bits/ 64 <1500000000>;
+					opp-microvolt = <1040000>;
+			};
 
+		};
 		cpu-map {
 			cluster0 {
 				core0 {
@@ -89,6 +110,9 @@
 			tlb-split;
 			#cooling-cells = <2>;
 			status = "okay";
+			operating-points-v2 = <&cpu_opp>;
+			clocks = <&clkgen JH7110_CPU_CORE>;
+			clock-names = "cpu";
 
 			cpu1intctrl: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -117,6 +141,9 @@
 			tlb-split;
 			#cooling-cells = <2>;
 			status = "okay";
+			operating-points-v2 = <&cpu_opp>;
+			clocks = <&clkgen JH7110_CPU_CORE>;
+			clock-names = "cpu";
 
 			cpu2intctrl: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -145,6 +172,9 @@
 			tlb-split;
 			#cooling-cells = <2>;
 			status = "okay";
+			operating-points-v2 = <&cpu_opp>;
+			clocks = <&clkgen JH7110_CPU_CORE>;
+			clock-names = "cpu";
 
 			cpu3intctrl: interrupt-controller {
 				#interrupt-cells = <1>;
@@ -173,6 +203,9 @@
 			tlb-split;
 			#cooling-cells = <2>;
 			status = "okay";
+			operating-points-v2 = <&cpu_opp>;
+			clocks = <&clkgen JH7110_CPU_CORE>;
+			clock-names = "cpu";
 
 			cpu4intctrl: interrupt-controller {
 				#interrupt-cells = <1>;
