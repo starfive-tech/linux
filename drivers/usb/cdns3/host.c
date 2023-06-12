@@ -24,6 +24,19 @@
 #define CFG_RXDET_P3_EN		BIT(15)
 #define LPM_2_STB_SWITCH_EN	BIT(25)
 
+#ifdef CONFIG_PM_SLEEP
+struct cdns_hiber_data {
+	struct usb_hcd *hcd;
+	struct usb_hcd *shared_hcd;
+	struct notifier_block pm_notifier;
+	int (*pm_setup)(struct usb_hcd *hcd);
+	int (*pm_remove)(struct cdns *cdns);
+	bool notify_registered;
+};
+
+static struct cdns_hiber_data cdns3_hiber_data;
+#endif
+
 static void xhci_cdns3_plat_setup(struct usb_hcd *hcd)
 {
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
@@ -67,15 +80,6 @@ static const struct xhci_plat_priv xhci_plat_cdns3_xhci = {
 };
 
 #ifdef CONFIG_PM_SLEEP
-struct cdns_hiber_data {
-	struct usb_hcd *hcd;
-	struct usb_hcd *shared_hcd;
-	struct notifier_block pm_notifier;
-	int (*pm_setup)(struct usb_hcd *hcd);
-	int (*pm_remove)(struct cdns *cdns);
-};
-static struct cdns_hiber_data cdns3_hiber_data;
-
 static int cdns_hiber_notifier(struct notifier_block *nb, unsigned long action,
 			void *data)
 {
@@ -88,14 +92,15 @@ static int cdns_hiber_notifier(struct notifier_block *nb, unsigned long action,
 			usb_hcd_resume_root_hub(hcd);
 			usb_disable_autosuspend(hcd->self.root_hub);
 		}
-		if (shared_hcd->state == HC_STATE_SUSPENDED) {
+		if (shared_hcd && shared_hcd->state == HC_STATE_SUSPENDED) {
 			usb_hcd_resume_root_hub(shared_hcd);
 			usb_disable_autosuspend(shared_hcd->self.root_hub);
 		}
 		break;
 	case PM_POST_RESTORE:
 		usb_enable_autosuspend(hcd->self.root_hub);
-		usb_enable_autosuspend(shared_hcd->self.root_hub);
+		if (shared_hcd)
+			usb_enable_autosuspend(shared_hcd->self.root_hub);
 		break;
 	default:
 		break;
@@ -107,11 +112,25 @@ static int cdns_hiber_notifier(struct notifier_block *nb, unsigned long action,
 static int cdns_register_pm_notifier(struct usb_hcd *hcd)
 {
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	int ret;
+
+	if (!xhci->main_hcd)
+		return 0;
+
+	if (xhci->shared_hcd)
+		cdns3_hiber_data.shared_hcd = xhci->shared_hcd;
+
+	if (cdns3_hiber_data.notify_registered)
+		return 0;
 
 	cdns3_hiber_data.hcd = xhci->main_hcd;
-	cdns3_hiber_data.shared_hcd = xhci->shared_hcd;
 	cdns3_hiber_data.pm_notifier.notifier_call = cdns_hiber_notifier;
-	return register_pm_notifier(&cdns3_hiber_data.pm_notifier);
+	ret = register_pm_notifier(&cdns3_hiber_data.pm_notifier);
+	if (ret)
+		return ret;
+	cdns3_hiber_data.notify_registered = 1;
+
+	return 0;
 }
 
 static int cdns_unregister_pm_notifier(struct cdns *cdns)
@@ -120,6 +139,7 @@ static int cdns_unregister_pm_notifier(struct cdns *cdns)
 
 	ret = unregister_pm_notifier(&cdns3_hiber_data.pm_notifier);
 
+	cdns3_hiber_data.notify_registered = 0;
 	cdns3_hiber_data.hcd = NULL;
 	cdns3_hiber_data.shared_hcd = NULL;
 
