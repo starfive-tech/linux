@@ -10,6 +10,7 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <asm/kvm_host.h>
+#include <linux/suspend.h>
 #include <asm/thread_info.h>
 #include <asm/ptrace.h>
 #include <asm/cpu_ops_sbi.h>
@@ -115,6 +116,9 @@ void asm_offsets(void)
 	OFFSET(PT_CAUSE, pt_regs, cause);
 
 	OFFSET(SUSPEND_CONTEXT_REGS, suspend_context, regs);
+        OFFSET(HIBERN_PBE_ADDR, pbe, address);
+        OFFSET(HIBERN_PBE_ORIG, pbe, orig_address);
+        OFFSET(HIBERN_PBE_NEXT, pbe, next);
 
 	OFFSET(KVM_ARCH_GUEST_ZERO, kvm_vcpu_arch, guest_context.zero);
 	OFFSET(KVM_ARCH_GUEST_RA, kvm_vcpu_arch, guest_context.ra);
