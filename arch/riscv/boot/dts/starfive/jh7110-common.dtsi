@@ -250,3 +250,23 @@
 &sfctemp {
 	status = "okay";
 };
+
+&cpu1 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu2 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu3 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu4 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
