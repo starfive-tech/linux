@@ -1,0 +1,37 @@
+/ {
+	sound5: snd-card5 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-TDM-Sound-Card";
+		simple-audio-card,widgets = "Microphone", "Mic Jack",
+					    "Line", "Line In",
+					    "Line", "Line Out",
+					    "Speaker", "Speaker",
+					    "Headphone", "Headphone Jack";
+		simple-audio-card,routing = "Headphone Jack", "HP_L",
+					    "Headphone Jack", "HP_R",
+					    "Speaker", "SPK_LP",
+					    "Speaker", "SPK_LN",
+					    "LINPUT1", "Mic Jack",
+					    "LINPUT3", "Mic Jack",
+					    "RINPUT1", "Mic Jack",
+					    "RINPUT2", "Mic Jack";
+
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "dsp_a";
+			bitclock-master = <&dailink_master>;
+			frame-master = <&dailink_master>;
+
+			cpu {
+				sound-dai = <&tdm>;
+			};
+			dailink_master: codec {
+				sound-dai = <&wm8960>;
+				clocks = <&wm8960_mclk>;
+			};
+		};
+	};
+};
