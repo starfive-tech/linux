@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+comment "Starfive media platform drivers"
+
+config VIN_SENSOR_OV5640
+	tristate "VIN SENSOR support OV5640"
+	depends on VIDEO_STF_VIN
+	select V4L2_FWNODE
+	default n
+	help
+	  Say Y here if you want to have support for VIN sensor OV5640
+
+config VIN_SENSOR_SC2235
+	tristate "VIN SENSOR support SC2235"
+	depends on VIDEO_STF_VIN
+	select V4L2_FWNODE
+	default n
+	help
+	  Say Y here if you want to have support for VIN sensor SC2235
+
+config VIN_SENSOR_OV4689
+	tristate "VIN SENSOR support OV4689"
+	depends on VIDEO_STF_VIN
+	select V4L2_FWNODE
+	default n
+
+	help
+	  Say Y here if you want to have support for VIN sensor OV4689
+
+config VIN_SENSOR_OV13850
+	bool "VIN SENSOR support OV13850"
+	depends on VIDEO_STF_VIN
+	select V4L2_FWNODE
+	default n
+	help
+	  Say Y here if you want to have support for VIN sensor OV13850
+
+config VIN_SENSOR_IMX219
+	tristate "VIN SENSOR support IMX219"
+	depends on VIDEO_STF_VIN
+	select V4L2_FWNODE
+	default n
+	help
+	  Say Y here if you want to have support for VIN sensor IMX219
+
+config VIDEO_STF_VIN
+	tristate "starfive VIC video in support"
+	depends on V4L_PLATFORM_DRIVERS
+	depends on VIDEO_DEV
+	select MEDIA_CONTROLLER
+	select VIDEOBUF2_DMA_CONTIG
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  To compile this driver as a module, choose M here: the module
+	  will be called stf-vin.
