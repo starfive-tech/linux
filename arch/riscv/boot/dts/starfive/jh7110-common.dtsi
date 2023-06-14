@@ -424,3 +424,8 @@
 &xrp {
 	status = "okay";
 };
+
+&pwmdac {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwmdac0_pins>;
+};
