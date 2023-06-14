@@ -45,3 +45,7 @@
 	rxc-skew-ps = <1060>;
 	txc-skew-ps = <1800>;
 };
+
+&pcie1 {
+	status = "okay";
+};
