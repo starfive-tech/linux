@@ -368,6 +368,10 @@
 	status = "disabled";
 };
 
+&gpu {
+	status = "okay";
+};
+
 &usbdrd30 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb_pins>;
