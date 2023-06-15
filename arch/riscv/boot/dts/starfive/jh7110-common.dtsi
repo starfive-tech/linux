@@ -270,8 +270,9 @@
 	};
 };
 
-&spdif_transmitter {
-	status = "disabled";
+&spdif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spdif0_pins>;
 };
 
 &mailbox_contrl0 {
