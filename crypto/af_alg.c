@@ -834,6 +834,7 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
 	struct af_alg_control con = {};
 	long copied = 0;
 	bool enc = false;
+	int op = 0;
 	bool init = false;
 	int err = 0;
 
@@ -844,11 +845,11 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
 
 		init = true;
 		switch (con.op) {
+		case ALG_OP_VERIFY:
+		case ALG_OP_SIGN:
 		case ALG_OP_ENCRYPT:
-			enc = true;
-			break;
 		case ALG_OP_DECRYPT:
-			enc = false;
+			op = con.op;
 			break;
 		default:
 			return -EINVAL;
@@ -872,7 +873,7 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
 	ctx->init = true;
 
 	if (init) {
-		ctx->enc = enc;
+		ctx->op = op;
 		if (con.iv)
 			memcpy(ctx->iv, con.iv->iv, ivsize);
 
