@@ -16,6 +16,23 @@ config SND_SOC_JH7110_PWMDAC
 	 Say Y or M if you want to add support for StarFive JH7110
 	 PWM-DAC driver.
 
+config SND_SOC_JH7110_SPDIF
+	tristate "JH7110 SPDIF module"
+	depends on HAVE_CLK && SND_SOC_STARFIVE
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for SPDIF driver of StarFive
+	  JH7110 SoC.
+
+config SND_SOC_JH7110_SPDIF_PCM
+	bool "PCM PIO extension for JH7110 SPDIF"
+	depends on SND_SOC_JH7110_SPDIF
+	default y if SND_SOC_JH7110_SPDIF
+	help
+	  Say Y or N if you want to add a custom ALSA extension that registers
+	  a PCM and uses PIO to transfer data.
+
 config SND_SOC_JH7110_TDM
 	tristate "JH7110 TDM device driver"
 	depends on HAVE_CLK && SND_SOC_STARFIVE
