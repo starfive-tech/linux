@@ -1,0 +1,28 @@
+/ {
+	spdif_transmitter: spdif_transmitter {
+		compatible = "linux,spdif-dit";
+		#sound-dai-cells = <0>;
+	};
+
+	sound4: snd-card4 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-SPDIF-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "left_j";
+			bitclock-master = <&sndcpu0>;
+			frame-master = <&sndcpu0>;
+
+			sndcpu0: cpu {
+				sound-dai = <&spdif>;
+			};
+
+			codec {
+				sound-dai = <&spdif_transmitter>;
+			};
+		};
+	};
+};
