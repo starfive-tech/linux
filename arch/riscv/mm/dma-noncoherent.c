@@ -29,8 +29,6 @@ void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size, enum dma_data_directi
 {
 	switch (dir) {
 	case DMA_BIDIRECTIONAL:
-		sbi_cache_flush(paddr, size);
-		break;
 	case DMA_FROM_DEVICE:
 		sbi_cache_invalidate(paddr, size);
 		break;
