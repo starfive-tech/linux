@@ -1,0 +1,109 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/verisilicon/verisilicon-dc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: StarFive SoC display controller
+
+description:
+  The StarFive SoC uses the display controller based on Verisilicon IP 
+  to transfer the image data from a video memory
+  buffer to an external LCD interface.
+
+maintainers:
+  - Keith Zhao <keith.zhao@starfivetech.com>
+
+properties:
+  compatible:
+    const: verisilicon,dc8200
+
+  reg:
+    maxItems: 3
+
+  interrupts:
+    items:
+      - description: The interrupt will be generated when DC finish one frame
+
+  clocks:
+    items:
+      - description: Clock for display system noc bus.
+      - description: Pixel clock for display channel 0.
+      - description: Pixel clock for display channel 1.
+      - description: Clock for axi interface of display controller.
+      - description: Core clock for display controller.
+      - description: Clock for ahb interface of display controller.
+      - description: External HDMI pixel clock.
+      - description: Parent clock for pixel clock
+
+  clock-names:
+    items:
+      - const: clk_vout_noc_disp
+      - const: clk_vout_pix0
+      - const: clk_vout_pix1
+      - const: clk_vout_axi
+      - const: clk_vout_core
+      - const: clk_vout_vout_ahb
+      - const: hdmitx0_pixel
+      - const: clk_vout_dc8200
+
+  resets:
+    items:
+      - description: Reset for axi interface of display controller.
+      - description: Reset for ahb interface of display controller.
+      - description: Core reset of display controller.
+
+  reset-names:
+    items:
+      - const: rst_vout_axi
+      - const: rst_vout_ahb
+      - const: rst_vout_core
+
+  port:
+    $ref: /schemas/graph.yaml#/properties/port
+    description:
+      Port node with one endpoint connected to a hdmi node.
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - clock-names
+  - resets
+  - reset-names
+  - port
+
+additionalProperties: false
+
+examples:
+  - |
+    dc8200: dc8200@29400000 {
+      compatible = "verisilicon,dc8200";
+      reg = <0x29400000 0x100>,
+            <0x29400800 0x2000>,
+            <0x295B0000 0x90>;
+      interrupts = <95>;
+      clocks = <&syscrg 60>,
+               <&voutcrg 7>,
+               <&voutcrg 8>,
+               <&voutcrg 4>,
+               <&voutcrg 5>,
+               <&voutcrg 6>,
+               <&hdmitx0_pixelclk>,
+               <&voutcrg 1>;
+      clock-names = "clk_vout_noc_disp", "clk_vout_pix0", "clk_vout_pix1", "clk_vout_axi",
+                    "clk_vout_core", "clk_vout_vout_ahb", "hdmitx0_pixel","clk_vout_dc8200";
+      resets = <&voutcrg 0>,
+               <&voutcrg 1>,
+               <&voutcrg 2>;
+      reset-names = "rst_vout_axi","rst_vout_ahb","rst_vout_core";
+      dc_out: port {
+          #address-cells = <1>;
+          #size-cells = <0>;
+          dc_out_dpi0: endpoint@0 {
+              reg = <0>;
+              remote-endpoint = <&hdmi_input>;
+          };
+      };
+    };
