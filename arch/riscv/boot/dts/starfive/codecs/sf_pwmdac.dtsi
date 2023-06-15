@@ -1,0 +1,28 @@
+/ {
+	pwmdac_codec: pwmdac-transmitter {
+		compatible = "starfive,jh7110-pwmdac-dit";
+		#sound-dai-cells = <0>;
+	};
+
+	sound3: snd-card3 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-PWMDAC-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "left_j";
+			bitclock-master = <&sndcpu0>;
+			frame-master = <&sndcpu0>;
+
+			sndcpu0: cpu {
+				sound-dai = <&pwmdac>;
+			};
+
+			codec {
+				sound-dai = <&pwmdac_codec>;
+			};
+		};
+	};
+};
