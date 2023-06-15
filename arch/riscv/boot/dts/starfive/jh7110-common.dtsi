@@ -99,6 +99,18 @@
        status = "disabled";
 };
 
+&can0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0_pins>;
+	status = "disabled";
+};
+
+&can1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1_pins>;
+	status = "disabled";
+};
+
 &crypto {
 	status = "okay";
 };
