@@ -99,6 +99,14 @@
        status = "disabled";
 };
 
+&crypto {
+	status = "okay";
+};
+
+&sec_dma {
+	status = "okay";
+};
+
 &trng {
 	status = "okay";
 };

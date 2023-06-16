@@ -52,9 +52,13 @@ struct af_alg_iv {
 #define ALG_SET_AEAD_ASSOCLEN		4
 #define ALG_SET_AEAD_AUTHSIZE		5
 #define ALG_SET_DRBG_ENTROPY		6
+#define ALG_SET_PUBKEY			7
 
 /* Operations */
 #define ALG_OP_DECRYPT			0
 #define ALG_OP_ENCRYPT			1
+#define ALG_OP_SIGN			2
+#define ALG_OP_VERIFY			3
+
 
 #endif	/* _LINUX_IF_ALG_H */
