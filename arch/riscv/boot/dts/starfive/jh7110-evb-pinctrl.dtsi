@@ -196,6 +196,58 @@
 		};
 	};
 
+	can0_pins: can0-pins {
+		can0-pins0 {
+			starfive,pins = <PAD_GPIO30>;
+			starfive,pinmux = <PAD_GPIO30_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1))>;
+			starfive,pin-gpio-dout = <GPO_CAN0_CTRL_TXD>;
+			starfive,pin-gpio-doen = <OEN_LOW>;
+		};
+
+		can0-pins1 {
+			starfive,pins = <PAD_GPIO31>;
+			starfive,pinmux = <PAD_GPIO31_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1))>;
+			starfive,pin-gpio-doen = <OEN_HIGH>;
+			starfive,pin-gpio-din =  <GPI_CAN0_CTRL_RXD>;
+		};
+
+		can0-pins2 {
+			starfive,pins = <PAD_GPIO32>;
+			starfive,pinmux = <PAD_GPIO32_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1))>;
+			starfive,pin-gpio-dout = <GPO_CAN0_CTRL_STBY>;
+			starfive,pin-gpio-doen = <OEN_LOW>;
+		};
+	};
+
+	can1_pins: can1-pins {
+		can1-pins0 {
+			starfive,pins = <PAD_GPIO29>;
+			starfive,pinmux = <PAD_GPIO29_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1)| GPIO_DS(3))>;
+			starfive,pin-gpio-dout = <GPO_CAN1_CTRL_TXD>;
+			starfive,pin-gpio-doen = <OEN_LOW>;
+		};
+
+		can1-pins1 {
+			starfive,pins = <PAD_GPIO27>;
+			starfive,pinmux = <PAD_GPIO27_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1)| GPIO_DS(3))>;
+			starfive,pin-gpio-doen = <OEN_HIGH>;
+			starfive,pin-gpio-din =  <GPI_CAN1_CTRL_RXD>;
+		};
+
+		can1-pins2 {
+			starfive,pins = <PAD_GPIO45>;
+			starfive,pinmux = <PAD_GPIO45_FUNC_SEL 0>;
+			starfive,pin-ioconfig = <IO(GPIO_IE(1))>;
+			starfive,pin-gpio-dout = <GPO_CAN1_CTRL_STBY>;
+			starfive,pin-gpio-doen = <OEN_LOW>;
+		};
+	};
+
 	i2c0_pins: i2c0-pins {
 		i2c0-pins-scl {
 			starfive,pins = <PAD_GPIO57>;
