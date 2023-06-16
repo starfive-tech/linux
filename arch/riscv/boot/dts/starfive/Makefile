@@ -7,4 +7,5 @@ dtb-$(CONFIG_SOC_STARFIVE_JH7110) += jh7110-evb.dtb \
 				     jh7110-evb-uart4-emmc-spdif.dtb \
 				     jh7110-evb-uart5-pwm-i2c-tdm.dtb \
 				     jh7110-evb-dvp-rgb2hdmi.dtb \
-				     jh7110-evb-can-pdm-pwmdac.dtb
+				     jh7110-evb-can-pdm-pwmdac.dtb \
+				     jh7110-evb-i2s-ac108.dtb
