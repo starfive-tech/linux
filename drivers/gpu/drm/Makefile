@@ -149,3 +149,4 @@ obj-$(CONFIG_DRM_HYPERV) += hyperv/
 obj-y			+= solomon/
 obj-$(CONFIG_DRM_SPRD) += sprd/
 obj-$(CONFIG_DRM_VERISILICON) += verisilicon/
+obj-$(CONFIG_DRM_IMG) += img/
