@@ -490,6 +490,114 @@
 			status = "disabled";
 		};
 
+		i2srx_mst: i2srx_mst@100e0000 {
+			compatible = "starfive,jh7110-i2srx-master";
+			reg = <0x0 0x100e0000 0x0 0x1000>;
+			clocks = <&clkgen JH7110_APB0>,
+				 <&clkgen JH7110_I2SRX0_3CH_CLK_APB>,
+				 <&clkgen JH7110_I2SRX_3CH_BCLK_MST>,
+				 <&clkgen JH7110_I2SRX_3CH_LRCK_MST>,
+				 <&clkgen JH7110_I2SRX0_3CH_BCLK>,
+				 <&clkgen JH7110_I2SRX0_3CH_LRCK>,
+				 <&clkgen JH7110_MCLK>,
+				 <&mclk_ext>;
+			clock-names = "apb0", "apb",
+				      "bclk_mst", "lrck_mst",
+				      "bclk", "lrck",
+				      "mclk", "mclk_ext";
+			resets = <&rstgen RSTN_U0_I2SRX_3CH_APB>,
+				 <&rstgen RSTN_U0_I2SRX_3CH_BCLK>;
+			reset-names = "apb", "bclk";
+			dmas = <&dma 24>;
+			dma-names = "rx";
+			starfive,sys-syscon = <&sys_syscon 0x18 0x34>;
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2srx_3ch: i2srx_3ch@100e0000 {
+			compatible = "starfive,jh7110-i2srx";
+			reg = <0x0 0x100e0000 0x0 0x1000>;
+			clocks = <&clkgen JH7110_APB0>,
+				 <&clkgen JH7110_I2SRX0_3CH_CLK_APB>,
+				 <&clkgen JH7110_AUDIO_ROOT>,
+				 <&clkgen JH7110_MCLK_INNER>,
+				 <&clkgen JH7110_I2SRX_3CH_BCLK_MST>,
+				 <&clkgen JH7110_I2SRX_3CH_LRCK_MST>,
+				 <&clkgen JH7110_I2SRX0_3CH_BCLK>,
+				 <&clkgen JH7110_I2SRX0_3CH_LRCK>,
+				 <&clkgen JH7110_MCLK>,
+				 <&mclk_ext>,
+				 <&i2srx_bclk_ext>,
+				 <&i2srx_lrck_ext>;
+			clock-names = "apb0", "apb",
+				      "audioroot", "mclk_inner",
+				      "bclk_mst", "lrck_mst",
+				      "bclk", "lrck",
+				      "mclk", "mclk_ext",
+				      "bclk_ext", "lrck_ext";
+			resets = <&rstgen RSTN_U0_I2SRX_3CH_APB>,
+				 <&rstgen RSTN_U0_I2SRX_3CH_BCLK>;
+			dmas = <&dma 24>;
+			dma-names = "rx";
+			starfive,sys-syscon = <&sys_syscon 0x18 0x34>;
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2stx_4ch0: i2stx_4ch0@120b0000 {
+			compatible = "starfive,jh7110-i2stx-4ch0";
+			reg = <0x0 0x120b0000 0x0 0x1000>;
+			clocks = <&clkgen JH7110_MCLK_INNER>,
+				 <&clkgen JH7110_I2STX_4CH0_BCLK_MST>,
+				 <&clkgen JH7110_I2STX_4CH0_LRCK_MST>,
+				 <&clkgen JH7110_MCLK>,
+				 <&clkgen JH7110_I2STX0_4CHBCLK>,
+				 <&clkgen JH7110_I2STX0_4CHLRCK>,
+				 <&clkgen JH7110_I2STX0_4CHCLK_APB>,
+				 <&mclk_ext>;
+			clock-names = "mclk_inner", "bclk_mst",
+					"lrck_mst", "mclk",
+					"bclk", "lrck",
+					"apb", "mclk_ext";
+			resets = <&rstgen RSTN_U0_I2STX_4CH_APB>,
+				 <&rstgen RSTN_U0_I2STX_4CH_BCLK>;
+			reset-names = "apb", "bclk";
+			dmas = <&dma 47>;
+			dma-names = "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2stx_4ch1: i2stx_4ch1@120c0000 {
+			compatible = "starfive,jh7110-i2stx-4ch1";
+			reg = <0x0 0x120c0000 0x0 0x1000>;
+			clocks = <&clkgen JH7110_AUDIO_ROOT>,
+				 <&clkgen JH7110_MCLK_INNER>,
+				 <&clkgen JH7110_I2STX_4CH1_BCLK_MST>,
+				 <&clkgen JH7110_I2STX_4CH1_LRCK_MST>,
+				 <&clkgen JH7110_MCLK>,
+				 <&clkgen JH7110_I2STX1_4CHBCLK>,
+				 <&clkgen JH7110_I2STX1_4CHLRCK>,
+				 <&clkgen JH7110_MCLK_OUT>,
+				 <&clkgen JH7110_APB0>,
+				 <&clkgen JH7110_I2STX1_4CHCLK_APB>,
+				 <&mclk_ext>,
+				 <&i2stx_bclk_ext>,
+				 <&i2stx_lrck_ext>;
+			clock-names = "audroot", "mclk_inner", "bclk_mst",
+				      "lrck_mst", "mclk", "bclk",
+				      "lrck", "mclk_out",
+				      "apb0", "apb",
+				      "mclk_ext", "bclk_ext", "lrck_ext";
+			resets = <&rstgen RSTN_U1_I2STX_4CH_APB>,
+				 <&rstgen RSTN_U1_I2STX_4CH_BCLK>;
+			dmas = <&dma 48>;
+			dma-names = "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
 		gpio: gpio@13040000 {
 			compatible = "starfive,jh7110-sys-pinctrl";
 			reg = <0x0 0x13040000 0x0 0x10000>;
