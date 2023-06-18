@@ -18,3 +18,9 @@
 		priority = <224>;
 	};
 };
+
+&mdio {
+	phy: ethernet-phy@0 {
+		reg = <0>;
+	};
+};
