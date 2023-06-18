@@ -27,8 +27,10 @@ config ARCH_STARFIVE
 
 config SOC_STARFIVE
 	bool "StarFive SoCs"
+	select DMA_GLOBAL_POOL
 	select PINCTRL
 	select RESET_CONTROLLER
+	select RISCV_NONSTANDARD_CACHE_OPS
 	help
 	  This enables support for StarFive SoC platform hardware.
 
