@@ -1,0 +1,26 @@
+/ {
+	/* i2s + hdmi */
+	sound1: snd-card1 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-HDMI-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&sndi2s0>;
+			frame-master = <&sndi2s0>;
+			mclk-fs = <256>;
+			status = "okay";
+
+			sndi2s0: cpu {
+				sound-dai = <&i2stx_4ch0>;
+			};
+
+			codec {
+				sound-dai = <&hdmi>;
+			};
+		};
+	};
+};

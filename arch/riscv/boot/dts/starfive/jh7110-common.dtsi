@@ -7,6 +7,7 @@
 /dts-v1/;
 #include "jh7110.dtsi"
 #include "jh7110-evb-pinctrl.dtsi"
+#include "codecs/sf_hdmi.dtsi"
 
 / {
 	aliases {
@@ -142,6 +143,13 @@
 		reg = <0x1a>;
 		wlf,shared-lrclk;
 		#sound-dai-cells = <0>;
+	};
+
+	ac108: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
 	};
 };
 
@@ -479,6 +487,27 @@
 &pwmdac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwmdac0_pins>;
+};
+
+&i2srx_mst {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_clk_pins>;
+};
+
+&i2srx_3ch {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s_clk_pins &i2srx_pins>;
+};
+
+&i2stx_4ch0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mclk_ext_pins>;
+	status = "okay";
+};
+
+&i2stx_4ch1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2stx_pins>;
 };
 
 &display {
