@@ -22,7 +22,17 @@ static bool noncoherent_supported = true;
 
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size, enum dma_data_direction dir)
 {
-	sbi_cache_flush(paddr, size);
+	switch (dir) {
+	case DMA_BIDIRECTIONAL:
+	case DMA_TO_DEVICE:
+		sbi_cache_flush(paddr, size);
+		break;
+	case DMA_FROM_DEVICE:
+		sbi_cache_invalidate(paddr, size);
+		break;
+	default:
+		BUG();
+	}
 }
 
 void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size, enum dma_data_direction dir)
