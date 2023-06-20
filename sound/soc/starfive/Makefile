@@ -1,4 +1,6 @@
 # StarFive Platform Support
+obj-$(CONFIG_SND_SOC_JH7110_PDM) += jh7110_pdm.o
+
 obj-$(CONFIG_SND_SOC_JH7110_PWMDAC) += jh7110_pwmdac.o
 
 obj-$(CONFIG_SND_SOC_JH7110_SPDIF) += spdif.o
