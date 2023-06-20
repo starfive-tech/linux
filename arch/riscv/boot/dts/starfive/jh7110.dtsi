@@ -490,6 +490,22 @@
 			status = "disabled";
 		};
 
+		pdm: pdm@100d0000 {
+			compatible = "starfive,jh7110-pdm";
+			reg = <0x0 0x100d0000 0x0 0x1000>;
+			reg-names = "pdm";
+			clocks = <&clkgen JH7110_PDM_CLK_DMIC>,
+				 <&clkgen JH7110_PDM_CLK_APB>,
+				 <&clkgen JH7110_MCLK>,
+				 <&mclk_ext>;
+			clock-names = "pdm_mclk", "pdm_apb",
+				      "clk_mclk", "mclk_ext";
+			resets = <&rstgen RSTN_U0_PDM_4MIC_DMIC>,
+				 <&rstgen RSTN_U0_PDM_4MIC_APB>;
+			reset-names = "pdm_dmic", "pdm_apb";
+			#sound-dai-cells = <0>;
+		};
+
 		i2srx_mst: i2srx_mst@100e0000 {
 			compatible = "starfive,jh7110-i2srx-master";
 			reg = <0x0 0x100e0000 0x0 0x1000>;

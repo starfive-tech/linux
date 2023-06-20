@@ -7,6 +7,7 @@
 /dts-v1/;
 #include "jh7110-evb.dtsi"
 #include "codecs/sf_pwmdac.dtsi"
+#include "codecs/sf_pdm.dtsi"
 
 / {
 	model = "StarFive JH7110 EVB";
@@ -21,6 +22,14 @@
 	status = "okay";
 };
 
+&i2srx_mst {
+	status = "okay";
+};
+
 &pwmdac {
+	status = "okay";
+};
+
+&pdm {
 	status = "okay";
 };

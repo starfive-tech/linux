@@ -510,6 +510,12 @@
 	pinctrl-0 = <&i2stx_pins>;
 };
 
+&pdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pdm0_pins>;
+	status = "disabled";
+};
+
 &display {
 	status = "okay";
 };
