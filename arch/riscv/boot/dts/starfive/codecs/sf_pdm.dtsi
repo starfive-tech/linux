@@ -1,0 +1,23 @@
+/ {
+	sound2: snd-card2 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-PDM-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&dailink_master>;
+			frame-master = <&dailink_master>;
+
+			dailink_master:cpu {
+				sound-dai = <&i2srx_mst>;
+			};
+
+			dailink_slave:codec {
+				sound-dai = <&pdm>;
+			};
+		};
+	};
+};
