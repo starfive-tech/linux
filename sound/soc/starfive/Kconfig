@@ -54,6 +54,14 @@ config SND_SOC_JH7110_SPDIF_PCM
 	  Say Y or N if you want to add a custom ALSA extension that registers
 	  a PCM and uses PIO to transfer data.
 
+config SND_SOC_JH7110_PDM
+	tristate "JH7110 PDM device driver"
+	depends on HAVE_CLK && SND_SOC_STARFIVE
+	select SND_SOC_JH7110_I2S
+	select REGMAP_MMIO
+	help
+	  Say Y or M if you want to add support for StarFive pdm driver.
+
 config SND_SOC_JH7110_TDM
 	tristate "JH7110 TDM device driver"
 	depends on HAVE_CLK && SND_SOC_STARFIVE
