@@ -81,6 +81,11 @@ properties:
       The reference to the reserved-memory for the L2 Loosely Integrated Memory region.
       The reserved memory node should be defined as per the bindings in reserved-memory.txt.
 
+  sifive,cmo-ops:
+    type: boolean
+    description: |
+      Use the cache flushing register for regular CMO operations.
+
 allOf:
   - $ref: /schemas/cache-controller.yaml#
 
