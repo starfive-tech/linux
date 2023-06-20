@@ -6,35 +6,9 @@
 #include <linux/linkage.h>
 #include <asm/asm.h>
 
-/* void *memcpy(void *, const void *, size_t) */
-ENTRY(__memcpy)
-WEAK(memcpy)
+/* void *__memcpy_aligned(void *, const void *, size_t) */
+ENTRY(__memcpy_aligned)
 	move t6, a0  /* Preserve return value */
-
-	/* Defer to byte-oriented copy for small sizes */
-	sltiu a3, a2, 128
-	bnez a3, 4f
-	/* Use word-oriented copy only if low-order bits match */
-	andi a3, t6, SZREG-1
-	andi a4, a1, SZREG-1
-	bne a3, a4, 4f
-
-	beqz a3, 2f  /* Skip if already aligned */
-	/*
-	 * Round to nearest double word-aligned address
-	 * greater than or equal to start address
-	 */
-	andi a3, a1, ~(SZREG-1)
-	addi a3, a3, SZREG
-	/* Handle initial misalignment */
-	sub a4, a3, a1
-1:
-	lb a5, 0(a1)
-	addi a1, a1, 1
-	sb a5, 0(t6)
-	addi t6, t6, 1
-	bltu a1, a3, 1b
-	sub a2, a2, a4  /* Update count */
 
 2:
 	andi a4, a2, ~((16*SZREG)-1)
@@ -105,6 +79,6 @@ WEAK(memcpy)
 	bltu a1, a3, 5b
 6:
 	ret
-END(__memcpy)
-SYM_FUNC_ALIAS(__pi_memcpy, __memcpy)
-SYM_FUNC_ALIAS(__pi___memcpy, __memcpy)
+END(__memcpy_aligned)
+SYM_FUNC_ALIAS(__pi_memcpy, __memcpy_aligned)
+SYM_FUNC_ALIAS(__pi___memcpy, __memcpy_aligned)
