@@ -248,6 +248,19 @@
 			#reset-cells = <1>;
 		};
 
+		usb3: usb@104c0000 {
+			compatible = "cdns,usb3";
+			reg = <0x0 0x104c0000 0x0 0x10000>,	// memory area for HOST registers
+			      <0x0 0x104d0000 0x0 0x10000>,	// memory area for DEVICE registers
+			      <0x0 0x104e0000 0x0 0x10000>;	// memory area for OTG/DRD registers
+			reg-names = "otg", "xhci", "dev";
+			interrupts = <44>, <52>, <43>;
+			interrupt-names = "host", "peripheral", "otg";
+			phy-names = "cdns3,usb3-phy", "cdns3,usb2-phy";
+			maximum-speed = "super-speed";
+			status = "disabled";
+		};
+
 		clkgen: clock-controller@11800000 {
 			compatible = "starfive,jh7100-clkgen";
 			reg = <0x0 0x11800000 0x0 0x10000>;
