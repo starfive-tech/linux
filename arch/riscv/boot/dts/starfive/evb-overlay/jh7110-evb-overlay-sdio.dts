@@ -82,9 +82,9 @@
 		};
 	};
 
-	//sdio1
+	//mmc1
 	fragment@3 {
-		target-path = "/soc/sdio1@16020000";
+		target-path = "/soc/mmc1@16020000";
 		__overlay__ {
 			max-frequency = <100000000>;
 			card-detect-delay = <300>;
