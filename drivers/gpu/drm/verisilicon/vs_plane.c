@@ -294,7 +294,7 @@ static void vs_plane_atomic_update(struct drm_plane *plane,
 
 		vs_obj = vs_fb_get_gem_obj(fb, i);
 		vs_plane->dma_addr[i] = vs_obj->iova + fb->offsets[i];
-		//starfive_flush_dcache(vs_plane->dma_addr[i], vs_obj->size);
+		sifive_l2_flush64_range(vs_plane->dma_addr[i], vs_obj->size);
 	}
 
 	plane_state->status.src = drm_plane_state_src(new_state);

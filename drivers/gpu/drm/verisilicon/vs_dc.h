@@ -79,6 +79,6 @@ struct vs_dc {
 };
 
 extern struct platform_driver dc_platform_driver;
-
+extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
 
 #endif /* __VS_DC_H__ */

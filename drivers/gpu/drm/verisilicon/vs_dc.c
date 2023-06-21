@@ -1003,13 +1003,13 @@ static void update_fb(struct vs_plane *plane, u8 display_id,
 	update_format(drm_fb->format->format, drm_fb->modifier, fb);
 	update_swizzle(drm_fb->format->format, fb);
 	update_watermark(plane_state->watermark, fb);
-/*
-	starfive_flush_dcache(fb->y_address, fb->height * fb->y_stride);
+
+	sifive_l2_flush64_range(fb->y_address, fb->height * fb->y_stride);
 	if (fb->u_address)
-		starfive_flush_dcache(fb->u_address, fb->height * fb->u_stride);
+		sifive_l2_flush64_range(fb->u_address, fb->height * fb->u_stride);
 	if (fb->v_address)
-		starfive_flush_dcache(fb->v_address, fb->height * fb->v_stride);
-*/
+		sifive_l2_flush64_range(fb->v_address, fb->height * fb->v_stride);
+
 	plane_state->status.tile_mode = fb->tile_mode;
 }
 
