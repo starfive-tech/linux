@@ -30,6 +30,7 @@ static inline void local_flush_tlb_page(unsigned long addr)
 #endif /* CONFIG_MMU */
 
 #if defined(CONFIG_SMP) && defined(CONFIG_MMU)
+extern unsigned long tlb_flush_all_threshold;
 void flush_tlb_all(void);
 void flush_tlb_mm(struct mm_struct *mm);
 void flush_tlb_page(struct vm_area_struct *vma, unsigned long addr);
