@@ -245,4 +245,6 @@
 /* Sunplus UART */
 #define PORT_SUNPLUS	123
 
+#define PORT_16550A_AFE	124
+
 #endif /* _UAPILINUX_SERIAL_CORE_H */
