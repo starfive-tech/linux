@@ -8,13 +8,16 @@
 
 #define pr_fmt(fmt) "CCACHE: " fmt
 
+#include <linux/align.h>
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
 #include <linux/device.h>
 #include <linux/bitfield.h>
+#include <asm/cacheflush.h>
 #include <asm/cacheinfo.h>
+#include <asm/page.h>
 #include <soc/sifive/sifive_ccache.h>
 
 #define SIFIVE_CCACHE_DIRECCFIX_LOW 0x100
@@ -39,10 +42,14 @@
 #define SIFIVE_CCACHE_CONFIG_SETS_MASK GENMASK_ULL(23, 16)
 #define SIFIVE_CCACHE_CONFIG_BLKS_MASK GENMASK_ULL(31, 24)
 
+#define SIFIVE_CCACHE_FLUSH64 0x200
+#define SIFIVE_CCACHE_FLUSH32 0x240
+
 #define SIFIVE_CCACHE_WAYENABLE 0x08
 #define SIFIVE_CCACHE_ECCINJECTERR 0x40
 
 #define SIFIVE_CCACHE_MAX_ECCINTR 4
+#define SIFIVE_CCACHE_LINE_SIZE 64
 
 static void __iomem *ccache_base;
 static int g_irq[SIFIVE_CCACHE_MAX_ECCINTR];
@@ -123,6 +130,47 @@ int unregister_sifive_ccache_error_notifier(struct notifier_block *nb)
 	return atomic_notifier_chain_unregister(&ccache_err_chain, nb);
 }
 EXPORT_SYMBOL_GPL(unregister_sifive_ccache_error_notifier);
+
+#ifdef CONFIG_RISCV_DMA_NONCOHERENT
+static phys_addr_t uncached_offset;
+DEFINE_STATIC_KEY_FALSE(sifive_ccache_handle_noncoherent_key);
+
+void sifive_ccache_flush_range(phys_addr_t start, size_t len)
+{
+	phys_addr_t end = start + len;
+	phys_addr_t line;
+
+	if (!len)
+		return;
+
+	mb();
+	for (line = ALIGN_DOWN(start, SIFIVE_CCACHE_LINE_SIZE); line < end;
+	     line += SIFIVE_CCACHE_LINE_SIZE) {
+#ifdef CONFIG_32BIT
+		writel(line >> 4, ccache_base + SIFIVE_CCACHE_FLUSH32);
+#else
+		writeq(line, ccache_base + SIFIVE_CCACHE_FLUSH64);
+#endif
+		mb();
+	}
+}
+EXPORT_SYMBOL_GPL(sifive_ccache_flush_range);
+
+void *sifive_ccache_set_uncached(void *addr, size_t size)
+{
+	phys_addr_t phys_addr = __pa(addr) + uncached_offset;
+	void *mem_base;
+
+	mem_base = memremap(phys_addr, size, MEMREMAP_WT);
+	if (!mem_base) {
+		pr_err("%s memremap failed for addr %p\n", __func__, addr);
+		return ERR_PTR(-EINVAL);
+	}
+
+	return mem_base;
+}
+EXPORT_SYMBOL_GPL(sifive_ccache_set_uncached);
+#endif /* CONFIG_RISCV_DMA_NONCOHERENT */
 
 static int ccache_largest_wayenabled(void)
 {
@@ -210,6 +258,7 @@ static int __init sifive_ccache_init(void)
 	struct device_node *np;
 	struct resource res;
 	int i, rc, intr_num;
+	u64 __maybe_unused offset;
 
 	np = of_find_matching_node(NULL, sifive_ccache_ids);
 	if (!np)
@@ -249,6 +298,15 @@ static int __init sifive_ccache_init(void)
 	}
 	of_node_put(np);
 
+#ifdef CONFIG_RISCV_DMA_NONCOHERENT
+	if (!of_property_read_u64(np, "uncached-offset", &offset)) {
+		uncached_offset = offset;
+		static_branch_enable(&sifive_ccache_handle_noncoherent_key);
+		riscv_cbom_block_size = SIFIVE_CCACHE_LINE_SIZE;
+		riscv_noncoherent_supported();
+	}
+#endif
+
 	ccache_config_read();
 
 	ccache_cache_ops.get_priv_group = ccache_get_priv_group;
@@ -269,4 +327,4 @@ err_node_put:
 	return rc;
 }
 
-device_initcall(sifive_ccache_init);
+arch_initcall(sifive_ccache_init);
