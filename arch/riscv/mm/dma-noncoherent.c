@@ -10,6 +10,7 @@
 #include <linux/mm.h>
 #include <asm/cacheflush.h>
 #include <asm/dma-noncoherent.h>
+#include <soc/sifive/sifive_ccache.h>
 
 static bool noncoherent_supported __ro_after_init;
 int dma_cache_alignment __ro_after_init = ARCH_DMA_MINALIGN;
@@ -69,6 +70,11 @@ static inline bool arch_sync_dma_cpu_needs_post_dma_flush(void)
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 			      enum dma_data_direction dir)
 {
+	if (sifive_ccache_handle_noncoherent()) {
+		sifive_ccache_flush_range(paddr, size);
+		return;
+	}
+
 	switch (dir) {
 	case DMA_TO_DEVICE:
 		arch_dma_cache_wback(paddr, size);
@@ -98,6 +104,11 @@ void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 			   enum dma_data_direction dir)
 {
+	if (sifive_ccache_handle_noncoherent()) {
+		sifive_ccache_flush_range(paddr, size);
+		return;
+	}
+
 	switch (dir) {
 	case DMA_TO_DEVICE:
 		break;
@@ -114,9 +125,29 @@ void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 	}
 }
 
+void *arch_dma_set_uncached(void *addr, size_t size)
+{
+	if (sifive_ccache_handle_noncoherent())
+		return sifive_ccache_set_uncached(addr, size);
+
+	return addr;
+}
+
+void arch_dma_clear_uncached(void *addr, size_t size)
+{
+	if (sifive_ccache_handle_noncoherent())
+		sifive_ccache_clear_uncached(addr, size);
+}
+
 void arch_dma_prep_coherent(struct page *page, size_t size)
 {
 	void *flush_addr = page_address(page);
+
+	if (sifive_ccache_handle_noncoherent()) {
+		memset(flush_addr, 0, size);
+		sifive_ccache_flush_range(__pa(flush_addr), size);
+		return;
+	}
 
 #ifdef CONFIG_RISCV_NONSTANDARD_CACHE_OPS
 	if (unlikely(noncoherent_cache_ops.wback_inv)) {
