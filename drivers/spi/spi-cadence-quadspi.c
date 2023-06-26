@@ -65,7 +65,8 @@ struct cqspi_st {
 	struct platform_device	*pdev;
 	struct spi_master	*master;
 	unsigned int		sclk;
-	struct clk_bulk_data	clks[4];
+	struct clk	*ref_clk;
+	struct clk_bulk_data	clks[3];
 
 	struct reset_control	*qspi_rst;
 
@@ -1329,10 +1330,7 @@ static int cqspi_mem_process(struct spi_mem *mem, const struct spi_mem_op *op)
 
 	f_pdata = &cqspi->f_pdata[mem->spi->chip_select];
 
-	if (op->cmd.opcode == SPINOR_OP_RDID)
-		cqspi_configure(f_pdata, CQSPI_READ_ID_FREQ);
-	else
-		cqspi_configure(f_pdata, mem->spi->max_speed_hz);
+	cqspi_configure(f_pdata, mem->spi->max_speed_hz);
 
 	if (op->data.dir == SPI_MEM_DATA_IN && op->data.buf.in) {
 		if (!op->addr.nbytes)
@@ -1543,11 +1541,7 @@ static int cadence_quadspi_clk_init(struct platform_device *pdev, struct cqspi_s
 		return ret;
 	}
 
-	ret = clk_bulk_prepare_enable(ARRAY_SIZE(cqspi->clks), cqspi->clks);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to enable qspi clocks\n");
-		goto disable_clk;
-	}
+	cqspi->ref_clk = cqspi->clks[3].clk;
 
 	pclk = devm_clk_get(&pdev->dev, "clk_src");
 	if (IS_ERR(pclk)) {
@@ -1556,9 +1550,15 @@ static int cadence_quadspi_clk_init(struct platform_device *pdev, struct cqspi_s
 
 		goto disable_clk;
 	}
-	ret = clk_set_parent(cqspi->clks[3].clk, pclk);
+	ret = clk_set_parent(cqspi->ref_clk, pclk);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to set parent of CLK_QSPI_REF\n", __func__);
+		goto disable_clk;
+	}
+
+	ret = clk_bulk_prepare_enable(ARRAY_SIZE(cqspi->clks), cqspi->clks);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable qspi clocks\n");
 		goto disable_clk;
 	}
 
@@ -1709,7 +1709,7 @@ static int cqspi_probe(struct platform_device *pdev)
 	reset_control_assert(cqspi->qspi_rst);
 	reset_control_deassert(cqspi->qspi_rst);
 
-	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->clks[3].clk);
+	cqspi->master_ref_clk_hz = clk_get_rate(cqspi->ref_clk);
 	master->max_speed_hz = cqspi->master_ref_clk_hz;
 
 	/* write completion is supported by default */
