@@ -26,8 +26,6 @@
 #include <asm/smp.h>
 #include <asm/suspend.h>
 
-#include <soc/sifive/sifive_l2_cache.h>
-
 /*
  * The logical cpu number we should resume on, initialised to a non-cpu
  * number.
