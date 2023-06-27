@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# ethercat
+#
+
+config ETHERCAT
+	tristate "ETHERCAT master driver"
+	select ETHERCAT_MASTER
+	default n
+	help
+	  Support for ethercat master driver.
+	  If unsure, say Y.
+
+source "net/ethercat/master/Kconfig"

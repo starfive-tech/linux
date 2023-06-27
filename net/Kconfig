@@ -387,6 +387,7 @@ source "net/ceph/Kconfig"
 source "net/nfc/Kconfig"
 source "net/psample/Kconfig"
 source "net/ife/Kconfig"
+source "net/ethercat/Kconfig"
 
 config LWTUNNEL
 	bool "Network light weight tunnels"

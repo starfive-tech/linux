@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# ethercat
+#
+
+config ETHERCAT_MASTER
+	tristate "ethercat master"
+	default n
+	help
+	  Support for ethercat master driver.
+	  If unsure, say Y.
+
+config ETHERCAT_RTDM
+	bool "ethercat rtdm"
+	depends on ETHERCAT_MASTER
+	default n
+	help
+	  Support for ethercat master driver.
+	  If unsure, say Y.
