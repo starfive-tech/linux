@@ -1181,6 +1181,7 @@
 			num-cs = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
 		};
 
 		tdm: tdm@10090000 {
