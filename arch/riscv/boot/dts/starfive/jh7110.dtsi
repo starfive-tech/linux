@@ -785,6 +785,8 @@
 				polling-delay-passive = <250>;
 				polling-delay = <15000>;
 
+				thermal-sensors = <&sfctemp>;
+
 				trips {
 					cpu_alert0: cpu_alert0 {
 						/* milliCelsius */
