@@ -172,6 +172,8 @@ pvr_buffer_sync_pmrs_unlock(struct pvr_buffer_sync_context *ctx,
 	mutex_unlock(&ctx->ctx_lock);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
+
 static void
 dma_resv_count_fences(struct dma_resv *resv, u32 *read_fence_count_out, u32 *write_fence_count_out)
 {
@@ -302,10 +304,143 @@ pvr_buffer_sync_check_fences_create(struct pvr_fence_context *fence_ctx,
 
 	return data;
 
-	err_check_data_free:
+err_check_data_free:
 	kfree(data);
 	return NULL;
 }
+
+#else
+
+static u32
+pvr_buffer_sync_pmrs_fence_count(u32 nr_pmrs, struct _PMR_ **pmrs,
+				 u32 *pmr_flags)
+{
+	struct dma_resv *resv;
+	struct dma_resv_list *resv_list;
+	struct dma_fence *fence;
+	u32 fence_count = 0;
+	bool exclusive;
+	int i;
+
+	for (i = 0; i < nr_pmrs; i++) {
+		exclusive = !!(pmr_flags[i] & PVR_BUFFER_FLAG_WRITE);
+
+		resv = pmr_reservation_object_get(pmrs[i]);
+		if (WARN_ON_ONCE(!resv))
+			continue;
+
+		resv_list = dma_resv_shared_list(resv);
+		fence = dma_resv_excl_fence(resv);
+
+		if (fence &&
+		    (!exclusive || !resv_list || !resv_list->shared_count))
+			fence_count++;
+
+		if (exclusive && resv_list)
+			fence_count += resv_list->shared_count;
+	}
+
+	return fence_count;
+}
+
+static struct pvr_buffer_sync_check_data *
+pvr_buffer_sync_check_fences_create(struct pvr_fence_context *fence_ctx,
+				    PSYNC_CHECKPOINT_CONTEXT sync_checkpoint_ctx,
+				    u32 nr_pmrs,
+				    struct _PMR_ **pmrs,
+				    u32 *pmr_flags)
+{
+	struct pvr_buffer_sync_check_data *data;
+	struct dma_resv *resv;
+	struct dma_resv_list *resv_list;
+	struct dma_fence *fence;
+	u32 fence_count;
+	bool exclusive;
+	int i, j;
+	int err;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if (!data)
+		return NULL;
+
+	fence_count = pvr_buffer_sync_pmrs_fence_count(nr_pmrs, pmrs,
+						       pmr_flags);
+	if (fence_count) {
+		data->fences = kcalloc(fence_count, sizeof(*data->fences),
+				       GFP_KERNEL);
+		if (!data->fences)
+			goto err_check_data_free;
+	}
+
+	for (i = 0; i < nr_pmrs; i++) {
+		resv = pmr_reservation_object_get(pmrs[i]);
+		if (WARN_ON_ONCE(!resv))
+			continue;
+
+		exclusive = !!(pmr_flags[i] & PVR_BUFFER_FLAG_WRITE);
+		if (!exclusive) {
+			err = dma_resv_reserve_shared(resv
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
+						      , 1
+#endif
+				);
+			if (err)
+				goto err_destroy_fences;
+		}
+
+		resv_list = dma_resv_shared_list(resv);
+		fence = dma_resv_excl_fence(resv);
+
+		if (fence &&
+		    (!exclusive || !resv_list || !resv_list->shared_count)) {
+			data->fences[data->nr_fences++] =
+				pvr_fence_create_from_fence(fence_ctx,
+							    sync_checkpoint_ctx,
+							    fence,
+							    PVRSRV_NO_FENCE,
+							    "exclusive check fence");
+			if (!data->fences[data->nr_fences - 1]) {
+				data->nr_fences--;
+				PVR_FENCE_TRACE(fence,
+						"waiting on exclusive fence\n");
+				WARN_ON(dma_fence_wait(fence, true) <= 0);
+			}
+		}
+
+		if (exclusive && resv_list) {
+			for (j = 0; j < resv_list->shared_count; j++) {
+				fence = rcu_dereference_protected(resv_list->shared[j],
+								  dma_resv_held(resv));
+				data->fences[data->nr_fences++] =
+					pvr_fence_create_from_fence(fence_ctx,
+								    sync_checkpoint_ctx,
+								    fence,
+								    PVRSRV_NO_FENCE,
+								    "check fence");
+				if (!data->fences[data->nr_fences - 1]) {
+					data->nr_fences--;
+					PVR_FENCE_TRACE(fence,
+							"waiting on non-exclusive fence\n");
+					WARN_ON(dma_fence_wait(fence, true) <= 0);
+				}
+			}
+		}
+	}
+
+	WARN_ON((i != nr_pmrs) || (data->nr_fences != fence_count));
+
+	return data;
+
+err_destroy_fences:
+	for (i = 0; i < data->nr_fences; i++)
+		pvr_fence_destroy(data->fences[i]);
+	kfree(data->fences);
+err_check_data_free:
+	kfree(data);
+	return NULL;
+}
+
+#endif
 
 static void
 pvr_buffer_sync_check_fences_destroy(struct pvr_buffer_sync_check_data *data)
