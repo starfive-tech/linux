@@ -32,11 +32,6 @@
 	status = "okay";
 };
 
-&usbdrd30 {
-	xhci-lowmem-pool;
-	status = "okay";
-};
-
 &phy0 {
 	rx-internal-delay-ps = <1900>;
 	tx-internal-delay-ps = <1350>;
@@ -48,5 +43,10 @@
 };
 
 &pcie1 {
+	status = "okay";
+};
+
+&usbdrd30 {
+	xhci-lowmem-pool;
 	status = "okay";
 };

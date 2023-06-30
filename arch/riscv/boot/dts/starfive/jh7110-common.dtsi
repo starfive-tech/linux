@@ -11,11 +11,9 @@
 
 / {
 	aliases {
-		gpio0 = &gpio;
 		ethernet0=&gmac0;
 		ethernet1=&gmac1;
-		serial0 = &uart0;
-		serial3 = &uart3;
+		gpio0 = &gpio;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -23,6 +21,8 @@
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
+		serial0 = &uart0;
+		serial3 = &uart3;
 	};
 
 	chosen {
@@ -66,42 +66,42 @@
 			reg = <0x0 0xc0000000 0x0 0x1600000>;
 		};
 	};
-};
 
-&uart0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart0_pins>;
-	status = "okay";
-};
+	thermal-zones {
+		cpu-thermal {
+			polling-delay-passive = <250>;
+			polling-delay = <15000>;
 
-&uart1 {
-       pinctrl-names = "default";
-       pinctrl-0 = <&uart1_pins>;
-       status = "disabled";
-};
+			thermal-sensors = <&sfctemp>;
 
-&uart2 {
-       pinctrl-names = "default";
-       pinctrl-0 = <&uart2_pins>;
-       status = "disabled";
-};
+			trips {
+				cpu_alert0: cpu_alert0 {
+					/* milliCelsius */
+					temperature = <85000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
 
-&uart3 {
-       pinctrl-names = "default";
-       pinctrl-0 = <&uart3_pins>;
-       status = "disabled";
-};
+				cpu_crit: cpu_crit {
+					/* milliCelsius */
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
 
-&uart4 {
-       pinctrl-names = "default";
-       pinctrl-0 = <&uart4_pins>;
-       status = "disabled";
-};
-
-&uart5 {
-       pinctrl-names = "default";
-       pinctrl-0 = <&uart5_pins>;
-       status = "disabled";
+			cooling-maps {
+				map0 {
+					trip = <&cpu_alert0>;
+					cooling-device =
+						<&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+						<&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
 };
 
 &can0 {
@@ -116,16 +116,128 @@
 	status = "disabled";
 };
 
+&co_process {
+	status = "okay";
+};
+
+&cpu1 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu2 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu3 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
+&cpu4 {
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+};
+
 &crypto {
 	status = "okay";
 };
 
-&sec_dma {
+&dc8200 {
+	status = "okay";
+
+	dc_out: port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dc_out_dpi0: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&hdmi_input0>;
+		};
+		dc_out_dpi1: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&hdmi_in_lcdc>;
+		};
+		dc_out_dpi2: endpoint@2 {
+			reg = <2>;
+			remote-endpoint = <&mipi_in>;
+		};
+	};
+};
+
+&display {
 	status = "okay";
 };
 
-&trng {
+&dsi_output {
 	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_in: endpoint {
+				remote-endpoint = <&dc_out_dpi2>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			mipi_out: endpoint {
+				remote-endpoint = <&dsi_in_port>;
+			};
+		};
+	};
+};
+
+&gmac0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	phy0: ethernet-phy@0 {
+		rxc_dly_en = <1>;
+		tx_delay_sel_fe = <5>;
+		tx_delay_sel = <0xb>;
+		tx_inverted_10 = <0x0>;
+		tx_inverted_100 = <0x0>;
+		tx_inverted_1000 = <0x0>;
+	};
+};
+
+&gmac1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	phy1: ethernet-phy@1 {
+		rxc-skew-ps = <1060>;
+		txc-skew-ps = <1800>;
+		reg = <0>;
+	};
+};
+
+&gpu {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&inno_hdmi_pins>;
+	hpd-gpio = <&gpio 15 GPIO_ACTIVE_HIGH>;
+
+	hdmi_in: port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		hdmi_in_lcdc: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&dc_out_dpi1>;
+		};
+	};
 };
 
 &i2c0 {
@@ -324,179 +436,14 @@
 	};
 };
 
-&spdif {
+&i2srx_3ch {
 	pinctrl-names = "default";
-	pinctrl-0 = <&spdif0_pins>;
-};
-
-&mailbox_contrl0 {
-	status = "okay";
-};
-
-&mailbox_client0 {
-	status = "okay";
-};
-
-&jpu {
-	status = "okay";
-};
-
-&vpu_dec {
-	status = "okay";
-};
-
-&vpu_enc {
-	status = "okay";
-};
-
-&gmac0 {
-	status = "okay";
-	#address-cells = <1>;
-	#size-cells = <0>;
-	phy0: ethernet-phy@0 {
-		rxc_dly_en = <1>;
-		tx_delay_sel_fe = <5>;
-		tx_delay_sel = <0xb>;
-		tx_inverted_10 = <0x0>;
-		tx_inverted_100 = <0x0>;
-		tx_inverted_1000 = <0x0>;
-	};
-};
-
-&gmac1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-	phy1: ethernet-phy@1 {
-		rxc-skew-ps = <1060>;
-		txc-skew-ps = <1800>;
-		reg = <0>;
-	};
-};
-
-&tdm {
-	pinctrl-names = "default";
-	pinctrl-0 = <&tdm0_pins>;
-	status = "disabled";
-};
-
-&gpu {
-	status = "okay";
-};
-
-&usbdrd30 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&usb_pins>;
-	dr_mode = "host"; /*host or peripheral*/
-	status = "disabled";
-};
-
-&sfctemp {
-	status = "okay";
-};
-
-&cpu1 {
-	/delete-property/ clocks;
-	/delete-property/ clock-names;
-};
-
-&cpu2 {
-	/delete-property/ clocks;
-	/delete-property/ clock-names;
-};
-
-&cpu3 {
-	/delete-property/ clocks;
-	/delete-property/ clock-names;
-};
-
-&cpu4 {
-	/delete-property/ clocks;
-	/delete-property/ clock-names;
-};
-
-&vin_sysctl {
-	status = "okay";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Parallel bus endpoint */
-			parallel_from_sc2235: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&sc2235_to_parallel>;
-				bus-type = <5>;		/* Parallel */
-				bus-width = <8>;
-				data-shift = <2>;	/* lines 9:2 are used */
-				hsync-active = <1>;
-				vsync-active = <0>;
-				pclk-sample = <1>;
-				status = "okay";
-			};
-		};
-
-		port@1 {
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* CSI2 bus endpoint */
-			csi2rx0_from_ov4689: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&ov4689_to_csi2rx0>;
-				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
-				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
-				status = "okay";
-			};
-
-			/* CSI2 bus endpoint */
-			csi2rx0_from_imx219: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&imx219_to_csi2rx0>;
-				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
-				clock-lanes = <0>;
-				data-lanes = <2 1>;
-				lane-polarities = <1 1 1>;
-				status = "okay";
-			};
-
-			csi2rx0_from_imx708: endpoint@2 {
-				reg = <2>;
-				remote-endpoint = <&imx708_to_csi2rx0>;
-				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
-				clock-lanes = <0>;
-				data-lanes = <2 1>;
-				lane-polarities = <1 1 1>;
-				status = "okay";
-			};
-		};
-	};
-};
-
-&xrp {
-	status = "okay";
-};
-
-&pwmdac {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pwmdac0_pins>;
+	pinctrl-0 = <&i2s_clk_pins &i2srx_pins>;
 };
 
 &i2srx_mst {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2srx_clk_pins>;
-};
-
-&i2srx_3ch {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2s_clk_pins &i2srx_pins>;
 };
 
 &i2stx_4ch0 {
@@ -510,50 +457,76 @@
 	pinctrl-0 = <&i2stx_pins>;
 };
 
+&jpu {
+	status = "okay";
+};
+
+&mailbox_contrl0 {
+	status = "okay";
+};
+
+&mailbox_client0 {
+	status = "okay";
+};
+
+&mipi_dphy {
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port {
+		dsi_out_port: endpoint@0 {
+			remote-endpoint = <&panel_dsi_port>;
+		};
+		dsi_in_port: endpoint@1 {
+			remote-endpoint = <&mipi_out>;
+		};
+	};
+
+	mipi_panel: panel@0 {
+		/*compatible = "";*/
+		status = "okay";
+	};
+};
+
 &pdm {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pdm0_pins>;
 	status = "disabled";
 };
 
-&display {
-	status = "okay";
-};
-
-&hdmi {
-	status = "okay";
+&pwmdac {
 	pinctrl-names = "default";
-	pinctrl-0 = <&inno_hdmi_pins>;
-	hpd-gpio = <&gpio 15 GPIO_ACTIVE_HIGH>;
-
-	hdmi_in: port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		hdmi_in_lcdc: endpoint@0 {
-			reg = <0>;
-			remote-endpoint = <&dc_out_dpi1>;
-		};
-	};
+	pinctrl-0 = <&pwmdac0_pins>;
 };
 
-&dc8200 {
-	status = "okay";
+&qspi {
+	nor_flash: nor-flash@0 {
+		compatible = "jedec,spi-nor";
+		reg=<0>;
+		cdns,read-delay = <5>;
+		spi-max-frequency = <100000000>;
+		cdns,tshsl-ns = <1>;
+		cdns,tsd2d-ns = <1>;
+		cdns,tchsh-ns = <1>;
+		cdns,tslch-ns = <1>;
 
-	dc_out: port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		dc_out_dpi0: endpoint@0 {
-			reg = <0>;
-			remote-endpoint = <&hdmi_input0>;
-		};
-		dc_out_dpi1: endpoint@1 {
-			reg = <1>;
-			remote-endpoint = <&hdmi_in_lcdc>;
-		};
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
 
-		dc_out_dpi2: endpoint@2 {
-			reg = <2>;
-			remote-endpoint = <&mipi_in>;
+			spl@0 {
+				reg = <0x0 0x40000>;
+			};
+			uboot@100000 {
+				reg = <0x100000 0x300000>;
+			};
+			data@f00000 {
+				reg = <0xf00000 0x100000>;
+			};
 		};
 	};
 };
@@ -569,6 +542,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0>;
+
 			hdmi_input0:endpoint@0 {
 				reg = <0>;
 				remote-endpoint = <&dc_out_dpi0>;
@@ -577,6 +551,7 @@
 
 		port@1 {
 			reg = <1>;
+
 			hdmi_out:endpoint {
 				remote-endpoint = <&tda998x_0_input>;
 			};
@@ -584,45 +559,17 @@
 	};
 };
 
-&tda988x_pin {
+&sec_dma {
+	status = "okay";
+};
+
+&sfctemp {
+	status = "okay";
+};
+
+&spdif {
 	pinctrl-names = "default";
-	pinctrl-0 = <&rgb_pad_pins>;
-	status = "disabled";
-};
-
-&dsi_output {
-	status = "okay";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@0 {
-			reg = <0>;
-			mipi_in: endpoint {
-				remote-endpoint = <&dc_out_dpi2>;
-			};
-		};
-
-		port@1 {
-			reg = <1>;
-			mipi_out: endpoint {
-				remote-endpoint = <&dsi_in_port>;
-			};
-		};
-	};
-};
-
-&mipi_dsi {
-	status = "okay";
-};
-
-&mipi_dphy {
-	status = "okay";
-};
-
-&co_process {
-	status = "okay";
+	pinctrl-0 = <&spdif0_pins>;
 };
 
 &spi0 {
@@ -721,4 +668,140 @@
 		reg = <0>;
 		status = "okay";
 	};
+};
+
+&tda988x_pin {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rgb_pad_pins>;
+	status = "disabled";
+};
+
+&tdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&tdm0_pins>;
+	status = "disabled";
+};
+
+&trng {
+	status = "okay";
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pins>;
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;
+	status = "disabled";
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pins>;
+	status = "disabled";
+};
+
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3_pins>;
+	status = "disabled";
+};
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart4_pins>;
+	status = "disabled";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5_pins>;
+	status = "disabled";
+};
+
+&usbdrd30 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_pins>;
+	dr_mode = "host"; /*host or peripheral*/
+	status = "disabled";
+};
+
+&vin_sysctl {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Parallel bus endpoint */
+			parallel_from_sc2235: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&sc2235_to_parallel>;
+				bus-type = <5>;		/* Parallel */
+				bus-width = <8>;
+				data-shift = <2>;	/* lines 9:2 are used */
+				hsync-active = <1>;
+				vsync-active = <0>;
+				pclk-sample = <1>;
+				status = "okay";
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_ov4689: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&ov4689_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				status = "okay";
+			};
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_imx219: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&imx219_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <1 1 1>;
+				status = "okay";
+			};
+
+			csi2rx0_from_imx708: endpoint@2 {
+				reg = <2>;
+				remote-endpoint = <&imx708_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <1 1 1>;
+				status = "okay";
+			};
+		};
+	};
+};
+
+&vpu_dec {
+	status = "okay";
+};
+
+&vpu_enc {
+	status = "okay";
+};
+
+&xrp {
+	status = "okay";
 };
