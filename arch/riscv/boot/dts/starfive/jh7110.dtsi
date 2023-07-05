@@ -1646,9 +1646,8 @@
 		co_process: e24 {
 			compatible = "starfive,e24";
 			dma-coherent;
-			reg = <0x0 0xc1410000 0x0 0x00001000>,
-			      <0x0 0xc1411000 0x0 0x0003f000>;
-			memory-region = <&e24_mem>;
+			reg = <0x0 0x6e210000 0x0 0x00001000>,
+				<0x0 0x6e211000 0x0 0x0003f000>;
 			reg-names = "ecmd", "espace";
 			clocks = <&clkgen JH7110_E2_RTC_CLK>,
 				 <&clkgen JH7110_E2_CLK_CORE>,
@@ -1665,7 +1664,7 @@
 				 <&mailbox_contrl0 2 0>;
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges = <0xc0000000 0x0 0xc0000000 0x1600000>;
+			ranges = <0x6ce00000 0x0 0x6ce00000 0x1600000>;
 			status = "disabled";
 			dsp@0 {};
 		};
