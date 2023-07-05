@@ -13,7 +13,7 @@
 #include "starfive_e24.h"
 #include "starfive_e24_hw.h"
 
-#define RET_E24_VECTOR_ADDR	0xc0000000
+#define RET_E24_VECTOR_ADDR	0x6CE00000
 
 static void halt(void *hw_arg)
 {
