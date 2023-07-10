@@ -637,10 +637,10 @@ static int dw8250_probe(struct platform_device *pdev)
 	if (err)
 		return err;
 
-	data->rst = devm_reset_control_get_optional_exclusive(dev, NULL);
-	if (IS_ERR(data->rst))
-		return PTR_ERR(data->rst);
-
+	data->rst = devm_reset_control_array_get_exclusive(dev);
+	if (IS_ERR(data->rst)) {
+		err = PTR_ERR(data->rst);
+	}
 	reset_control_deassert(data->rst);
 
 	err = devm_add_action_or_reset(dev, dw8250_reset_control_assert, data->rst);
