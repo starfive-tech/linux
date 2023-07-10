@@ -24,7 +24,15 @@
 	status = "okay";
 };
 
+&usbdrd30 {
+	status = "okay";
+};
+
 &pcie1 {
+	status = "okay";
+};
+
+&uart2 {
 	status = "okay";
 };
 
