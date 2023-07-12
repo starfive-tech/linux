@@ -205,7 +205,6 @@ static int alg_setkey(struct sock *sk, sockptr_t ukey, unsigned int keylen,
 
 {
 	struct alg_sock *ask = alg_sk(sk);
-	const struct af_alg_type *type = ask->type;
 	u8 *key;
 	int err;
 
@@ -841,7 +840,6 @@ int af_alg_sendmsg(struct socket *sock, struct msghdr *msg, size_t size,
 	struct af_alg_tsgl *sgl;
 	struct af_alg_control con = {};
 	long copied = 0;
-	bool enc = false;
 	int op = 0;
 	bool init = false;
 	int err = 0;
