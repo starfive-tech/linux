@@ -346,7 +346,7 @@
 };
 
 &uart0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &dma {
