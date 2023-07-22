@@ -447,3 +447,8 @@
 	pinctrl-0 = <&uart3_pins>;
 	status = "okay";
 };
+
+&usb3 {
+	dr_mode = "host";
+	status = "okay";
+};
