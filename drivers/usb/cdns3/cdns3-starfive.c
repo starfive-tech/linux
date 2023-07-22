@@ -20,6 +20,19 @@
 #include <linux/usb/otg.h>
 #include "core.h"
 
+#define JH7100_USB0			0x20
+#define JH7100_USB0_MODE_STRAP_MASK	GENMASK(2, 0)
+#define JH7100_USB0_MODE_STRAP_HOST	2
+
+#define JH7100_USB3			0x2c
+#define JH7100_USB3_UTMI_IDDIG		BIT(21)
+
+#define JH7100_USB7			0x3c
+#define JH7100_USB7_SSRX_SEL		BIT(18)
+#define JH7100_USB7_SSTX_SEL		BIT(19)
+#define JH7100_USB7_PLL_EN		BIT(23)
+#define JH7100_USB7_EQ_EN		BIT(25)
+
 #define JH7110_STRAP_HOST		BIT(17)
 #define JH7110_STRAP_DEVICE		BIT(18)
 #define JH7110_STRAP_MASK		GENMASK(18, 16)
@@ -42,6 +55,36 @@ typedef int (cdns_starfive_mode_init_t)(struct device *dev, struct cdns_starfive
 
 static int cdns_jh7100_mode_init(struct device *dev, struct cdns_starfive *data)
 {
+	struct regmap *syscon;
+	enum usb_dr_mode mode;
+
+	syscon = syscon_regmap_lookup_by_phandle(dev->of_node, "starfive,syscon");
+	if (IS_ERR(syscon))
+		return dev_err_probe(dev, PTR_ERR(syscon),
+				     "failed to get starfive,syscon\n");
+
+	/* dr mode setting */
+	mode = usb_get_dr_mode(dev);
+
+	switch (mode) {
+	case USB_DR_MODE_HOST:
+		regmap_update_bits(syscon, JH7100_USB0,
+				   JH7100_USB0_MODE_STRAP_MASK, JH7100_USB0_MODE_STRAP_HOST);
+		regmap_update_bits(syscon, JH7100_USB7,
+				   JH7100_USB7_PLL_EN, JH7100_USB7_PLL_EN);
+		regmap_update_bits(syscon, JH7100_USB7,
+				   JH7100_USB7_EQ_EN, JH7100_USB7_EQ_EN);
+		regmap_update_bits(syscon, JH7100_USB7,
+				   JH7100_USB7_SSRX_SEL, JH7100_USB7_SSRX_SEL);
+		regmap_update_bits(syscon, JH7100_USB7,
+				   JH7100_USB7_SSTX_SEL, JH7100_USB7_SSTX_SEL);
+		regmap_update_bits(syscon, JH7100_USB3,
+				   JH7100_USB3_UTMI_IDDIG, JH7100_USB3_UTMI_IDDIG);
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
