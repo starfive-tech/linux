@@ -18,6 +18,6 @@
 };
 
 &i2srx_3ch {
-	status = "disabled";
+	status = "okay";
 };
 

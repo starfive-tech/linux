@@ -18,9 +18,9 @@
 };
 
 &i2srx_3ch {
-	status = "disabled";
+	status = "okay";
 };
 
 &i2stx_4ch1 {
-	status = "disabled";
+	status = "okay";
 };

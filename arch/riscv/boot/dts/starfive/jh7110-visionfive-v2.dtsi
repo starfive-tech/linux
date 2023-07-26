@@ -420,19 +420,19 @@
 };
 
 &dma {
-	status = "disabled";
+	status = "okay";
 };
 
 &trng {
-	status = "disabled";
+	status = "okay";
 };
 
 &crypto {
-	status = "disabled";
+	status = "okay";
 };
 
 &sec_dma {
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c0 {
@@ -443,7 +443,7 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c2 {
@@ -452,7 +452,7 @@
 	i2c-sda-falling-time-ns = <510>;
 	i2c-scl-falling-time-ns = <510>;
 	auto_calc_scl_lhcnt;
-	status = "disabled";
+	status = "okay";
 
 	seeed_plane_i2c@45 {
 		compatible = "seeed_panel";
@@ -512,7 +512,7 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c5_pins>;
-	status = "disabled";
+	status = "okay";
 
 	eeprom@50 {
 		compatible = "atmel,24c04";
@@ -587,7 +587,7 @@
 	auto_calc_scl_lhcnt;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c6_pins>;
-	status = "disabled";
+	status = "okay";
 
 	imx219: imx219@10 {
 		compatible = "sony,imx219";
@@ -656,7 +656,7 @@
 	post-power-on-delay-ms = <200>;
 	vmmc-supply = <&vcc_3v3>;
 	vqmmc-supply = <&sdio_vdd>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mmc1 {
@@ -668,12 +668,12 @@
 	broken-cd;
 	cap-sd-highspeed;
 	post-power-on-delay-ms = <200>;
-	status = "disabled";
+	status = "okay";
 };
 
 &vin_sysctl {
 	/* when use dvp open this pinctrl*/
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -692,7 +692,7 @@
 				clock-lanes = <4>;
 				data-lanes = <0 1>;
 				lane-polarities = <0 0 0>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			csi2rx0_from_imx708: endpoint@1 {
@@ -702,7 +702,7 @@
 				clock-lanes = <4>;
 				data-lanes = <0 1>;
 				lane-polarities = <0 0 0>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			csi2rx0_from_ov4689: endpoint@2 {
@@ -711,30 +711,30 @@
 				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
 				clock-lanes = <4>;
 				data-lanes = <0 1>;
-				status = "disabled";
+				status = "okay";
 			};
 		};
 	};
 };
 
 &sfctemp {
-	status = "disabled";
+	status = "okay";
 };
 
 &jpu {
-	status = "disabled";
+	status = "okay";
 };
 
 &vpu_dec {
-	status = "disabled";
+	status = "okay";
 };
 
 &vpu_enc {
-	status = "disabled";
+	status = "okay";
 };
 
 &gmac0 {
-	status = "disabled";
+	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
 	phy0: ethernet-phy@0 {
@@ -754,7 +754,7 @@
 &gmac1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "disabled";
+	status = "okay";
 	phy1: ethernet-phy@1 {
 		rgmii_sw_dr_2 = <0x0>;
 		rgmii_sw_dr = <0x3>;
@@ -770,13 +770,13 @@
 };
 
 &gpu {
-	status = "disabled";
+	status = "okay";
 };
 
 &pwmdac {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwmdac0_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &i2srx_3ch {
@@ -791,21 +791,27 @@
 	status = "disabled";
 };
 
-&pwmdac_codec {
+&tdm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&tdm0_pins>;
 	status = "disabled";
+};
+
+&pwmdac_codec {
+	status = "okay";
 };
 
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&ssp0_pins>;
-	status = "disabled";
+	status = "okay";
 
 	spi_dev0: spi@0 {
 		compatible = "rohm,dh2228fv";
 		pl022,com-mode = <1>;
 		spi-max-frequency = <10000000>;
 		reg = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 };
 
@@ -814,7 +820,7 @@
 	pinctrl-0 = <&pcie0_wake_default>,
 		    <&pcie0_clkreq_default>;
 	reset-gpios = <&gpio 26 GPIO_ACTIVE_LOW>;
-	status = "disabled";
+	status = "okay";
 };
 
 &pcie1 {
@@ -822,23 +828,23 @@
 	pinctrl-0 = <&pcie1_wake_default>,
 		    <&pcie1_clkreq_default>;
 	reset-gpios = <&gpio 28 GPIO_ACTIVE_LOW>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mailbox_contrl0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &mailbox_client0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &display {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi {
-	status = "disabled";
+	status = "okay";
 
 	hdmi_in: port {
 		#address-cells = <1>;
@@ -851,7 +857,7 @@
 };
 
 &dc8200 {
-	status = "disabled";
+	status = "okay";
 
 	dc_out: port {
 		#address-cells = <1>;
@@ -891,7 +897,7 @@
 };
 
 &dsi_output {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -914,7 +920,7 @@
 };
 
 &mipi_dsi {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -951,11 +957,11 @@
 };
 
 &mipi_dphy {
-	status = "disabled";
+	status = "okay";
 };
 
 &co_process {
-	status = "disabled";
+	status = "okay";
 };
 
 &usbdrd30 {
@@ -974,17 +980,17 @@
 	reset-names = "pwrup","apb","axi","utmi";
 	starfive,usb2-only;
 	dr_mode = "peripheral"; /*host or peripheral*/
-	status = "disabled";
+	status = "okay";
 };
 
 &xrp {
-	status = "disabled";
+	status = "okay";
 };
 
 &ptc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwm_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &qspi {
