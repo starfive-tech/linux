@@ -1185,7 +1185,6 @@
 			fifo-depth = <32>;
 			fifo-watermark-aligned;
 			data-addr = <0>;
-			starfive,sys-syscon = <&sys_syscon 0x14 0x1a 0x7c000000>;
 			status = "disabled";
 		};
 
@@ -1202,7 +1201,6 @@
 			fifo-depth = <32>;
 			fifo-watermark-aligned;
 			data-addr = <0>;
-			starfive,sys-syscon = <&sys_syscon 0x9c 0x1 0x3e>;
 			status = "disabled";
 		};
 
