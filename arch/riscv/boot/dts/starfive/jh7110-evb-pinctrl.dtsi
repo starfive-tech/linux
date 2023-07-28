@@ -1,0 +1,997 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2023 StarFive Technology Co., Ltd.
+ * Author: Hal Feng <hal.feng@starfivetech.com>
+ */
+
+#include "jh7110-pinfunc.h"
+
+&sysgpio {
+	can0_pins: can0-0 {
+		can-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_CAN0_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_CAN0_RXD)>,
+				 <GPIOMUX(32, GPOUT_SYS_CAN0_STBY,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	can1_pins: can1-0 {
+		can-pins {
+			pinmux = <GPIOMUX(29, GPOUT_SYS_CAN1_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(27, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_CAN1_RXD)>,
+				 <GPIOMUX(45, GPOUT_SYS_CAN1_STBY,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			drive-strength = <12>;
+			input-enable;
+		};
+	};
+
+	dvp_pins: dvp-0 {
+		dvp-pins{
+			pinmux = <PINMUX(21, 2)>,
+				 <PINMUX(22, 2)>,
+				 <PINMUX(23, 2)>,
+				 <PINMUX(24, 2)>,
+				 <PINMUX(25, 2)>,
+				 <PINMUX(26, 2)>,
+				 <PINMUX(27, 2)>,
+				 <PINMUX(28, 2)>,
+				 <PINMUX(29, 2)>,
+				 <PINMUX(30, 2)>,
+				 <PINMUX(31, 2)>,
+				 <PINMUX(32, 2)>,
+				 <PINMUX(33, 2)>,
+				 <PINMUX(34, 2)>,
+				 <PINMUX(35, 2)>;
+			input-enable;
+		};
+	};
+
+	emmc0_pins: emmc0-0 {
+		emmc-pins {
+			pinmux = <GPIOMUX(22, GPOUT_SYS_SDIO0_RST,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <PINMUX(64, 0)>,
+				 <PINMUX(65, 0)>,
+				 <PINMUX(66, 0)>,
+				 <PINMUX(67, 0)>,
+				 <PINMUX(68, 0)>,
+				 <PINMUX(69, 0)>,
+				 <PINMUX(70, 0)>,
+				 <PINMUX(71, 0)>,
+				 <PINMUX(72, 0)>,
+				 <PINMUX(73, 0)>;
+			bias-pull-up;
+			drive-strength = <12>;
+			input-enable;
+			slew-rate = <1>;
+		};
+	};
+
+	emmc1_pins: emmc1-0 {
+		emmc-pins {
+			pinmux = <GPIOMUX(51, GPOUT_SYS_SDIO1_RST,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(38, GPOUT_SYS_SDIO1_CLK,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(36, GPOUT_SYS_SDIO1_CMD,
+					      GPOEN_SYS_SDIO1_CMD,
+					      GPI_SYS_SDIO1_CMD)>,
+				 <GPIOMUX(43, GPOUT_SYS_SDIO1_DATA0,
+					      GPOEN_SYS_SDIO1_DATA0,
+					      GPI_SYS_SDIO1_DATA0)>,
+				 <GPIOMUX(48, GPOUT_SYS_SDIO1_DATA1,
+					      GPOEN_SYS_SDIO1_DATA1,
+					      GPI_SYS_SDIO1_DATA1)>,
+				 <GPIOMUX(53, GPOUT_SYS_SDIO1_DATA2,
+					      GPOEN_SYS_SDIO1_DATA2,
+					      GPI_SYS_SDIO1_DATA2)>,
+				 <GPIOMUX(63, GPOUT_SYS_SDIO1_DATA3,
+					      GPOEN_SYS_SDIO1_DATA3,
+					      GPI_SYS_SDIO1_DATA3)>,
+				 <GPIOMUX(52, GPOUT_SYS_SDIO1_DATA4,
+					      GPOEN_SYS_SDIO1_DATA4,
+					      GPI_SYS_SDIO1_DATA4)>,
+				 <GPIOMUX(39, GPOUT_SYS_SDIO1_DATA5,
+					      GPOEN_SYS_SDIO1_DATA5,
+					      GPI_SYS_SDIO1_DATA5)>,
+				 <GPIOMUX(46, GPOUT_SYS_SDIO1_DATA6,
+					      GPOEN_SYS_SDIO1_DATA6,
+					      GPI_SYS_SDIO1_DATA6)>,
+				 <GPIOMUX(47, GPOUT_SYS_SDIO1_DATA7,
+					      GPOEN_SYS_SDIO1_DATA7,
+					      GPI_SYS_SDIO1_DATA7)>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	gmac0_pins: gmac0-0 {
+		reset-pins {
+			pinmux = <GPIOMUX(13, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-pull-up;
+		};
+	};
+
+	gmac1_pins: gmac1-0 {
+		mdc-pins {
+			pinmux = <PINMUX(75, 0)>;
+		};
+	};
+
+	hdmi_pins: hdmi-0 {
+		scl-pins {
+			pinmux = <GPIOMUX(7, GPOUT_SYS_HDMI_DDC_SCL,
+					     GPOEN_SYS_HDMI_DDC_SCL,
+					     GPI_SYS_HDMI_DDC_SCL)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		sda-pins {
+			pinmux = <GPIOMUX(8, GPOUT_SYS_HDMI_DDC_SDA,
+					     GPOEN_SYS_HDMI_DDC_SDA,
+					     GPI_SYS_HDMI_DDC_SDA)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		cec-pins {
+			pinmux = <GPIOMUX(14, GPOUT_SYS_HDMI_CEC_SDA,
+					      GPOEN_SYS_HDMI_CEC_SDA,
+					      GPI_SYS_HDMI_CEC_SDA)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		hpd-pins {
+			pinmux = <GPIOMUX(15, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_HDMI_HPD)>;
+			bias-disable; /* external pull-up */
+			input-enable;
+		};
+	};
+
+	i2c0_pins: i2c0-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(57, GPOUT_LOW,
+					      GPOEN_SYS_I2C0_CLK,
+					      GPI_SYS_I2C0_CLK)>,
+				 <GPIOMUX(58, GPOUT_LOW,
+					      GPOEN_SYS_I2C0_DATA,
+					      GPI_SYS_I2C0_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c1_pins: i2c1-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(49, GPOUT_LOW,
+					      GPOEN_SYS_I2C1_CLK,
+					      GPI_SYS_I2C1_CLK)>,
+				 <GPIOMUX(50, GPOUT_LOW,
+					      GPOEN_SYS_I2C1_DATA,
+					      GPI_SYS_I2C1_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c2_pins: i2c2-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(11, GPOUT_LOW,
+					      GPOEN_SYS_I2C2_CLK,
+					      GPI_SYS_I2C2_CLK)>,
+				 <GPIOMUX(9, GPOUT_LOW,
+					     GPOEN_SYS_I2C2_DATA,
+					     GPI_SYS_I2C2_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c3_pins: i2c3-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(51, GPOUT_LOW,
+					      GPOEN_SYS_I2C3_CLK,
+					      GPI_SYS_I2C3_CLK)>,
+				 <GPIOMUX(52, GPOUT_LOW,
+					      GPOEN_SYS_I2C3_DATA,
+					      GPI_SYS_I2C3_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c4_pins: i2c4-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(18, GPOUT_LOW,
+					      GPOEN_SYS_I2C4_CLK,
+					      GPI_SYS_I2C4_CLK)>,
+				 <GPIOMUX(12, GPOUT_LOW,
+					      GPOEN_SYS_I2C4_DATA,
+					      GPI_SYS_I2C4_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c5_pins: i2c5-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(19, GPOUT_LOW,
+					      GPOEN_SYS_I2C5_CLK,
+					      GPI_SYS_I2C5_CLK)>,
+				 <GPIOMUX(20, GPOUT_LOW,
+					      GPOEN_SYS_I2C5_DATA,
+					      GPI_SYS_I2C5_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c6_pins: i2c6-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(16, GPOUT_LOW,
+					      GPOEN_SYS_I2C6_CLK,
+					      GPI_SYS_I2C6_CLK)>,
+				 <GPIOMUX(17, GPOUT_LOW,
+					      GPOEN_SYS_I2C6_DATA,
+					      GPI_SYS_I2C6_DATA)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2s_clk_pins: i2s-clk-0 {
+		bclk-lrck-pins {
+			pinmux = <GPIOMUX(38, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2STX1_BCLK)>,
+				 <GPIOMUX(38, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_BCLK)>,
+				 <GPIOMUX(63, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2STX1_LRCK)>,
+				 <GPIOMUX(63, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_LRCK)>;
+			input-enable;
+		};
+	};
+
+	i2srx_clk_pins: i2srx-clk-0 {
+		mclk-pins {
+			pinmux = <GPIOMUX(58, GPOUT_SYS_MCLK,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	i2srx_pins: i2srx-0 {
+		i2srx-pins {
+			pinmux = <GPIOMUX(61, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_SDIN0)>;
+			input-enable;
+		};
+	};
+
+	i2stx_pins: i2stx-0 {
+		i2stx-pins {
+			pinmux = <GPIOMUX(44, GPOUT_SYS_I2STX1_SDO0,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	mclk_ext_pins: mclk-ext-0 {
+		mclk-ext-pins {
+			pinmux = <GPIOMUX(4, GPOUT_LOW,
+					     GPOEN_DISABLE,
+					     GPI_SYS_MCLK_EXT)>;
+			input-enable;
+		};
+	};
+
+	pdm_pins: pdm-0 {
+		pdm-pins {
+			pinmux = <GPIOMUX(54, GPOUT_SYS_PDM_MCLK,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(60, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_PDM_DMIC0)>;
+			input-enable;
+		};
+	};
+
+	pwm_ch0to3_pins: pwm-ch0to3-0 {
+		pwm-pins {
+			pinmux = <GPIOMUX(45, GPOUT_SYS_PWM_CHANNEL0,
+					      GPOEN_SYS_PWM0_CHANNEL0,
+					      GPI_NONE)>,
+				 <GPIOMUX(46, GPOUT_SYS_PWM_CHANNEL1,
+					      GPOEN_SYS_PWM0_CHANNEL1,
+					      GPI_NONE)>,
+				 <GPIOMUX(47, GPOUT_SYS_PWM_CHANNEL2,
+					      GPOEN_SYS_PWM0_CHANNEL2,
+					      GPI_NONE)>,
+				 <GPIOMUX(48, GPOUT_SYS_PWM_CHANNEL3,
+					      GPOEN_SYS_PWM0_CHANNEL3,
+					      GPI_NONE)>;
+			drive-strength = <12>;
+		};
+	};
+
+	pwmdac_pins: pwmdac-0 {
+		pwmdac-pins {
+			pinmux = <GPIOMUX(57, GPOUT_SYS_PWMDAC_LEFT,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(42, GPOUT_SYS_PWMDAC_RIGHT,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+		};
+	};
+
+	rgb_pad_pins: rgb-pad-pins {
+		rgb-0-pins {
+			pinmux = <PINMUX(36, 1)>;
+			drive-strength = <12>;
+			input-disable;
+			slew-rate = <1>;
+		};
+
+		rgb-pins {
+			pinmux = <PINMUX(37, 1)>,
+				 <PINMUX(38, 1)>,
+				 <PINMUX(39, 1)>,
+				 <PINMUX(40, 1)>,
+				 <PINMUX(41, 1)>,
+				 <PINMUX(42, 1)>,
+				 <PINMUX(43, 1)>,
+				 <PINMUX(44, 1)>,
+				 <PINMUX(45, 1)>,
+				 <PINMUX(46, 1)>,
+				 <PINMUX(47, 1)>,
+				 <PINMUX(48, 1)>,
+				 <PINMUX(49, 1)>,
+				 <PINMUX(50, 1)>,
+				 <PINMUX(51, 1)>,
+				 <PINMUX(52, 1)>,
+				 <PINMUX(53, 1)>,
+				 <PINMUX(54, 1)>,
+				 <PINMUX(55, 1)>,
+				 <PINMUX(56, 1)>,
+				 <PINMUX(57, 1)>,
+				 <PINMUX(58, 1)>,
+				 <PINMUX(59, 1)>,
+				 <PINMUX(60, 1)>,
+				 <PINMUX(61, 1)>,
+				 <PINMUX(62, 1)>,
+				 <PINMUX(63, 1)>;
+			drive-strength = <12>;
+			input-disable;
+		};
+	};
+
+	sdcard0_pins: sdcard0-0 {
+		sdcard-pins {
+			pinmux = <GPIOMUX(24, GPOUT_SYS_SDIO0_RST,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <PINMUX(64, 0)>,
+				 <PINMUX(65, 0)>,
+				 <PINMUX(66, 0)>,
+				 <PINMUX(67, 0)>,
+				 <PINMUX(68, 0)>,
+				 <PINMUX(69, 0)>;
+			bias-pull-up;
+			drive-strength = <12>;
+			input-enable;
+			slew-rate = <1>;
+		};
+	};
+
+	sdcard1_pins: sdcard1-0 {
+		sdcard-pins {
+			pinmux = <GPIOMUX(56, GPOUT_SYS_SDIO1_CLK,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(50, GPOUT_SYS_SDIO1_CMD,
+					      GPOEN_SYS_SDIO1_CMD,
+					      GPI_SYS_SDIO1_CMD)>,
+				 <GPIOMUX(49, GPOUT_SYS_SDIO1_DATA0,
+					      GPOEN_SYS_SDIO1_DATA0,
+					      GPI_SYS_SDIO1_DATA0)>,
+				 <GPIOMUX(45, GPOUT_SYS_SDIO1_DATA1,
+					      GPOEN_SYS_SDIO1_DATA1,
+					      GPI_SYS_SDIO1_DATA1)>,
+				 <GPIOMUX(62, GPOUT_SYS_SDIO1_DATA2,
+					      GPOEN_SYS_SDIO1_DATA2,
+					      GPI_SYS_SDIO1_DATA2)>,
+				 <GPIOMUX(40, GPOUT_SYS_SDIO1_DATA3,
+					      GPOEN_SYS_SDIO1_DATA3,
+					      GPI_SYS_SDIO1_DATA3)>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	spdif_pins: spdif-0 {
+		spdif-pins {
+			pinmux = <GPIOMUX(57, GPOUT_SYS_SPDIF,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	spi0_pins: spi0-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(38, GPOUT_SYS_SPI0_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(39, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI0_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(36, GPOUT_SYS_SPI0_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI0_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(37, GPOUT_SYS_SPI0_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI0_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi1_pins: spi1-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(42, GPOUT_SYS_SPI1_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(43, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI1_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(40, GPOUT_SYS_SPI1_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI1_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(41, GPOUT_SYS_SPI1_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI1_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi2_pins: spi2-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(46, GPOUT_SYS_SPI2_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(47, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI2_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(44, GPOUT_SYS_SPI2_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI2_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(45, GPOUT_SYS_SPI2_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI2_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi3_pins: spi3-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(50, GPOUT_SYS_SPI3_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(51, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI3_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(48, GPOUT_SYS_SPI3_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI3_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(49, GPOUT_SYS_SPI3_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI3_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi4_pins: spi4-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(54, GPOUT_SYS_SPI4_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(55, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI4_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(52, GPOUT_SYS_SPI4_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI4_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(53, GPOUT_SYS_SPI4_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI4_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi5_pins: spi5-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(58, GPOUT_SYS_SPI5_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(59, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI5_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(56, GPOUT_SYS_SPI5_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI5_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(57, GPOUT_SYS_SPI5_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI5_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	spi6_pins: spi6-0 {
+		mosi-pins {
+			pinmux = <GPIOMUX(62, GPOUT_SYS_SPI6_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		miso-pins {
+			pinmux = <GPIOMUX(63, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_SPI6_RXD)>;
+			bias-pull-up;
+			input-enable;
+			input-schmitt-enable;
+		};
+
+		sck-pins {
+			pinmux = <GPIOMUX(60, GPOUT_SYS_SPI6_CLK,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI6_CLK)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+
+		ss-pins {
+			pinmux = <GPIOMUX(61, GPOUT_SYS_SPI6_FSS,
+					      GPOEN_ENABLE,
+					      GPI_SYS_SPI6_FSS)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+		};
+	};
+
+	tdm_pins: tdm-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(44, GPOUT_SYS_TDM_TXD,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(61, GPOUT_HIGH,
+					      GPOEN_DISABLE,
+					      GPI_SYS_TDM_RXD)>;
+			input-enable;
+		};
+
+		sync-pins {
+			pinmux = <GPIOMUX(63, GPOUT_HIGH,
+					      GPOEN_DISABLE,
+					      GPI_SYS_TDM_SYNC)>;
+			input-enable;
+		};
+
+		pcmclk-pins {
+			pinmux = <GPIOMUX(38, GPOUT_HIGH,
+					      GPOEN_DISABLE,
+					      GPI_SYS_TDM_CLK)>;
+			input-enable;
+		};
+	};
+
+	uart0_pins: uart0-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(5, GPOUT_SYS_UART0_TX,
+					     GPOEN_ENABLE,
+					     GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(6, GPOUT_LOW,
+					     GPOEN_DISABLE,
+					     GPI_SYS_UART0_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+	};
+
+	uart1_pins: uart1-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_UART1_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART1_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+
+		cts-pins {
+			pinmux = <GPIOMUX(29, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART1_CTS)>;
+			input-enable;
+		};
+
+		rts-pins {
+			pinmux = <GPIOMUX(27, GPOUT_SYS_UART1_RTS,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	uart2_pins: uart2-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_UART2_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART2_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+
+		cts-pins {
+			pinmux = <GPIOMUX(29, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART2_CTS)>;
+			input-enable;
+		};
+
+		rts-pins {
+			pinmux = <GPIOMUX(27, GPOUT_SYS_UART2_RTS,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	uart3_pins: uart3-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_UART3_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART3_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+	};
+
+	uart4_pins: uart4-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_UART4_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART4_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+
+		cts-pins {
+			pinmux = <GPIOMUX(29, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART4_CTS)>;
+			input-enable;
+		};
+
+		rts-pins {
+			pinmux = <GPIOMUX(27, GPOUT_SYS_UART4_RTS,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	uart5_pins: uart5-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(30, GPOUT_SYS_UART5_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(31, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART5_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+
+		cts-pins {
+			pinmux = <GPIOMUX(29, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART5_CTS)>;
+			input-enable;
+		};
+
+		rts-pins {
+			pinmux = <GPIOMUX(27, GPOUT_SYS_UART5_RTS,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	usb_pins: usb-0 {
+		usb-pins {
+			pinmux = <GPIOMUX(33, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>,
+				 <GPIOMUX(34, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_USB_OVERCURRENT)>;
+			input-enable;
+		};
+	};
+};
+
+&aongpio {
+	pwm_ch4to5_pins: pwm-ch4to5-0 {
+		pwm-pins {
+			pinmux = <GPIOMUX(1, GPOUT_AON_PTC0_PWM4, /* PAD_RGPIO0 */
+					     GPOEN_AON_PTC0_OE_N_4,
+					     GPI_NONE)>,
+				 <GPIOMUX(2, GPOUT_AON_PTC0_PWM5, /* PAD_RGPIO1 */
+					     GPOEN_AON_PTC0_OE_N_5,
+					     GPI_NONE)>;
+			drive-strength = <12>;
+		};
+	};
+
+	pwm_ch6to7_pins: pwm-ch6to7-0 {
+		pwm-pins {
+			pinmux = <GPIOMUX(1, GPOUT_AON_PTC0_PWM6, /* PAD_RGPIO0 */
+					     GPOEN_AON_PTC0_OE_N_6,
+					     GPI_NONE)>,
+				 <GPIOMUX(2, GPOUT_AON_PTC0_PWM7, /* PAD_RGPIO1 */
+					     GPOEN_AON_PTC0_OE_N_7,
+					     GPI_NONE)>;
+			drive-strength = <12>;
+		};
+	};
+};

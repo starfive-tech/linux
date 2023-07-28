@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2023 StarFive Technology Co., Ltd.
+ */
+
+/dts-v1/;
+#include "jh7110-evb.dtsi"
+
+/ {
+	model = "StarFive JH7110 EVB";
+	compatible = "starfive,jh7110-evb", "starfive,jh7110";
+};
+
+&mmc0 {
+	assigned-clocks = <&syscrg JH7110_SYSCLK_SDIO0_SDCARD>;
+	assigned-clock-rates = <50000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdcard0_pins>;
+	max-frequency = <100000000>;
+	card-detect-delay = <300>;
+	bus-width = <4>;
+	no-sdio;
+	no-mmc;
+	broken-cd;
+	post-power-on-delay-ms = <200>;
+	status = "okay";
+};
+
+&pcie1 {
+	status = "okay";
+};
+
+&usb0 {
+	status = "okay";
+};

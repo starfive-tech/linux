@@ -196,11 +196,60 @@
 			opp-750000000 {
 					opp-hz = /bits/ 64 <750000000>;
 					opp-microvolt = <800000>;
+					opp-suspend;
 			};
 			opp-1500000000 {
 					opp-hz = /bits/ 64 <1500000000>;
 					opp-microvolt = <1040000>;
 			};
+			/* CPU opp table for 1.25GHz */
+			opp-312500000 {
+					opp-hz = /bits/ 64 <312500000>;
+					opp-microvolt = <800000>;
+			};
+			opp-417000000 {
+					opp-hz = /bits/ 64 <417000000>;
+					opp-microvolt = <800000>;
+			};
+			opp-625000000 {
+					opp-hz = /bits/ 64 <625000000>;
+					opp-microvolt = <800000>;
+					opp-suspend;
+			};
+			opp-1250000000 {
+					opp-hz = /bits/ 64 <1250000000>;
+					opp-microvolt = <1000000>;
+			};
+	};
+
+	display: display-subsystem {
+		compatible = "starfive,jh7110-display","verisilicon,display-subsystem";
+		status = "disabled";
+	};
+
+	dsi_output: dsi-output {
+		compatible = "starfive,jh7110-display-encoder","verisilicon,dsi-encoder";
+		status = "disabled";
+	};
+
+	mailbox_client0: mailbox_client {
+		compatible = "starfive,mailbox-test";
+		mbox-names = "rx", "tx";
+		mboxes = <&mailbox_contrl0 0 1>,<&mailbox_contrl0 1 0>;
+		status = "disabled";
+	};
+
+	rgb_output: rgb-output {
+		compatible = "starfive,jh7110-rgb_output","verisilicon,rgb-encoder";
+		//verisilicon,dss-syscon = <&dssctrl>;
+		//verisilicon,mux-mask = <0x70 0x380>;
+		//verisilicon,mux-val = <0x40 0x280>;
+		status = "disabled";
+	};
+
+	tda988x_pin: tda988x_pin {
+		compatible = "starfive,tda998x_rgb_pin";
+		status = "disabled";
 	};
 
 	thermal-zones {
@@ -349,7 +398,9 @@
 
 		ccache: cache-controller@2010000 {
 			compatible = "starfive,jh7110-ccache", "sifive,ccache0", "cache";
-			reg = <0x0 0x2010000 0x0 0x4000>;
+			reg = <0x0 0x2010000 0x0 0x4000>,
+			      <0x0 0x8000000 0x0 0x2000000>,
+			      <0x0 0xa000000 0x0 0x2000000>;
 			interrupts = <1>, <3>, <4>, <2>;
 			cache-block-size = <64>;
 			cache-level = <2>;
@@ -378,7 +429,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART0_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART0_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART0_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART0_APB>,
+				 <&syscrg JH7110_SYSRST_UART0_CORE>;
 			interrupts = <32>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -391,7 +443,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART1_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART1_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART1_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART1_APB>,
+				 <&syscrg JH7110_SYSRST_UART1_CORE>;
 			interrupts = <33>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -404,7 +457,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART2_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART2_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART2_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART2_APB>,
+				 <&syscrg JH7110_SYSRST_UART2_CORE>;
 			interrupts = <34>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -513,6 +567,25 @@
 			status = "disabled";
 		};
 
+		spdif: spdif@100a0000 {
+			compatible = "starfive,jh7110-spdif";
+			reg = <0x0 0x100a0000 0x0 0x1000>;
+			clocks = <&syscrg JH7110_SYSCLK_SPDIF_APB>,
+				 <&syscrg JH7110_SYSCLK_SPDIF_CORE>,
+				 <&syscrg JH7110_SYSCLK_AUDIO_ROOT>,
+				 <&syscrg JH7110_SYSCLK_MCLK_INNER>,
+				 <&mclk_ext>, <&syscrg JH7110_SYSCLK_MCLK>;
+			clock-names = "apb", "core",
+				      "audroot", "mclk_inner",
+				      "mclk_ext", "mclk";
+			resets = <&syscrg JH7110_SYSRST_SPDIF_APB>;
+			reset-names = "apb";
+			interrupts = <84>;
+			interrupt-names = "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
 		pwmdac: pwmdac@100b0000 {
 			compatible = "starfive,jh7110-pwmdac";
 			reg = <0x0 0x100b0000 0x0 0x1000>;
@@ -522,6 +595,42 @@
 			resets = <&syscrg JH7110_SYSRST_PWMDAC_APB>;
 			dmas = <&dma 22>;
 			dma-names = "tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		pdm: pdm@100d0000 {
+			compatible = "starfive,jh7110-pdm";
+			reg = <0x0 0x100d0000 0x0 0x1000>;
+			reg-names = "pdm";
+			clocks = <&syscrg JH7110_SYSCLK_PDM_DMIC>,
+				 <&syscrg JH7110_SYSCLK_PDM_APB>,
+				 <&syscrg JH7110_SYSCLK_MCLK>,
+				 <&mclk_ext>;
+			clock-names = "pdm_mclk", "pdm_apb",
+				      "clk_mclk", "mclk_ext";
+			resets = <&syscrg JH7110_SYSRST_PDM_DMIC>,
+				 <&syscrg JH7110_SYSRST_PDM_APB>;
+			reset-names = "pdm_dmic", "pdm_apb";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		i2srx_mst: i2srx_mst@100e0000 {
+			compatible = "starfive,jh7110-i2srx-master";
+			reg = <0x0 0x100e0000 0x0 0x1000>;
+			clocks = <&syscrg JH7110_SYSCLK_I2SRX_BCLK_MST>,
+				 <&syscrg JH7110_SYSCLK_I2SRX_APB>,
+				 <&syscrg JH7110_SYSCLK_MCLK>,
+				 <&syscrg JH7110_SYSCLK_MCLK_INNER>,
+				 <&mclk_ext>;
+			clock-names = "i2sclk", "apb", "mclk",
+				      "mclk_inner","mclk_ext";
+			resets = <&syscrg JH7110_SYSRST_I2SRX_APB>,
+				 <&syscrg JH7110_SYSRST_I2SRX_BCLK>;
+			dmas = <&dma 24>;
+			dma-names = "rx";
+			starfive,syscon = <&sys_syscon 0x18 0x2 0x34 0x3FC00 0x24400>;
 			#sound-dai-cells = <0>;
 			status = "disabled";
 		};
@@ -622,6 +731,26 @@
 			#reset-cells = <1>;
 		};
 
+		xrp: xrp@10230000 {
+			compatible = "cdns,xrp";
+			dma-coherent;
+			reg = <0x0 0x10230000 0x0 0x00010000
+			       0x0 0x10240000 0x0 0x00010000>;
+			clocks = <&stgcrg JH7110_STGCLK_HIFI4_CLK_CORE>;
+			clock-names = "core_clk";
+			resets = <&stgcrg JH7110_STGRST_HIFI4_CORE>,
+				 <&stgcrg JH7110_STGRST_HIFI4_AXI>;
+			reset-names = "rst_core","rst_axi";
+			starfive,stg-syscon = <&stg_syscon>;
+			firmware-name = "hifi4_elf";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x40000000 0x0 0x20000000 0x040000
+				0x69c00000 0x0 0x69c00000 0x03000000>;
+			status = "disabled";
+			dsp@0 {};
+		};
+
 		stg_syscon: syscon@10240000 {
 			compatible = "starfive,jh7110-stg-syscon", "syscon";
 			reg = <0x0 0x10240000 0x0 0x1000>;
@@ -633,7 +762,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART3_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART3_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART3_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART3_APB>,
+				 <&syscrg JH7110_SYSRST_UART3_CORE>;
 			interrupts = <45>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -646,7 +776,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART4_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART4_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART4_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART4_APB>,
+				 <&syscrg JH7110_SYSRST_UART4_CORE>;
 			interrupts = <46>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -659,7 +790,8 @@
 			clocks = <&syscrg JH7110_SYSCLK_UART5_CORE>,
 				 <&syscrg JH7110_SYSCLK_UART5_APB>;
 			clock-names = "baudclk", "apb_pclk";
-			resets = <&syscrg JH7110_SYSRST_UART5_APB>;
+			resets = <&syscrg JH7110_SYSRST_UART5_APB>,
+				 <&syscrg JH7110_SYSRST_UART5_CORE>;
 			interrupts = <47>;
 			reg-io-width = <4>;
 			reg-shift = <2>;
@@ -919,6 +1051,18 @@
 				      "ch2", "ch3";
 		};
 
+		mailbox_contrl0: mailbox@13060000 {
+			compatible = "starfive,mail_box";
+			reg = <0x0 0x13060000 0x0 0x0001000>;
+			clocks = <&syscrg JH7110_SYSCLK_MAILBOX_APB>;
+			clock-names = "clk_apb";
+			resets = <&syscrg JH7110_SYSRST_MAILBOX_APB>;
+			reset-names = "mbx_rre";
+			interrupts = <26 27>;
+			#mbox-cells = <2>;
+			status = "disabled";
+		};
+
 		watchdog@13070000 {
 			compatible = "starfive,jh7110-wdt";
 			reg = <0x0 0x13070000 0x0 0x10000>;
@@ -927,6 +1071,112 @@
 			clock-names = "apb", "core";
 			resets = <&syscrg JH7110_SYSRST_WDT_APB>,
 				 <&syscrg JH7110_SYSRST_WDT_CORE>;
+		};
+
+		jpu: jpu@13090000 {
+			compatible = "starfive,jpu";
+			dma-coherent;
+			reg = <0x0 0x13090000 0x0 0x300>;
+			interrupts = <14>;
+			clocks = <&syscrg JH7110_SYSCLK_CODAJ12_AXI>,
+				 <&syscrg JH7110_SYSCLK_CODAJ12_CORE>,
+				 <&syscrg JH7110_SYSCLK_CODAJ12_APB>,
+				 <&syscrg JH7110_SYSCLK_NOC_BUS_VDEC_AXI>,
+				 <&syscrg JH7110_SYSCLK_VDEC_MAIN>,
+				 <&syscrg JH7110_SYSCLK_VDEC_JPG>;
+			clock-names = "axi_clk", "core_clk", "apb_clk",
+				      "noc_bus", "main_clk", "dec_clk";
+			resets = <&syscrg JH7110_SYSRST_CODAJ12_AXI>,
+				 <&syscrg JH7110_SYSRST_CODAJ12_CORE>,
+				 <&syscrg JH7110_SYSRST_CODAJ12_APB>;
+			reset-names = "rst_axi", "rst_core", "rst_apb";
+			power-domains = <&pwrc JH7110_PD_VDEC>;
+			status = "disabled";
+		};
+
+		vpu_dec: vpu_dec@130a0000 {
+			compatible = "starfive,vdec";
+			dma-coherent;
+			reg = <0x0 0x130a0000 0x0 0x10000>;
+			interrupts = <13>;
+			clocks = <&syscrg JH7110_SYSCLK_WAVE511_AXI>,
+				 <&syscrg JH7110_SYSCLK_WAVE511_BPU>,
+				 <&syscrg JH7110_SYSCLK_WAVE511_VCE>,
+				 <&syscrg JH7110_SYSCLK_WAVE511_APB>,
+				 <&syscrg JH7110_SYSCLK_NOC_BUS_VDEC_AXI>,
+				 <&syscrg JH7110_SYSCLK_VDEC_MAIN>;
+			clock-names = "axi_clk", "bpu_clk", "vce_clk",
+				      "apb_clk", "noc_bus", "main_clk";
+			resets = <&syscrg JH7110_SYSRST_WAVE511_AXI>,
+				 <&syscrg JH7110_SYSRST_WAVE511_BPU>,
+				 <&syscrg JH7110_SYSRST_WAVE511_VCE>,
+				 <&syscrg JH7110_SYSRST_WAVE511_APB>,
+				 <&syscrg JH7110_SYSRST_AXIMEM0_AXI>;
+			reset-names = "rst_axi", "rst_bpu", "rst_vce",
+				      "rst_apb", "rst_sram";
+			starfive,vdec_noc_ctrl;
+			power-domains = <&pwrc JH7110_PD_VDEC>;
+			status = "disabled";
+		};
+
+		vpu_enc: vpu_enc@130b0000 {
+			compatible = "starfive,venc";
+			dma-coherent;
+			reg = <0x0 0x130b0000 0x0 0x10000>;
+			interrupts = <15>;
+			clocks = <&syscrg JH7110_SYSCLK_WAVE420L_AXI>,
+				 <&syscrg JH7110_SYSCLK_WAVE420L_BPU>,
+				 <&syscrg JH7110_SYSCLK_WAVE420L_VCE>,
+				 <&syscrg JH7110_SYSCLK_WAVE420L_APB>,
+				 <&syscrg JH7110_SYSCLK_NOC_BUS_VENC_AXI>;
+			clock-names = "axi_clk", "bpu_clk", "vce_clk",
+				      "apb_clk", "noc_bus";
+			resets = <&syscrg JH7110_SYSRST_WAVE420L_AXI>,
+				 <&syscrg JH7110_SYSRST_WAVE420L_BPU>,
+				 <&syscrg JH7110_SYSRST_WAVE420L_VCE>,
+				 <&syscrg JH7110_SYSRST_WAVE420L_APB>,
+				 <&syscrg JH7110_SYSRST_AXIMEM1_AXI>;
+			reset-names = "rst_axi", "rst_bpu", "rst_vce",
+				      "rst_apb", "rst_sram";
+			starfive,venc_noc_ctrl;
+			power-domains = <&pwrc JH7110_PD_VENC>;
+			status = "disabled";
+		};
+
+		can0: can@130d0000 {
+			compatible = "starfive,jh7110-can", "ipms,can";
+			reg = <0x0 0x130d0000 0x0 0x1000>;
+			interrupts = <112>;
+			clocks = <&syscrg JH7110_SYSCLK_CAN0_APB>,
+				 <&syscrg JH7110_SYSCLK_CAN0_CAN>,
+				 <&syscrg JH7110_SYSCLK_CAN0_TIMER>;
+			clock-names = "apb_clk", "core_clk", "timer_clk";
+			resets = <&syscrg JH7110_SYSRST_CAN0_APB>,
+				 <&syscrg JH7110_SYSRST_CAN0_CORE>,
+				 <&syscrg JH7110_SYSRST_CAN0_TIMER>;
+			reset-names = "rst_apb", "rst_core", "rst_timer";
+			frequency = <40000000>;
+			starfive,sys-syscon = <&sys_syscon 0x10 0x3 0x8>;
+			syscon,can_or_canfd = <0>;
+			status = "disabled";
+		};
+
+		can1: can@130e0000 {
+			compatible = "starfive,jh7110-can", "ipms,can";
+			reg = <0x0 0x130e0000 0x0 0x1000>;
+			interrupts = <113>;
+			clocks = <&syscrg JH7110_SYSCLK_CAN1_APB>,
+				 <&syscrg JH7110_SYSCLK_CAN1_CAN>,
+				 <&syscrg JH7110_SYSCLK_CAN1_TIMER>;
+			clock-names = "apb_clk", "core_clk", "timer_clk";
+			resets = <&syscrg JH7110_SYSRST_CAN1_APB>,
+				 <&syscrg JH7110_SYSRST_CAN1_CORE>,
+				 <&syscrg JH7110_SYSRST_CAN1_TIMER>;
+			reset-names = "rst_apb", "rst_core", "rst_timer";
+			frequency = <40000000>;
+			starfive,sys-syscon = <&sys_syscon 0x88 0x12 0x40000>;
+			syscon,can_or_canfd = <0>;
+			status = "disabled";
 		};
 
 		crypto: crypto@16000000 {
@@ -1119,6 +1369,42 @@
 			#power-domain-cells = <1>;
 		};
 
+		rtc: rtc@17040000 {
+			compatible = "starfive,jh7110-rtc";
+			reg = <0x0 0x17040000 0x0 0x10000>;
+			interrupts = <10>, <11>, <12>;
+			interrupt-names = "rtc_ms_pulse", "rtc_sec_pulse", "rtc";
+			clocks = <&aoncrg JH7110_AONCLK_RTC_APB>,
+				 <&aoncrg JH7110_AONCLK_RTC_CAL>;
+			clock-names = "pclk", "cal_clk";
+			resets = <&aoncrg JH7110_AONRST_RTC_32K>,
+				 <&aoncrg JH7110_AONRST_RTC_APB>,
+				 <&aoncrg JH7110_AONRST_RTC_CAL>;
+			reset-names = "rst_osc", "rst_apb", "rst_cal";
+			rtc,cal-clock-freq = <1000000>;
+		};
+
+		gpu: gpu@18000000 {
+			compatible = "img-gpu";
+			reg = <0x0 0x18000000 0x0 0x100000>,
+				<0x0 0x130C000 0x0 0x10000>;
+			clocks = <&syscrg JH7110_SYSCLK_GPU_CORE>,
+				 <&syscrg JH7110_SYSCLK_GPU_APB>,
+				 <&syscrg JH7110_SYSCLK_GPU_RTC_TOGGLE>,
+				 <&syscrg JH7110_SYSCLK_GPU_CORE_CLK>,
+				 <&syscrg JH7110_SYSCLK_GPU_SYS_CLK>,
+				 <&syscrg JH7110_SYSCLK_NOC_BUS_GPU_AXI>;
+			clock-names = "clk_bv", "clk_apb", "clk_rtc",
+					"clk_core", "clk_sys", "clk_axi";
+			resets = <&syscrg JH7110_SYSRST_GPU_APB>,
+				 <&syscrg JH7110_SYSRST_GPU_DOMA>;
+			reset-names = "rst_apb", "rst_doma";
+			power-domains = <&pwrc JH7110_PD_GPUA>;
+			interrupts = <82>;
+			current-clock = <8000000>;
+			status = "disabled";
+		};
+
 		csi2rx: csi-bridge@19800000 {
 			compatible = "starfive,jh7110-csi2rx";
 			reg = <0x0 0x19800000 0x0 0x10000>;
@@ -1142,6 +1428,67 @@
 				 "pixel_if2", "pixel_if3";
 			phys = <&csi_phy>;
 			phy-names = "dphy";
+			status = "disabled";
+		};
+
+		vin_sysctl: vin_sysctl@19800000 {
+			compatible = "starfive,jh7110-vin";
+			reg = <0x0 0x19800000 0x0 0x10000>,
+				<0x0 0x19810000 0x0 0x10000>,
+				<0x0 0x19820000 0x0 0x10000>,
+				<0x0 0x19840000 0x0 0x10000>,
+				<0x0 0x19870000 0x0 0x30000>,
+				<0x0 0x11840000 0x0 0x10000>,
+				<0x0 0x17030000 0x0 0x10000>,
+				<0x0 0x13020000 0x0 0x10000>;
+			reg-names = "csi2rx", "vclk", "vrst", "sctrl",
+				"isp", "trst", "pmu", "syscrg";
+			clocks = <&ispcrg JH7110_ISPCLK_DOM4_APB_FUNC>,
+				 <&ispcrg JH7110_ISPCLK_VIN_APB>,
+				 <&ispcrg JH7110_ISPCLK_VIN_SYS>,
+				 <&ispcrg JH7110_ISPCLK_ISPV2_TOP_WRAPPER_C>,
+				 <&ispcrg JH7110_ISPCLK_DVP_INV>,
+				 <&ispcrg JH7110_ISPCLK_VIN_P_AXI_WR>,
+				 <&ispcrg JH7110_ISPCLK_MIPI_RX0_PXL>,
+				 <&ispcrg JH7110_ISPCLK_VIN_PIXEL_IF0>,
+				 <&ispcrg JH7110_ISPCLK_VIN_PIXEL_IF1>,
+				 <&ispcrg JH7110_ISPCLK_VIN_PIXEL_IF2>,
+				 <&ispcrg JH7110_ISPCLK_VIN_PIXEL_IF3>,
+				 <&ispcrg JH7110_ISPCLK_M31DPHY_CFG_IN>,
+				 <&ispcrg JH7110_ISPCLK_M31DPHY_REF_IN>,
+				 <&ispcrg JH7110_ISPCLK_M31DPHY_TX_ESC_LAN0>,
+				 <&syscrg JH7110_SYSCLK_ISP_TOP_CORE>,
+				 <&syscrg JH7110_SYSCLK_ISP_TOP_AXI>;
+			clock-names = "clk_apb_func", "clk_pclk", "clk_sys_clk",
+				"clk_wrapper_clk_c", "clk_dvp_inv", "clk_axiwr",
+				"clk_mipi_rx0_pxl", "clk_pixel_clk_if0",
+				"clk_pixel_clk_if1", "clk_pixel_clk_if2",
+				"clk_pixel_clk_if3", "clk_m31dphy_cfgclk_in",
+				"clk_m31dphy_refclk_in", "clk_m31dphy_txclkesc_lan0",
+				"clk_ispcore_2x", "clk_isp_axi";
+			resets = <&ispcrg JH7110_ISPRST_ISPV2_TOP_WRAPPER_P>,
+				 <&ispcrg JH7110_ISPRST_ISPV2_TOP_WRAPPER_C>,
+				 <&ispcrg JH7110_ISPRST_VIN_APB>,
+				 <&ispcrg JH7110_ISPRST_VIN_SYS>,
+				 <&ispcrg JH7110_ISPRST_VIN_P_AXI_RD>,
+				 <&ispcrg JH7110_ISPRST_VIN_P_AXI_WR>,
+				 <&ispcrg JH7110_ISPRST_VIN_PIXEL_IF0>,
+				 <&ispcrg JH7110_ISPRST_VIN_PIXEL_IF1>,
+				 <&ispcrg JH7110_ISPRST_VIN_PIXEL_IF2>,
+				 <&ispcrg JH7110_ISPRST_VIN_PIXEL_IF3>,
+				 <&ispcrg JH7110_ISPRST_M31DPHY_HW>,
+				 <&ispcrg JH7110_ISPRST_M31DPHY_B09_AON>,
+				 <&syscrg JH7110_SYSRST_ISP_TOP>,
+				 <&syscrg JH7110_SYSRST_ISP_TOP_AXI>;
+			reset-names = "rst_wrapper_p", "rst_wrapper_c", "rst_pclk",
+				"rst_sys_clk", "rst_axird", "rst_axiwr", "rst_pixel_clk_if0",
+				"rst_pixel_clk_if1", "rst_pixel_clk_if2", "rst_pixel_clk_if3",
+				"rst_m31dphy_hw", "rst_m31dphy_b09_always_on",
+				"rst_isp_top_n", "rst_isp_top_axi";
+			starfive,aon-syscon = <&aon_syscon 0x00>;
+			power-domains = <&pwrc JH7110_PD_ISP>;
+			/* irq nr: vin, isp, isp_csi, isp_scd, isp_csiline */
+			interrupts = <92 87 88 89 90>;
 			status = "disabled";
 		};
 
@@ -1175,6 +1522,66 @@
 			#phy-cells = <0>;
 		};
 
+		dc8200: dc8200@29400000 {
+			compatible = "starfive,jh7110-dc8200","verisilicon,dc8200";
+			verisilicon,dss-syscon = <&dssctrl>;//20220624 panel syscon
+			reg = <0x0 0x29400000 0x0 0x100>,
+			      <0x0 0x29400800 0x0 0x2000>,
+			      <0x0 0x17030000 0x0 0x1000>;
+			interrupts = <95>;
+			clocks = <&syscrg JH7110_SYSCLK_NOC_BUS_DISP_AXI>,
+				 <&syscrg JH7110_SYSCLK_VOUT_SRC>,
+				 <&syscrg JH7110_SYSCLK_VOUT_TOP_AXI>,
+				 <&syscrg JH7110_SYSCLK_VOUT_TOP_AHB>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_PIX0>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_PIX1>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_AXI>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_CORE>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_AHB>,
+				 <&syscrg JH7110_SYSCLK_VOUT_TOP_AXI>,
+				 <&voutcrg JH7110_VOUTCLK_DOM_VOUT_TOP_LCD>,
+				 <&hdmitx0_pixelclk>,
+				 <&voutcrg JH7110_VOUTCLK_DC8200_PIX>;
+			clock-names = "noc_disp","vout_src",
+			   "top_vout_axi","top_vout_ahb",
+			   "pix_clk","vout_pix1",
+			   "axi_clk","core_clk","vout_ahb",
+			   "vout_top_axi","vout_top_lcd","hdmitx0_pixelclk","dc8200_pix0";
+			resets = <&syscrg JH7110_SYSRST_VOUT_TOP_SRC>,
+				 <&voutcrg JH7110_VOUTRST_DC8200_AXI>,
+				 <&voutcrg JH7110_VOUTRST_DC8200_AHB>,
+				 <&voutcrg JH7110_VOUTRST_DC8200_CORE>,
+				 <&syscrg JH7110_SYSRST_NOC_BUS_DISP_AXI>;
+			reset-names = "rst_vout_src","rst_axi","rst_ahb","rst_core",
+					"rst_noc_disp";
+			status = "disabled";
+		};
+
+		hdmi: hdmi@29590000 {
+			compatible = "starfive,jh7110-hdmi","inno,hdmi";
+			reg = <0x0 0x29590000 0x0 0x4000>;
+			interrupts = <99>;
+			/*interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;*/
+			/*clocks = <&cru  PCLK_HDMI>;*/
+			/*clock-names = "pclk";*/
+			/*pinctrl-names = "default";*/
+			/*pinctrl-0 = <&hdmi_ctl>;*/
+			clocks = <&voutcrg JH7110_VOUTCLK_HDMI_TX_SYS>,
+				 <&voutcrg JH7110_VOUTCLK_HDMI_TX_MCLK>,
+				 <&voutcrg JH7110_VOUTCLK_HDMI_TX_BCLK>,
+				 <&hdmitx0_pixelclk>;
+			clock-names = "sysclk", "mclk","bclk","pclk";
+			resets = <&voutcrg JH7110_VOUTRST_HDMI_TX_HDMI>;
+			reset-names = "hdmi_tx";
+			#sound-dai-cells = <0>;
+			status = "disabled";
+		};
+
+		dssctrl: dssctrl@295B0000 {
+			compatible = "starfive,jh7110-dssctrl","verisilicon,dss-ctrl", "syscon";
+			reg = <0 0x295B0000 0 0x90>;
+		};
+
 		voutcrg: clock-controller@295c0000 {
 			compatible = "starfive,jh7110-voutcrg";
 			reg = <0x0 0x295c0000 0x0 0x10000>;
@@ -1191,6 +1598,67 @@
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 			power-domains = <&pwrc JH7110_PD_VOUT>;
+		};
+
+		mipi_dsi: mipi@295d0000 {
+			compatible = "starfive,jh7110-mipi_dsi","cdns,dsi";
+			reg = <0x0 0x295d0000 0x0 0x10000>;
+			interrupts = <98>;
+			reg-names = "dsi";
+			clocks = <&voutcrg JH7110_VOUTCLK_DSITX_SYS>,
+				 <&voutcrg JH7110_VOUTCLK_DSITX_APB>,
+				 <&voutcrg JH7110_VOUTCLK_DSITX_TXESC>,
+				 <&voutcrg JH7110_VOUTCLK_DSITX_DPI>;
+			clock-names = "dpi", "apb", "txesc", "sys";
+			resets = <&voutcrg JH7110_VOUTRST_DSITX_DPI>,
+				 <&voutcrg JH7110_VOUTRST_DSITX_APB>,
+				 <&voutcrg JH7110_VOUTRST_DSITX_RXESC>,
+				 <&voutcrg JH7110_VOUTRST_DSITX_SYS>,
+				 <&voutcrg JH7110_VOUTRST_DSITX_TXBYTEHS>,
+				 <&voutcrg JH7110_VOUTRST_DSITX_TXESC>;
+			reset-names = "dsi_dpi", "dsi_apb", "dsi_rxesc",
+					"dsi_sys", "dsi_txbytehs", "dsi_txesc";
+			phys = <&mipi_dphy>;
+			phy-names = "dphy";
+			status = "disabled";
+		};
+
+		mipi_dphy: mipi-dphy@295e0000{
+			compatible = "starfive,jh7110-mipi-dphy-tx","m31,mipi-dphy-tx";
+			reg = <0x0 0x295e0000 0x0 0x10000>;
+			clocks = <&voutcrg JH7110_VOUTCLK_MIPITX_DPHY_TXESC>;
+			clock-names = "dphy_txesc";
+			resets = <&voutcrg JH7110_VOUTRST_MIPITX_DPHY_SYS>,
+				 <&voutcrg JH7110_VOUTRST_MIPITX_DPHY_TXBYTEHS>;
+			reset-names = "dphy_sys", "dphy_txbytehs";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		co_process: e24@6e210000 {
+			compatible = "starfive,e24";
+			dma-coherent;
+			reg = <0x0 0x6e210000 0x0 0x00001000>,
+				<0x0 0x6e211000 0x0 0x0003f000>;
+			reg-names = "ecmd", "espace";
+			clocks = <&stgcrg JH7110_STGCLK_E2_RTC>,
+				 <&stgcrg JH7110_STGCLK_E2_CORE>,
+				 <&stgcrg JH7110_STGCLK_E2_DBG>;
+			clock-names = "clk_rtc", "clk_core", "clk_dbg";
+			resets = <&stgcrg JH7110_STGRST_E24_CORE>;
+			reset-names = "e24_core";
+			starfive,stg-syscon = <&stg_syscon>;
+			interrupt-parent = <&plic>;
+			firmware-name = "e24_elf";
+			irq-mode = <1>;
+			mbox-names = "tx", "rx";
+			mboxes = <&mailbox_contrl0 0 2>,
+				 <&mailbox_contrl0 2 0>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x6ce00000 0x0 0x6ce00000 0x1600000>;
+			status = "disabled";
+			dsp@0 {};
 		};
 
 		pcie0: pcie@940000000 {
