@@ -1215,6 +1215,8 @@ static int cdns_dsi_attach(struct mipi_dsi_host *host,
 	struct device_node *np;
 	int ret;
 
+	dev_info(&dev->dev, "dsi controller attach\n");
+
 	/*
 	 * We currently do not support connecting several DSI devices to the
 	 * same host. In order to support that we'd need the DRM bridge
@@ -1524,6 +1526,8 @@ static int cdns_dsi_drm_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 	u32 val;
+
+	dev_info(&pdev->dev, "dsi controller probe\n");
 
 	dsi = devm_kzalloc(&pdev->dev, sizeof(*dsi), GFP_KERNEL);
 	if (!dsi)
