@@ -158,29 +158,29 @@
 &uart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mmc0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc0_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mmc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdcard1_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&inno_hdmi_pins>;
 };
@@ -192,5 +192,5 @@
 		    <&pcie0_vbus_default>;
 	pinctrl-1 = <&pcie0_perst_default>;
 	pinctrl-2 = <&pcie0_perst_active>;
-	status = "disabled";
+	status = "okay";
 };

@@ -222,32 +222,32 @@
 &i2c2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mmc0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc0_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &mmc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdcard1_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&inno_hdmi_pins>;
 	hpd-gpio = <&gpio 15 GPIO_ACTIVE_HIGH>;
-	status = "disabled";
+	status = "okay";
 };
 
 &i2stx_4ch0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&mclk_ext_pins>;
-	status = "disabled";
+	status = "okay";
 };
 
 &cpu1 {

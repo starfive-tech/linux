@@ -6,18 +6,17 @@
 
 /dts-v1/;
 #include "jh7110-visionfive-v2.dts"
-#include "codecs/sf_ac108.dtsi"
+#include "codecs/sf_tdm.dtsi"
 
 &i2c0 {
-	ac108: ac108@3b {
-		compatible = "x-power,ac108_0";
-		reg = <0x3b>;
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		wlf,shared-lrclk;
 		#sound-dai-cells = <0>;
-		data-protocol = <0>;
 	};
 };
 
-&i2srx_3ch {
+&tdm {
 	status = "okay";
 };
-
