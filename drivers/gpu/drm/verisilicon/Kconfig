@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-2.0
+config DRM_VERISILICON
+	tristate "DRM Support for VeriSilicon"
+	depends on DRM
+	select DRM_KMS_HELPER
+	select DRM_GEM_DMA_HELPER
+	select CMA
+	select DMA_CMA
+	help
+	  Choose this option if you have a VeriSilicon soc chipset.
+	  This driver provides VeriSilicon kernel mode
+	  setting and buffer management. It does not
+	  provide 2D or 3D acceleration.
+
+if DRM_VERISILICON
+
+config STARFIVE_HDMI
+	bool "Starfive specific extensions HDMI"
+	help
+	   This selects support for StarFive SoC specific extensions
+	   for the Innosilicon HDMI driver. If you want to enable
+	   HDMI on JH7110 based SoC, you should select this option.
+
+	   To compile this driver as a module, choose M here.
+endif
