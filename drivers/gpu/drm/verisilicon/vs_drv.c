@@ -33,6 +33,7 @@
 #include "vs_drv.h"
 #include "vs_modeset.h"
 #include "vs_gem.h"
+#include "vs_dc.h"
 
 #define DRV_NAME	"starfive"
 #define DRV_DESC	"Starfive DRM driver"
@@ -155,7 +156,7 @@ static const struct component_master_ops vs_drm_ops = {
 };
 
 static struct platform_driver *drm_sub_drivers[] = {
-
+	&dc_platform_driver,
 
 	/* connector + encoder*/
 #ifdef CONFIG_STARFIVE_HDMI
