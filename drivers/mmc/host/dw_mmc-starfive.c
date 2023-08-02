@@ -9,10 +9,12 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mmc/host.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 
@@ -23,6 +25,7 @@
 #define MAX_DELAY_CHAIN		32
 
 #define STARFIVE_SMPL_PHASE     GENMASK(20, 16)
+#define EVB_SD_SEL1V8_EN_PIN	25
 
 static void dw_mci_starfive_set_ios(struct dw_mci *host, struct mmc_ios *ios)
 {
@@ -103,12 +106,14 @@ static int dw_mci_starfive_switch_voltage(struct mmc_host *mmc, struct mmc_ios *
 	struct dw_mci *host = slot->host;
 	u32 ret;
 
-	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330)
-		ret = gpio_direction_output(25, 0);
-	else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
-		ret = gpio_direction_output(25, 1);
-	if (ret)
-		return ret;
+	if (device_property_read_bool(host->dev, "board-is-evb")) {
+		if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330)
+			ret = gpio_direction_output(EVB_SD_SEL1V8_EN_PIN, 0);
+		else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+			ret = gpio_direction_output(EVB_SD_SEL1V8_EN_PIN, 1);
+		if (ret)
+			return ret;
+	}
 
 	if (!IS_ERR(mmc->supply.vqmmc)) {
 		ret = mmc_regulator_set_vqmmc(mmc, ios);
@@ -117,9 +122,6 @@ static int dw_mci_starfive_switch_voltage(struct mmc_host *mmc, struct mmc_ios *
 			return ret;
 		}
 	}
-
-	/* We should delay 20ms wait for timing setting finished. */
-	mdelay(20);
 
 	return 0;
 }
@@ -140,6 +142,43 @@ MODULE_DEVICE_TABLE(of, dw_mci_starfive_match);
 
 static int dw_mci_starfive_probe(struct platform_device *pdev)
 {
+	struct gpio_desc *power_gpio;
+	int gpio_wl_reg_on = -1;
+	int ret;
+
+	if (device_property_read_bool(&pdev->dev, "board-is-devkits")) {
+		power_gpio = devm_gpiod_get_optional(&pdev->dev, "power", GPIOD_OUT_LOW);
+		if (IS_ERR(power_gpio)) {
+			dev_err(&pdev->dev, "Failed to get power-gpio\n");
+			return -EINVAL;
+		}
+
+		gpiod_set_value_cansleep(power_gpio, 1);
+
+		gpio_wl_reg_on = of_get_named_gpio(pdev->dev.of_node, "gpio_wl_reg_on", 0);
+		if (gpio_wl_reg_on >= 0) {
+			ret = gpio_request(gpio_wl_reg_on, "WL_REG_ON");
+			if (ret < 0) {
+				dev_err(&pdev->dev, "gpio_request(%d) for WL_REG_ON failed %d\n",
+					gpio_wl_reg_on, ret);
+				gpio_wl_reg_on = -1;
+				return -EINVAL;
+			}
+			ret = gpio_direction_output(gpio_wl_reg_on, 0);
+			if (ret) {
+				dev_err(&pdev->dev, "WL_REG_ON didn't output high\n");
+				return -EIO;
+			}
+			mdelay(10);
+			ret = gpio_direction_output(gpio_wl_reg_on, 1);
+			if (ret) {
+				dev_err(&pdev->dev, "WL_REG_ON didn't output high\n");
+				return -EIO;
+			}
+			mdelay(10);
+		}
+	}
+
 	return dw_mci_pltfm_register(pdev, &starfive_data);
 }
 
