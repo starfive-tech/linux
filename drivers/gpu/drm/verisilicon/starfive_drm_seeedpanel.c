@@ -18,7 +18,7 @@
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
 #include "vs_drv.h"
-#define RPI_DSI_DRIVER_NAME "cdns-dri-panel"
+#define RPI_DSI_DRIVER_NAME "starfive-dri-panel"
 
 /* I2C registers of the Atmel microcontroller. */
 enum REG_ADDR {
@@ -492,6 +492,7 @@ static int seeed_dsi_probe(struct mipi_dsi_device *dsi)
 				MIPI_DSI_MODE_LPM);
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->lanes = 1;
+	dsi->hs_rate = 750000000;
 
 	ret = mipi_dsi_attach(dsi);
 	if (ret)
