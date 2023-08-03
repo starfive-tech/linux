@@ -7,7 +7,7 @@
 
 	//hdmi_output
 	fragment@0 {
-		target-path = "/soc/tda988x_pin";
+		target-path = "/tda988x_pin";
 		__overlay__ {
 			status = "okay";
 		};
