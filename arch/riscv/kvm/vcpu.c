@@ -471,6 +471,7 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 	return -EINVAL;
 }
 
+/*
 static void kvm_riscv_vcpu_update_config(const unsigned long *isa)
 {
 	u64 henvcfg = 0;
@@ -492,6 +493,7 @@ static void kvm_riscv_vcpu_update_config(const unsigned long *isa)
 	csr_write(CSR_HENVCFGH, henvcfg >> 32);
 #endif
 }
+*/
 
 void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 {
