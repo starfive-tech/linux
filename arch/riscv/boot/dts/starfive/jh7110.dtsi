@@ -249,9 +249,8 @@
 	};
 
 	stmmac_axi_setup: stmmac-axi-config {
-		snps,lpi_en;
-		snps,wr_osr_lmt = <4>;
-		snps,rd_osr_lmt = <4>;
+		snps,wr_osr_lmt = <0xf>;
+		snps,rd_osr_lmt = <0xf>;
 		snps,blen = <256 128 64 32 0 0 0>;
 	};
 
