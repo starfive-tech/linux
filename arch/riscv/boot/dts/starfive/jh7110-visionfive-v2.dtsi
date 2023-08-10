@@ -741,6 +741,21 @@
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
+        clock-names = "gtx",
+                      "tx",
+                      "ptp_ref",
+                      "stmmaceth",
+                      "pclk",
+                      "gtxc",
+                      "rmii_rtx";
+        clocks = <&clkgen JH7110_GMAC0_GTXCLK>,
+                 <&clkgen JH7110_U0_GMAC5_CLK_TX>,
+                 <&clkgen JH7110_GMAC0_PTP>,
+                 <&clkgen JH7110_U0_GMAC5_CLK_AHB>,
+                 <&clkgen JH7110_U0_GMAC5_CLK_AXI>,
+                 <&clkgen JH7110_GMAC0_GTXC>,
+                 <&clkgen JH7110_GMAC0_RMII_RTX>;
+
 	phy0: ethernet-phy@0 {
 		rgmii_sw_dr_2 = <0x0>;
 		rgmii_sw_dr = <0x3>;
@@ -759,6 +774,21 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
+        clock-names = "gtx",
+                      "tx",
+                      "ptp_ref",
+                      "stmmaceth",
+                      "pclk",
+                      "gtxc",
+                      "rmii_rtx";
+        clocks = <&clkgen JH7110_GMAC1_GTXCLK>,
+                 <&clkgen JH7110_GMAC5_CLK_TX>,
+                 <&clkgen JH7110_GMAC5_CLK_PTP>,
+                 <&clkgen JH7110_GMAC5_CLK_AHB>,
+                 <&clkgen JH7110_GMAC5_CLK_AXI>,
+                 <&clkgen JH7110_GMAC1_GTXC>,
+                 <&clkgen JH7110_GMAC1_RMII_RTX>;
+
 	phy1: ethernet-phy@1 {
 		rgmii_sw_dr_2 = <0x0>;
 		rgmii_sw_dr = <0x3>;
@@ -1031,3 +1061,4 @@
 		};
 	};
 };
+
