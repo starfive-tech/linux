@@ -501,7 +501,52 @@ static int __init jh7110_syscrg_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	return jh7110_reset_controller_register(priv, "rst-sys", 0);
+	ret = jh7110_reset_controller_register(priv, "rst-sys", 0);
+	if (ret)
+		return ret;
+
+	/*
+	 * Set PLL0 rate to 1.5GHz
+	 * In order to not affect the cpu when the PLL0 rate is changing,
+	 * we need to switch the parent of cpu_root clock to osc clock first,
+	 * and then switch back after setting the PLL0 rate.
+	 */
+	pllclk = clk_get(priv->dev, "pll0_out");
+	if (!IS_ERR(pllclk)) {
+		struct clk *osc = clk_get(&pdev->dev, "osc");
+		struct clk *cpu_root = priv->reg[JH7110_SYSCLK_CPU_ROOT].hw.clk;
+		struct clk *cpu_core = priv->reg[JH7110_SYSCLK_CPU_CORE].hw.clk;
+
+		if (IS_ERR(osc)) {
+			clk_put(pllclk);
+			return PTR_ERR(osc);
+		}
+
+		/*
+		 * CPU need voltage regulation by CPUfreq if set 1.5GHz.
+		 * So in this driver, cpu_core need to be set the divider to be 2 first
+		 * and will be 750M after setting parent.
+		 */
+		ret = clk_set_rate(cpu_core, clk_get_rate(cpu_core) / 2);
+		if (ret)
+			goto failed_set;
+
+		ret = clk_set_parent(cpu_root, osc);
+		if (ret)
+			goto failed_set;
+
+		ret = clk_set_rate(pllclk, 1500000000);
+		if (ret)
+			goto failed_set;
+
+		ret = clk_set_parent(cpu_root, pllclk);
+
+failed_set:
+		clk_put(pllclk);
+		clk_put(osc);
+	}
+
+	return ret;
 }
 
 static const struct of_device_id jh7110_syscrg_match[] = {
