@@ -10,8 +10,8 @@
 #include "wave5-vpu.h"
 #include "wave5-regdefine.h"
 #include <linux/delay.h>
-#include <soc/sifive/sifive_l2_cache.h>
 
+extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
 
 #define VDI_SYSTEM_ENDIAN		VDI_LITTLE_ENDIAN
 #define VDI_128BIT_BUS_SYSTEM_ENDIAN	VDI_128BIT_LITTLE_ENDIAN
