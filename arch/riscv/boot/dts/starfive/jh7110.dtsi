@@ -1021,6 +1021,7 @@
 
 		jpu: jpu@13090000 {
 			compatible = "starfive,jpu";
+			dma-coherent;
 			reg = <0x0 0x13090000 0x0 0x300>;
 			interrupts = <14>;
 			clocks = <&clkgen JH7110_CODAJ12_CLK_AXI>,
@@ -1039,6 +1040,7 @@
 
 		vpu_dec: vpu_dec@130A0000 {
 			compatible = "starfive,vdec";
+			dma-coherent;
 			reg = <0x0 0x130A0000 0x0 0x10000>;
 			interrupts = <13>;
 			clocks = <&clkgen JH7110_WAVE511_CLK_AXI>,
@@ -1062,6 +1064,7 @@
 
 		vpu_enc: vpu_enc@130B0000 {
 			compatible = "starfive,venc";
+			dma-coherent;
 			reg = <0x0 0x130B0000 0x0 0x10000>;
 			interrupts = <15>;
 			clocks = <&clkgen JH7110_WAVE420L_CLK_AXI>,
