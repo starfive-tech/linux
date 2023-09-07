@@ -119,4 +119,15 @@ struct plda_pcie_rp {
 	struct plda_msi msi;
 	void __iomem *bridge_addr;
 };
+
+void plda_handle_msi(struct irq_desc *desc);
+int plda_allocate_msi_domains(struct plda_pcie_rp *port);
+void plda_handle_intx(struct irq_desc *desc);
+int plda_pcie_intx_map(struct irq_domain *domain, unsigned int irq,
+		       irq_hw_number_t hwirq);
+void plda_pcie_setup_window(void __iomem *bridge_base_addr, u32 index,
+			    phys_addr_t axi_addr, phys_addr_t pci_addr,
+			    size_t size);
+int plda_pcie_setup_iomems(struct pci_host_bridge *bridge,
+			   struct plda_pcie_rp *port);
 #endif
