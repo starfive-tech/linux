@@ -125,8 +125,18 @@ struct plda_pcie_rp {
 	struct irq_domain *event_domain;
 	raw_spinlock_t lock;
 	struct plda_msi msi;
+	const struct plda_event_ops *event_ops;
 	void __iomem *bridge_addr;
 	int num_events;
+};
+
+struct plda_event {
+	const struct irq_domain_ops *domain_ops;
+	const struct plda_event_ops *event_ops;
+	int (*request_event_irq)(struct plda_pcie_rp *pcie,
+				 int event_irq, int event);
+	int intx_event;
+	int msi_event;
 };
 
 void plda_handle_msi(struct irq_desc *desc);
