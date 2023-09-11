@@ -929,6 +929,29 @@ update_con:
 	return nbcon_context_exit_unsafe(ctxt);
 }
 
+/* Track the nbcon emergency nesting per CPU. */
+static DEFINE_PER_CPU(unsigned int, nbcon_pcpu_emergency_nesting);
+static unsigned int early_nbcon_pcpu_emergency_nesting __initdata;
+
+/**
+ * nbcon_get_cpu_emergency_nesting - Get the per CPU emergency nesting pointer
+ *
+ * Return:	Either a pointer to the per CPU emergency nesting counter of
+ *		the current CPU or to the init data during early boot.
+ */
+static __ref unsigned int *nbcon_get_cpu_emergency_nesting(void)
+{
+	/*
+	 * The value of __printk_percpu_data_ready gets set in normal
+	 * context and before SMP initialization. As a result it could
+	 * never change while inside an nbcon emergency section.
+	 */
+	if (!printk_percpu_data_ready())
+		return &early_nbcon_pcpu_emergency_nesting;
+
+	return this_cpu_ptr(&nbcon_pcpu_emergency_nesting);
+}
+
 /**
  * nbcon_atomic_emit_one - Print one record for an nbcon console using the
  *				write_atomic() callback
@@ -971,8 +994,14 @@ static bool nbcon_atomic_emit_one(struct nbcon_write_context *wctxt)
  */
 enum nbcon_prio nbcon_get_default_prio(void)
 {
+	unsigned int *cpu_emergency_nesting;
+
 	if (this_cpu_in_panic())
 		return NBCON_PRIO_PANIC;
+
+	cpu_emergency_nesting = nbcon_get_cpu_emergency_nesting();
+	if (*cpu_emergency_nesting)
+		return NBCON_PRIO_EMERGENCY;
 
 	return NBCON_PRIO_NORMAL;
 }
@@ -1108,6 +1137,58 @@ void nbcon_atomic_flush_all(void)
 void nbcon_atomic_flush_unsafe(void)
 {
 	__nbcon_atomic_flush_all(prb_next_reserve_seq(prb), true);
+}
+
+/**
+ * nbcon_cpu_emergency_enter - Enter an emergency section where printk()
+ *	messages for that CPU are only stored
+ *
+ * Upon exiting the emergency section, all stored messages are flushed.
+ *
+ * Context:	Any context. Disables preemption.
+ *
+ * When within an emergency section, no printing occurs on that CPU. This
+ * is to allow all emergency messages to be dumped into the ringbuffer before
+ * flushing the ringbuffer. The actual printing occurs when exiting the
+ * outermost emergency section.
+ */
+void nbcon_cpu_emergency_enter(void)
+{
+	unsigned int *cpu_emergency_nesting;
+
+	preempt_disable();
+
+	cpu_emergency_nesting = nbcon_get_cpu_emergency_nesting();
+	(*cpu_emergency_nesting)++;
+}
+
+/**
+ * nbcon_cpu_emergency_exit - Exit an emergency section and flush the
+ *	stored messages
+ *
+ * Flushing only occurs when exiting all nesting for the CPU.
+ *
+ * Context:	Any context. Enables preemption.
+ */
+void nbcon_cpu_emergency_exit(void)
+{
+	unsigned int *cpu_emergency_nesting;
+	bool do_trigger_flush = false;
+
+	cpu_emergency_nesting = nbcon_get_cpu_emergency_nesting();
+
+	WARN_ON_ONCE(*cpu_emergency_nesting == 0);
+
+	if (*cpu_emergency_nesting == 1)
+		do_trigger_flush = true;
+
+	/* Undo the nesting count of nbcon_cpu_emergency_enter(). */
+	(*cpu_emergency_nesting)--;
+
+	preempt_enable();
+
+	if (do_trigger_flush)
+		printk_trigger_flush();
 }
 
 /**
