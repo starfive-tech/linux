@@ -77,6 +77,7 @@ void nbcon_seq_force(struct console *con, u64 seq);
 bool nbcon_alloc(struct console *con);
 void nbcon_init(struct console *con);
 void nbcon_free(struct console *con);
+void nbcon_atomic_flush_all(void);
 
 /*
  * Check if the given console is currently capable and allowed to print
@@ -131,6 +132,7 @@ static inline void nbcon_seq_force(struct console *con, u64 seq) { }
 static inline bool nbcon_alloc(struct console *con) { return false; }
 static inline void nbcon_init(struct console *con) { }
 static inline void nbcon_free(struct console *con) { }
+static inline void nbcon_atomic_flush_all(void) { }
 
 static inline bool console_is_usable(struct console *con, short flags) { return false; }
 
