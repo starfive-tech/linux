@@ -3176,6 +3176,8 @@ void console_flush_on_panic(enum con_flush_mode mode)
 		console_srcu_read_unlock(cookie);
 	}
 
+	nbcon_atomic_flush_all();
+
 	console_flush_all(false, &next_seq, &handover);
 }
 
