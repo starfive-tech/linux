@@ -299,6 +299,7 @@ struct nbcon_write_context {
  * @nbcon_state:	State for nbcon consoles
  * @nbcon_seq:		Sequence number of the next record for nbcon to print
  * @pbufs:		Pointer to nbcon private buffer
+ * @locked_port:	True, if the port lock is locked by nbcon
  */
 struct console {
 	char			name[16];
@@ -325,6 +326,7 @@ struct console {
 	atomic_t		__private nbcon_state;
 	atomic_long_t		__private nbcon_seq;
 	struct printk_buffers	*pbufs;
+	bool			locked_port;
 };
 
 #ifdef CONFIG_LOCKDEP
