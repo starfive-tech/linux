@@ -6,6 +6,7 @@
 #include <linux/console.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/serial_core.h>
 #include "internal.h"
 /*
  * Printk console printing implementation for consoles which does not depend
@@ -995,3 +996,79 @@ void nbcon_free(struct console *con)
 
 	con->pbufs = NULL;
 }
+
+static inline bool uart_is_nbcon(struct uart_port *up)
+{
+	int cookie;
+	bool ret;
+
+	if (!uart_console(up))
+		return false;
+
+	cookie = console_srcu_read_lock();
+	ret = (console_srcu_read_flags(up->cons) & CON_NBCON);
+	console_srcu_read_unlock(cookie);
+	return ret;
+}
+
+/**
+ * nbcon_acquire - The second half of the port locking wrapper
+ * @up:		The uart port whose @lock was locked
+ *
+ * The uart_port_lock() wrappers will first lock the spin_lock @up->lock.
+ * Then this function is called to implement nbcon-specific processing.
+ *
+ * If @up is an nbcon console, this console will be acquired and marked as
+ * unsafe. Otherwise this function does nothing.
+ */
+void nbcon_acquire(struct uart_port *up)
+{
+	struct console *con = up->cons;
+	struct nbcon_context ctxt;
+
+	if (!uart_is_nbcon(up))
+		return;
+
+	WARN_ON_ONCE(con->locked_port);
+
+	do {
+		do {
+			memset(&ctxt, 0, sizeof(ctxt));
+			ctxt.console	= con;
+			ctxt.prio	= NBCON_PRIO_NORMAL;
+		} while (!nbcon_context_try_acquire(&ctxt));
+
+	} while (!nbcon_context_enter_unsafe(&ctxt));
+
+	con->locked_port = true;
+}
+EXPORT_SYMBOL_GPL(nbcon_acquire);
+
+/**
+ * nbcon_release - The first half of the port unlocking wrapper
+ * @up:		The uart port whose @lock is about to be unlocked
+ *
+ * The uart_port_unlock() wrappers will first call this function to implement
+ * nbcon-specific processing. Then afterwards the uart_port_unlock() wrappers
+ * will unlock the spin_lock @up->lock.
+ *
+ * If @up is an nbcon console, the console will be marked as safe and
+ * released. Otherwise this function does nothing.
+ */
+void nbcon_release(struct uart_port *up)
+{
+	struct console *con = up->cons;
+	struct nbcon_context ctxt = {
+		.console	= con,
+		.prio		= NBCON_PRIO_NORMAL,
+	};
+
+	if (!con->locked_port)
+		return;
+
+	if (nbcon_context_exit_unsafe(&ctxt))
+		nbcon_context_release(&ctxt);
+
+	con->locked_port = false;
+}
+EXPORT_SYMBOL_GPL(nbcon_release);

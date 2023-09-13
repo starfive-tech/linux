@@ -9,6 +9,8 @@
 #include <linux/ratelimit_types.h>
 #include <linux/once_lite.h>
 
+struct uart_port;
+
 extern const char linux_banner[];
 extern const char linux_proc_banner[];
 
@@ -195,6 +197,8 @@ void show_regs_print_info(const char *log_lvl);
 extern asmlinkage void dump_stack_lvl(const char *log_lvl) __cold;
 extern asmlinkage void dump_stack(void) __cold;
 void printk_trigger_flush(void);
+extern void nbcon_acquire(struct uart_port *up);
+extern void nbcon_release(struct uart_port *up);
 #else
 static inline __printf(1, 0)
 int vprintk(const char *s, va_list args)
@@ -274,6 +278,15 @@ static inline void dump_stack(void)
 static inline void printk_trigger_flush(void)
 {
 }
+
+static inline void nbcon_acquire(struct uart_port *up)
+{
+}
+
+static inline void nbcon_release(struct uart_port *up)
+{
+}
+
 #endif
 
 #ifdef CONFIG_SMP
