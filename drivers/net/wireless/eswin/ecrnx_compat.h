@@ -50,9 +50,9 @@
 #define regulatory_set_wiphy_regd_sync_rtnl regulatory_set_wiphy_regd_sync
 #endif
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 11, 0)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 1, 0)
 #define cfg80211_ch_switch_started_notify(dev, chandef, count) \
-    cfg80211_ch_switch_started_notify(dev, chandef, count, 1)
+    cfg80211_ch_switch_started_notify(dev, chandef, count, 1, false)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0)
@@ -69,7 +69,11 @@
 #define IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_16US          0x80
 #define IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_RESERVED      0xc0
 #define IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_MASK          0xc0
-
+#else
+#define IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_0US			0x00
+#define IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_8US			0x1
+#define IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_16US			0x2
+#define IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_RESERVED		0x3
 #endif // 5.1
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)

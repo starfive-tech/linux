@@ -171,7 +171,8 @@ int ecrnx_cfg80211_dump_station(struct wiphy *wiphy, struct net_device *dev,
                                       int idx, u8 *mac, struct station_info *sinfo);
 int ecrnx_cfg80211_get_channel(struct wiphy *wiphy,
                                      struct wireless_dev *wdev,
-                                     struct cfg80211_chan_def *chandef);
+                                     unsigned int link_id,
+									 struct cfg80211_chan_def *chandef);
 int ecrnx_log_level_get(LOG_CTL_ST *log);
 int ecrnx_fw_log_level_set(u32 level, u32 dir);
 bool ecrnx_log_host_enable(void);

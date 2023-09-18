@@ -18,6 +18,7 @@
 #include "ecrnx_cfgfile.h"
 #include "reg_access.h"
 #include "ecrnx_compat.h"
+#include "fullmac/ecrnx_defs.h"
 
 #ifdef CONFIG_ECRNX_SOFTMAC
 #define COMMON_PARAM(name, default_softmac, default_fullmac)    \
@@ -1167,7 +1168,7 @@ static void ecrnx_set_he_capa(struct ecrnx_hw *ecrnx_hw, struct wiphy *wiphy)
                                            dcm_max_ru;
     he_cap->he_cap_elem.phy_cap_info[9] |= IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_COMP_SIGB |
                                            IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_NON_COMP_SIGB |
-                                           IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_16US;
+                                           IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_16US;
 #if 0
     if (__MDM_VERSION(phy_vers) > 30) {
         he_cap->he_cap_elem.phy_cap_info[6] |= IEEE80211_HE_PHY_CAP6_PARTIAL_BW_EXT_RANGE;

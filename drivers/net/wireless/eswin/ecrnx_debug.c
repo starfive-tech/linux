@@ -9,7 +9,7 @@
  *
  ****************************************************************************************
  */
-#include <stdarg.h>
+#include <linux/stdarg.h>
 #include <linux/init.h>
 #include "ecrnx_defs.h"
 #include "eswin_utils.h"

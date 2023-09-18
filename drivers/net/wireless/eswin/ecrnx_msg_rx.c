@@ -1071,9 +1071,9 @@ static inline int ecrnx_rx_sm_connect_ind(struct ecrnx_hw *ecrnx_hw,
         struct cfg80211_roam_info info;
         memset(&info, 0, sizeof(info));
         if (ecrnx_vif->ch_index < NX_CHAN_CTXT_CNT)
-            info.channel = ecrnx_hw->chanctx_table[ecrnx_vif->ch_index].chan_def.chan;
-        info.bssid = (const u8 *)ind->bssid.array;
-        info.req_ie = req_ie;
+            info.links[0].channel = ecrnx_hw->chanctx_table[ecrnx_vif->ch_index].chan_def.chan;
+        info.links[0].bssid = (const u8 *)ind->bssid.array;
+		info.req_ie = req_ie;
         info.req_ie_len = ind->assoc_req_ie_len;
         info.resp_ie = rsp_ie;
         info.resp_ie_len = ind->assoc_rsp_ie_len;
