@@ -1,0 +1,78 @@
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include "../jh7110-pinfunc.h"
+/ {
+	compatible = "starfive,jh7110";
+
+	//sysgpio
+	fragment@0 {
+		target-path = "/soc/pinctrl@13040000";
+		__overlay__ {
+			dt_sdcard1_pins: dt-sdcard1-0 {
+				sdcard-pins {
+					pinmux = <GPIOMUX(56, GPOUT_SYS_SDIO1_CLK,
+							      GPOEN_ENABLE,
+							      GPI_NONE)>,
+						 <GPIOMUX(50, GPOUT_SYS_SDIO1_CMD,
+							      GPOEN_SYS_SDIO1_CMD,
+							      GPI_SYS_SDIO1_CMD)>,
+						 <GPIOMUX(49, GPOUT_SYS_SDIO1_DATA0,
+							      GPOEN_SYS_SDIO1_DATA0,
+							      GPI_SYS_SDIO1_DATA0)>,
+						 <GPIOMUX(45, GPOUT_SYS_SDIO1_DATA1,
+							      GPOEN_SYS_SDIO1_DATA1,
+							      GPI_SYS_SDIO1_DATA1)>,
+						 <GPIOMUX(62, GPOUT_SYS_SDIO1_DATA2,
+							      GPOEN_SYS_SDIO1_DATA2,
+							      GPI_SYS_SDIO1_DATA2)>,
+						 <GPIOMUX(40, GPOUT_SYS_SDIO1_DATA3,
+							      GPOEN_SYS_SDIO1_DATA3,
+							      GPI_SYS_SDIO1_DATA3)>;
+					bias-pull-up;
+					input-enable;
+				};
+			};
+		};
+	};
+
+	//uart3
+	fragment@1 {
+		target-path = "/soc/serial@12000000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	//i2c0
+	fragment@2 {
+		target-path = "/soc/i2c@10030000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	//mmc1
+	fragment@3 {
+		target-path = "/soc/mmc@16020000";
+		__overlay__ {
+			max-frequency = <100000000>;
+			card-detect-delay = <300>;
+			bus-width = <4>;
+			no-sdio;
+			no-mmc;
+			broken-cd;
+			sd-uhs-sdr12;
+			sd-uhs-sdr25;
+			sd-uhs-sdr50;
+			sd-uhs-sdr104;
+			sd-uhs-ddr50;
+			cap-sd-highspeed;
+			post-power-on-delay-ms = <200>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&dt_sdcard1_pins>;
+			status = "okay";
+		};
+	};
+};
+

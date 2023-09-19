@@ -1,0 +1,92 @@
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include "../jh7110-pinfunc.h"
+/ {
+	compatible = "starfive,jh7110";
+
+	//sysgpio
+	fragment@0 {
+		target-path = "/soc/pinctrl@13040000";
+		__overlay__ {
+			dt_pwm_ch0to3_pins: dt-pwm-ch0to3-0 {
+				pwm-pins {
+					pinmux = <GPIOMUX(45, GPOUT_SYS_PWM_CHANNEL0,
+							      GPOEN_SYS_PWM0_CHANNEL0,
+							      GPI_NONE)>,
+						 <GPIOMUX(46, GPOUT_SYS_PWM_CHANNEL1,
+							      GPOEN_SYS_PWM0_CHANNEL1,
+							      GPI_NONE)>,
+						 <GPIOMUX(47, GPOUT_SYS_PWM_CHANNEL2,
+							      GPOEN_SYS_PWM0_CHANNEL2,
+							      GPI_NONE)>,
+						 <GPIOMUX(48, GPOUT_SYS_PWM_CHANNEL3,
+							      GPOEN_SYS_PWM0_CHANNEL3,
+							      GPI_NONE)>;
+					drive-strength = <12>;
+				};
+			};
+		};
+	};
+
+	//aongpio
+	fragment@1 {
+		target-path = "/soc/pinctrl@17020000";
+		__overlay__ {
+			dt_pwm_ch4to5_pins: dt-pwm-ch4to5-0 {
+				pwm-pins {
+					pinmux = <GPIOMUX(1, GPOUT_AON_PTC0_PWM4, /* PAD_RGPIO0 */
+							     GPOEN_AON_PTC0_OE_N_4,
+							     GPI_NONE)>,
+						 <GPIOMUX(2, GPOUT_AON_PTC0_PWM5, /* PAD_RGPIO1 */
+							     GPOEN_AON_PTC0_OE_N_5,
+							     GPI_NONE)>;
+					drive-strength = <12>;
+				};
+			};
+		};
+	};
+
+	//uart5
+	fragment@2 {
+		target-path = "/soc/serial@12020000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	//ptc
+	fragment@3 {
+		target-path = "/soc/pwm@120d0000";
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&dt_pwm_ch0to3_pins &dt_pwm_ch4to5_pins>;
+			status = "okay";
+		};
+	};
+
+	//i2c0
+	fragment@4 {
+		target-path = "/soc/i2c@10030000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	//i2c1
+	fragment@5 {
+		target-path = "/soc/i2c@10040000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	//i2c3
+	fragment@6 {
+		target-path = "/soc/i2c@12030000";
+		__overlay__ {
+			status = "okay";
+		};
+	};
+};
+
