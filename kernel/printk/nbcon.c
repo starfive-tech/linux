@@ -532,6 +532,7 @@ static struct printk_buffers panic_nbcon_pbufs;
  * nbcon_context_try_acquire - Try to acquire nbcon console
  * @ctxt:	The context of the caller
  *
+ * Context:	Any context which could not be migrated to another CPU.
  * Return:	True if the console was acquired. False otherwise.
  *
  * If the caller allowed an unsafe hostile takeover, on success the
@@ -958,6 +959,55 @@ static bool nbcon_atomic_emit_one(struct nbcon_write_context *wctxt)
 	nbcon_context_release(ctxt);
 
 	return ctxt->backlog;
+}
+
+/**
+ * nbcon_atomic_emit_next_record - Print one record for an nbcon console
+ *					using the write_atomic() callback
+ * @con:	The console to print on
+ * @handover:	Will be set to true if a printk waiter has taken over the
+ *		console_lock, in which case the caller is no longer holding
+ *		both the console_lock and the SRCU read lock. Otherwise it
+ *		is set to false.
+ * @cookie:	The cookie from the SRCU read lock.
+ *
+ * Context:	Any context which could not be migrated to another CPU.
+ * Return:	True if a record could be printed, otherwise false.
+ *
+ * This function is meant to be called by console_flush_all() to print records
+ * on nbcon consoles using the write_atomic() callback. Essentially it is the
+ * nbcon version of console_emit_next_record().
+ */
+bool nbcon_atomic_emit_next_record(struct console *con, bool *handover, int cookie)
+{
+	struct nbcon_write_context wctxt = { };
+	struct nbcon_context *ctxt = &ACCESS_PRIVATE(&wctxt, ctxt);
+	unsigned long driver_flags;
+	bool progress = false;
+	unsigned long flags;
+
+	*handover = false;
+
+	/* Use the same locking order as console_emit_next_record(). */
+	printk_safe_enter_irqsave(flags);
+	console_lock_spinning_enable();
+	stop_critical_timings();
+
+	con->driver_enter(con, &driver_flags);
+	cant_migrate();
+
+	ctxt->console	= con;
+	ctxt->prio	= NBCON_PRIO_NORMAL;
+
+	progress = nbcon_atomic_emit_one(&wctxt);
+
+	con->driver_exit(con, driver_flags);
+
+	start_critical_timings();
+	*handover = console_lock_spinning_disable_and_check(cookie);
+	printk_safe_exit_irqrestore(flags);
+
+	return progress;
 }
 
 /**
