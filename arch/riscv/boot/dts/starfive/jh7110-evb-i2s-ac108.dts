@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2022 StarFive Technology Co., Ltd.
+ */
+
+/dts-v1/;
+#include "jh7110-evb.dtsi"
+
+/ {
+	model = "StarFive JH7110 EVB";
+	compatible = "starfive,jh7110-evb", "starfive,jh7110";
+
+	/* i2s + ac108 */
+	sound0: snd-card0 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "StarFive-AC108-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&sndcodec1>;
+			frame-master = <&sndcodec1>;
+
+			widgets = "Microphone", "Mic Jack",
+				  "Line", "Line In",
+				  "Line", "Line Out",
+				  "Speaker", "Speaker",
+				  "Headphone", "Headphone Jack";
+			routing = "Headphone Jack", "HP_L",
+				  "Headphone Jack", "HP_R",
+				  "Speaker", "SPK_LP",
+				  "Speaker", "SPK_LN",
+				  "LINPUT1", "Mic Jack",
+				  "LINPUT3", "Mic Jack",
+				  "RINPUT1", "Mic Jack",
+				  "RINPUT2", "Mic Jack";
+
+			cpu {
+				sound-dai = <&i2srx>;
+			};
+
+			sndcodec1: codec {
+				sound-dai = <&ac108>;
+				clocks = <&ac108_mclk>;
+				clock-names = "mclk";
+			};
+		};
+	};
+};
+
+&mmc0 {
+	assigned-clocks = <&syscrg JH7110_SYSCLK_SDIO0_SDCARD>;
+	assigned-clock-rates = <50000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdcard0_pins>;
+	max-frequency = <100000000>;
+	card-detect-delay = <300>;
+	bus-width = <4>;
+	broken-cd;
+	post-power-on-delay-ms = <200>;
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+};
+
+&i2srx {
+	status = "okay";
+};
