@@ -13,8 +13,6 @@
 #include <drm/drm_fb_dma_helper.h>
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/vs_drm.h>
-//#include <soc/starfive/vic7100.h>
-
 #include "vs_type.h"
 #include "vs_crtc.h"
 #include "vs_plane.h"
@@ -294,7 +292,6 @@ static void vs_plane_atomic_update(struct drm_plane *plane,
 
 		vs_obj = vs_fb_get_gem_obj(fb, i);
 		vs_plane->dma_addr[i] = vs_obj->iova + fb->offsets[i];
-		sifive_l2_flush64_range(vs_plane->dma_addr[i], vs_obj->size);
 	}
 
 	plane_state->status.src = drm_plane_state_src(new_state);
