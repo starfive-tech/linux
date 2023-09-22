@@ -17,6 +17,7 @@
 #include <linux/atomic.h>
 #include <linux/bits.h>
 #include <linux/rculist.h>
+#include <linux/rcuwait.h>
 #include <linux/types.h>
 
 struct vc_data;
@@ -296,12 +297,15 @@ struct nbcon_write_context {
  * @node:		hlist node for the console list
  *
  * @write_atomic:	Write callback for atomic context
+ * @write_thread:	Write callback for non-atomic context
  * @driver_enter:	Callback to begin synchronization with driver code
  * @driver_exit:	Callback to finish synchronization with driver code
  * @nbcon_state:	State for nbcon consoles
  * @nbcon_seq:		Sequence number of the next record for nbcon to print
  * @pbufs:		Pointer to nbcon private buffer
  * @locked_port:	True, if the port lock is locked by nbcon
+ * @kthread:		Printer kthread for this console
+ * @rcuwait:		RCU-safe wait object for @kthread waking
  */
 struct console {
 	char			name[16];
@@ -325,12 +329,16 @@ struct console {
 	/* nbcon console specific members */
 	bool			(*write_atomic)(struct console *con,
 						struct nbcon_write_context *wctxt);
+	bool			(*write_thread)(struct console *con,
+						struct nbcon_write_context *wctxt);
 	void			(*driver_enter)(struct console *con, unsigned long *flags);
 	void			(*driver_exit)(struct console *con, unsigned long flags);
 	atomic_t		__private nbcon_state;
 	atomic_long_t		__private nbcon_seq;
 	struct printk_buffers	*pbufs;
 	bool			locked_port;
+	struct task_struct	*kthread;
+	struct rcuwait		rcuwait;
 };
 
 #ifdef CONFIG_LOCKDEP
