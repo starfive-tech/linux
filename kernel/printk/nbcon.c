@@ -1247,9 +1247,11 @@ bool nbcon_atomic_emit_next_record(struct console *con, bool *handover, int cook
 	*handover = false;
 
 	/* Use the same locking order as console_emit_next_record(). */
-	printk_safe_enter_irqsave(flags);
-	console_lock_spinning_enable();
-	stop_critical_timings();
+	if (!IS_ENABLED(CONFIG_PREEMPT_RT)) {
+		printk_safe_enter_irqsave(flags);
+		console_lock_spinning_enable();
+		stop_critical_timings();
+	}
 
 	con->driver_enter(con, &driver_flags);
 	cant_migrate();
@@ -1261,9 +1263,11 @@ bool nbcon_atomic_emit_next_record(struct console *con, bool *handover, int cook
 
 	con->driver_exit(con, driver_flags);
 
-	start_critical_timings();
-	*handover = console_lock_spinning_disable_and_check(cookie);
-	printk_safe_exit_irqrestore(flags);
+	if (!IS_ENABLED(CONFIG_PREEMPT_RT)) {
+		start_critical_timings();
+		*handover = console_lock_spinning_disable_and_check(cookie);
+		printk_safe_exit_irqrestore(flags);
+	}
 
 	return progress;
 }
@@ -1469,6 +1473,8 @@ static int __init printk_setup_threads(void)
 	printk_threads_enabled = true;
 	for_each_console(con)
 		nbcon_kthread_create(con);
+	if (IS_ENABLED(CONFIG_PREEMPT_RT) && printing_via_unlock)
+		nbcon_legacy_kthread_create();
 	console_list_unlock();
 	return 0;
 }
