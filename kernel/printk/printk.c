@@ -2688,6 +2688,8 @@ void suspend_console(void)
 void resume_console(void)
 {
 	struct console *con;
+	short flags;
+	int cookie;
 
 	if (!console_suspend_enabled)
 		return;
@@ -2703,6 +2705,14 @@ void resume_console(void)
 	 * that they are guaranteed to wake up and resume printing.
 	 */
 	synchronize_srcu(&console_srcu);
+
+	cookie = console_srcu_read_lock();
+	for_each_console_srcu(con) {
+		flags = console_srcu_read_flags(con);
+		if (flags & CON_NBCON)
+			nbcon_kthread_wake(con);
+	}
+	console_srcu_read_unlock(cookie);
 
 	pr_flush(1000, true);
 }
@@ -3024,6 +3034,13 @@ static bool console_flush_all(bool do_cond_resched, u64 *next_seq, bool *handove
 			u64 printk_seq;
 			bool progress;
 
+			/*
+			 * console_flush_all() is only for legacy consoles,
+			 * unless the nbcon console has no kthread printer.
+			 */
+			if ((flags & CON_NBCON) && con->kthread)
+				continue;
+
 			if (!console_is_usable(con, flags))
 				continue;
 			any_usable = true;
@@ -3319,9 +3336,23 @@ EXPORT_SYMBOL(console_stop);
 
 void console_start(struct console *console)
 {
+	short flags;
+
 	console_list_lock();
 	console_srcu_write_flags(console, console->flags | CON_ENABLED);
+	flags = console->flags;
 	console_list_unlock();
+
+	/*
+	 * Ensure that all SRCU list walks have completed. The related
+	 * printing context must be able to see it is enabled so that
+	 * it is guaranteed to wake up and resume printing.
+	 */
+	synchronize_srcu(&console_srcu);
+
+	if (flags & CON_NBCON)
+		nbcon_kthread_wake(console);
+
 	__pr_flush(console, 1000, true);
 }
 EXPORT_SYMBOL(console_start);
