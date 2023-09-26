@@ -44,6 +44,16 @@ enum printk_info_flags {
 };
 
 extern struct printk_ringbuffer *prb;
+extern bool have_legacy_console;
+extern bool have_boot_console;
+
+/*
+ * Specifies if the console lock/unlock dance is needed for console
+ * printing. If @have_boot_console is true, the nbcon consoles will
+ * be printed serially along with the legacy consoles because nbcon
+ * consoles cannot print simultaneously with boot consoles.
+ */
+#define printing_via_unlock (have_legacy_console || have_boot_console)
 
 __printf(4, 0)
 int vprintk_store(int facility, int level,
@@ -121,6 +131,8 @@ static inline bool console_is_usable(struct console *con, short flags)
 #define PRINTK_PREFIX_MAX	0
 #define PRINTK_MESSAGE_MAX	0
 #define PRINTKRB_RECORD_MAX	0
+
+#define printing_via_unlock (false)
 
 /*
  * In !PRINTK builds we still export console_sem
