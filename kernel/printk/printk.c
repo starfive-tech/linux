@@ -2409,6 +2409,8 @@ asmlinkage int vprintk_emit(int facility, int level,
 		}
 	}
 
+	nbcon_wake_threads();
+
 	if (do_trylock_unlock) {
 		/*
 		 * The caller may be holding system-critical or
@@ -2711,6 +2713,10 @@ void resume_console(void)
 	 */
 	synchronize_srcu(&console_srcu);
 
+	/*
+	 * Since this runs in task context, wake the threaded printers
+	 * directly rather than scheduling irq_work to do it.
+	 */
 	cookie = console_srcu_read_lock();
 	for_each_console_srcu(con) {
 		flags = console_srcu_read_flags(con);
@@ -4118,6 +4124,7 @@ void defer_console_output(void)
 
 void printk_trigger_flush(void)
 {
+	nbcon_wake_threads();
 	defer_console_output();
 }
 
