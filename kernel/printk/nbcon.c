@@ -1052,6 +1052,61 @@ wait_for_event:
 	goto wait_for_event;
 }
 
+/**
+ * nbcon_irq_work - irq work to wake printk thread
+ * @irq_work:	The irq work to operate on
+ */
+static void nbcon_irq_work(struct irq_work *irq_work)
+{
+	struct console *con = container_of(irq_work, struct console, irq_work);
+
+	nbcon_kthread_wake(con);
+}
+
+static inline bool rcuwait_has_sleeper(struct rcuwait *w)
+{
+	bool has_sleeper;
+
+	rcu_read_lock();
+	/*
+	 * Guarantee any new records can be seen by tasks preparing to wait
+	 * before this context checks if the rcuwait is empty.
+	 *
+	 * This full memory barrier pairs with the full memory barrier within
+	 * set_current_state() of ___rcuwait_wait_event(), which is called
+	 * after prepare_to_rcuwait() adds the waiter but before it has
+	 * checked the wait condition.
+	 *
+	 * This pairs with nbcon_kthread_func:A.
+	 */
+	smp_mb(); /* LMM(rcuwait_has_sleeper:A) */
+	has_sleeper = !!rcu_dereference(w->task);
+	rcu_read_unlock();
+
+	return has_sleeper;
+}
+
+/**
+ * nbcon_wake_threads - Wake up printing threads using irq_work
+ */
+void nbcon_wake_threads(void)
+{
+	struct console *con;
+	int cookie;
+
+	cookie = console_srcu_read_lock();
+	for_each_console_srcu(con) {
+		/*
+		 * Only schedule irq_work if the printing thread is
+		 * actively waiting. If not waiting, the thread will
+		 * notice by itself that it has work to do.
+		 */
+		if (con->kthread && rcuwait_has_sleeper(&con->rcuwait))
+			irq_work_queue(&con->irq_work);
+	}
+	console_srcu_read_unlock(cookie);
+}
+
 /* Track the nbcon emergency nesting per CPU. */
 static DEFINE_PER_CPU(unsigned int, nbcon_pcpu_emergency_nesting);
 static unsigned int early_nbcon_pcpu_emergency_nesting __initdata;
@@ -1418,6 +1473,7 @@ void nbcon_init(struct console *con)
 	BUG_ON(!con->pbufs);
 
 	rcuwait_init(&con->rcuwait);
+	init_irq_work(&con->irq_work, nbcon_irq_work);
 	nbcon_seq_force(con, con->seq);
 	nbcon_state_set(con, &state);
 }
