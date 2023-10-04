@@ -416,6 +416,9 @@ int handle_misaligned_load(struct pt_regs *regs)
 	if (!unaligned_enabled)
 		return -1;
 
+	if (user_mode(regs) && (current->thread.align_ctl & PR_UNALIGN_SIGBUS))
+		return -1;
+
 	if (get_insn(regs, epc, &insn))
 		return -1;
 
@@ -513,6 +516,9 @@ int handle_misaligned_store(struct pt_regs *regs)
 	perf_sw_event(PERF_COUNT_SW_ALIGNMENT_FAULTS, 1, regs, addr);
 
 	if (!unaligned_enabled)
+		return -1;
+
+	if (user_mode(regs) && (current->thread.align_ctl & PR_UNALIGN_SIGBUS))
 		return -1;
 
 	if (get_insn(regs, epc, &insn))
