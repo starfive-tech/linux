@@ -8,6 +8,7 @@
 #include <linux/bitfield.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/gpio.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mmc/host.h>
 #include <linux/module.h>
@@ -95,10 +96,39 @@ out:
 	return ret;
 }
 
+static int dw_mci_starfive_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios)
+{
+
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct dw_mci *host = slot->host;
+	u32 ret;
+
+	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330)
+		ret = gpio_direction_output(25, 0);
+	else if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+		ret = gpio_direction_output(25, 1);
+	if (ret)
+		return ret;
+
+	if (!IS_ERR(mmc->supply.vqmmc)) {
+		ret = mmc_regulator_set_vqmmc(mmc, ios);
+		if (ret < 0) {
+			dev_err(host->dev, "Regulator set error %d\n", ret);
+			return ret;
+		}
+	}
+
+	/* We should delay 20ms wait for timing setting finished. */
+	mdelay(20);
+
+	return 0;
+}
+
 static const struct dw_mci_drv_data starfive_data = {
 	.common_caps		= MMC_CAP_CMD23,
 	.set_ios		= dw_mci_starfive_set_ios,
 	.execute_tuning		= dw_mci_starfive_execute_tuning,
+	.switch_voltage		= dw_mci_starfive_switch_voltage,
 };
 
 static const struct of_device_id dw_mci_starfive_match[] = {
