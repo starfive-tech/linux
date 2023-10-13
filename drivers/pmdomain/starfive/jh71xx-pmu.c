@@ -16,6 +16,7 @@
 #include <dt-bindings/power/starfive,jh7110-pmu.h>
 
 /* register offset */
+#define JH71XX_PMU_HW_EVENT_TURN_OFF	0x08
 #define JH71XX_PMU_SW_TURN_ON_POWER	0x0C
 #define JH71XX_PMU_SW_TURN_OFF_POWER	0x10
 #define JH71XX_PMU_SW_ENCOURAGE		0x44
@@ -82,6 +83,14 @@ struct jh71xx_pmu_dev {
 	struct jh71xx_pmu *pmu;
 	struct generic_pm_domain genpd;
 };
+
+static void __iomem *pmu_base;
+
+void starfive_pmu_hw_event_turn_off_mask(u32 mask)
+{
+	writel(mask, pmu_base + JH71XX_PMU_HW_EVENT_TURN_OFF);
+}
+EXPORT_SYMBOL(starfive_pmu_hw_event_turn_off_mask);
 
 static int jh71xx_pmu_get_state(struct jh71xx_pmu_dev *pmd, u32 mask, bool *is_on)
 {
@@ -333,6 +342,8 @@ static int jh71xx_pmu_probe(struct platform_device *pdev)
 	pmu->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(pmu->base))
 		return PTR_ERR(pmu->base);
+
+	pmu_base = pmu->base;
 
 	spin_lock_init(&pmu->lock);
 
