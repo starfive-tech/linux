@@ -511,6 +511,7 @@
 				 <&rstgen RSTN_U0_PDM_4MIC_APB>;
 			reset-names = "pdm_dmic", "pdm_apb";
 			#sound-dai-cells = <0>;
+			status = "disabled";
 		};
 
 		i2srx_mst: i2srx_mst@100e0000 {
