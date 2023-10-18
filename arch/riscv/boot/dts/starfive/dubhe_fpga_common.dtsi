@@ -113,13 +113,30 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				reg = <0x000000 0x2000000>;
-				label = "Boot images";
+				reg = <0x00000000 0x00001000>;
+				label = "Boot Copier";
+				read-only;
 			};
 
-			partition@2000000 {
-				reg = <0x2000000 0x6000000>;
-				label = "Rootfs";
+			partition@1000 {
+				reg = <0x00001000 0x00001000>;
+				label = "Boot Jump Code";
+				read-only;
+			};
+
+			partition@2000 {
+				reg = <0x00002000 0x00040000>;
+				label = "U-Boot SPL";
+			};
+
+			partition@42000 {
+				reg = <0x00042000 0x00100000>;
+				label = "U-Boot FIT Image";
+			};
+
+			partition@142000 {
+				reg = <0x00142000 0x07ebe000>;
+				label = "User";
 			};
 		};
 	};
