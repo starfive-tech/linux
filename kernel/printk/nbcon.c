@@ -831,6 +831,38 @@ bool nbcon_exit_unsafe(struct nbcon_write_context *wctxt)
 EXPORT_SYMBOL_GPL(nbcon_exit_unsafe);
 
 /**
+ * nbcon_reacquire - Reacquire a console after losing ownership
+ * @wctxt:	The write context that was handed to the write function
+ *
+ * Since ownership can be lost at any time due to handover or takeover, a
+ * printing context _should_ be prepared to back out immediately and
+ * carefully. However, there are many scenarios where the context _must_
+ * reacquire ownership in order to finalize or revert hardware changes.
+ *
+ * This function allows a context to reacquire ownership using the same
+ * priority as its previous ownership.
+ *
+ * Note that for printing contexts, after a successful reacquire the
+ * context will have no output buffer because that has been lost. This
+ * function cannot be used to resume printing.
+ */
+void nbcon_reacquire(struct nbcon_write_context *wctxt)
+{
+	struct nbcon_context *ctxt = &ACCESS_PRIVATE(wctxt, ctxt);
+	struct console *con = ctxt->console;
+	struct nbcon_state cur;
+
+	while (!nbcon_context_try_acquire(ctxt))
+		cpu_relax();
+
+	wctxt->outbuf = NULL;
+	wctxt->len = 0;
+	nbcon_state_read(con, &cur);
+	wctxt->unsafe_takeover = cur.unsafe_takeover;
+}
+EXPORT_SYMBOL_GPL(nbcon_reacquire);
+
+/**
  * nbcon_emit_next_record - Emit a record in the acquired context
  * @wctxt:	The write context that will be handed to the write function
  * @use_atomic:	True if the write_atomic callback is to be used
