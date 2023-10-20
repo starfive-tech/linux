@@ -852,7 +852,7 @@ static bool nbcon_emit_next_record(struct nbcon_write_context *wctxt)
 	unsigned long con_dropped;
 	struct nbcon_state cur;
 	unsigned long dropped;
-	bool done;
+	bool done = false;
 
 	/*
 	 * The printk buffers are filled within an unsafe section. This
@@ -891,17 +891,18 @@ static bool nbcon_emit_next_record(struct nbcon_write_context *wctxt)
 	nbcon_state_read(con, &cur);
 	wctxt->unsafe_takeover = cur.unsafe_takeover;
 
-	if (con->write_atomic) {
+	if (con->write_atomic)
 		done = con->write_atomic(con, wctxt);
-	} else {
-		nbcon_context_release(ctxt);
-		WARN_ON_ONCE(1);
-		done = false;
-	}
 
-	/* If not done, the emit was aborted. */
-	if (!done)
+	if (!done) {
+		/*
+		 * The emit was aborted, probably due to a loss of ownership.
+		 * Ensure ownership was lost or released before reporting the
+		 * loss.
+		 */
+		nbcon_context_release(ctxt);
 		return false;
+	}
 
 	/*
 	 * Since any dropped message was successfully output, reset the
