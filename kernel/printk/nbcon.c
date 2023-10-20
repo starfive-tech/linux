@@ -1030,8 +1030,9 @@ bool nbcon_atomic_emit_next_record(struct console *con, bool *handover, int cook
  * __nbcon_atomic_flush_all - Flush all nbcon consoles using their
  *					write_atomic() callback
  * @stop_seq:			Flush up until this record
+ * @allow_unsafe_takeover:	True, to allow unsafe hostile takeovers
  */
-static void __nbcon_atomic_flush_all(u64 stop_seq)
+static void __nbcon_atomic_flush_all(u64 stop_seq, bool allow_unsafe_takeover)
 {
 	struct nbcon_write_context wctxt = { };
 	struct nbcon_context *ctxt = &ACCESS_PRIVATE(&wctxt, ctxt);
@@ -1059,6 +1060,7 @@ static void __nbcon_atomic_flush_all(u64 stop_seq)
 			memset(ctxt, 0, sizeof(*ctxt));
 			ctxt->console			= con;
 			ctxt->spinwait_max_us		= 2000;
+			ctxt->allow_unsafe_takeover	= allow_unsafe_takeover;
 
 			/*
 			 * Atomic flushing does not use console driver
@@ -1093,7 +1095,19 @@ static void __nbcon_atomic_flush_all(u64 stop_seq)
  */
 void nbcon_atomic_flush_all(void)
 {
-	__nbcon_atomic_flush_all(prb_next_reserve_seq(prb));
+	__nbcon_atomic_flush_all(prb_next_reserve_seq(prb), false);
+}
+
+/**
+ * nbcon_atomic_flush_unsafe - Flush all nbcon consoles using their
+ *	write_atomic() callback and allowing unsafe hostile takeovers
+ *
+ * Flush the backlog up through the currently newest record. Unsafe hostile
+ * takeovers will be performed, if necessary.
+ */
+void nbcon_atomic_flush_unsafe(void)
+{
+	__nbcon_atomic_flush_all(prb_next_reserve_seq(prb), true);
 }
 
 /**
