@@ -199,6 +199,7 @@ extern asmlinkage void dump_stack(void) __cold;
 void printk_trigger_flush(void);
 extern void nbcon_acquire(struct uart_port *up);
 extern void nbcon_release(struct uart_port *up);
+void nbcon_atomic_flush_unsafe(void);
 #else
 static inline __printf(1, 0)
 int vprintk(const char *s, va_list args)
@@ -284,6 +285,10 @@ static inline void nbcon_acquire(struct uart_port *up)
 }
 
 static inline void nbcon_release(struct uart_port *up)
+{
+}
+
+static inline void nbcon_atomic_flush_unsafe(void)
 {
 }
 
