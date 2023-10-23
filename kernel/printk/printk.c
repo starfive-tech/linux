@@ -2395,13 +2395,18 @@ asmlinkage int vprintk_emit(int facility, int level,
 		 *
 		 * - When this CPU is in panic.
 		 *
+		 * - During shutdown, since the printing threads may not get
+		 *   a chance to print the final messages.
+		 *
 		 * Note that if boot consoles are registered, the
 		 * console_lock/console_unlock dance must be relied upon
 		 * instead because nbcon consoles cannot print simultaneously
 		 * with boot consoles.
 		 */
-		if (is_panic_context)
+		if (is_panic_context ||
+		    (system_state > SYSTEM_RUNNING)) {
 			nbcon_atomic_flush_all();
+		}
 	}
 
 	if (do_trylock_unlock) {
