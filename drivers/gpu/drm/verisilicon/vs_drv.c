@@ -126,6 +126,11 @@ static const struct component_master_ops vs_drm_ops = {
 static struct platform_driver *drm_sub_drivers[] = {
 	&dc_platform_driver,
 
+	/* connector + encoder*/
+#ifdef CONFIG_DRM_VERISILICON_STARFIVE_HDMI
+	&starfive_hdmi_driver,
+#endif
+
 };
 
 static struct component_match *vs_drm_match_add(struct device *dev)

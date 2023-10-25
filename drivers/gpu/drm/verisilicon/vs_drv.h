@@ -24,4 +24,8 @@ to_vs_drm_private(const struct drm_device *dev)
 	return container_of(dev, struct vs_drm_device, base);
 }
 
+#ifdef CONFIG_DRM_VERISILICON_STARFIVE_HDMI
+extern struct platform_driver starfive_hdmi_driver;
+#endif
+
 #endif /* __VS_DRV_H__ */

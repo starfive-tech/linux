@@ -12,4 +12,10 @@ config DRM_VERISILICON
 	  setting and buffer management. It does not
 	  provide 2D or 3D acceleration.
 
-
+config DRM_VERISILICON_STARFIVE_HDMI
+	bool "Starfive HDMI extensions"
+	depends on DRM_VERISILICON
+	help
+	   This selects support for StarFive soc specific extensions
+	   for the Innosilicon HDMI driver. If you want to enable
+	   HDMI on JH7110 based soc, you should select this option.
