@@ -649,6 +649,35 @@ static const struct riscv_ipi_ops sbi_ipi_ops = {
 	.ipi_inject = sbi_send_cpumask_ipi
 };
 
+int sbi_cache_flush(unsigned long start, unsigned long len)
+{
+	struct sbiret ret;
+
+	ret = sbi_ecall(SBI_EXT_CACHE, SBI_EXT_BASE_L2_FLUSH,
+		start, len, 0, 0, 0, 0);
+	if (!ret.error)
+		if (ret.value)
+			return ret.value;
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL(sbi_cache_flush);
+
+int sbi_cache_invalidate(unsigned long start, unsigned long len)
+{
+
+	struct sbiret ret;
+
+	ret = sbi_ecall(SBI_EXT_CACHE, SBI_EXT_BASE_L2_INVALIDATE,
+		start, len, 0, 0, 0, 0);
+	if (!ret.error)
+		if (ret.value)
+			return ret.value;
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL(sbi_cache_invalidate);
+
 void __init sbi_init(void)
 {
 	int ret;

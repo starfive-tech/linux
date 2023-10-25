@@ -37,6 +37,7 @@ enum sbi_ext_id {
 
 	/* Vendor extensions must lie within this range */
 	SBI_EXT_VENDOR_START = 0x09000000,
+	SBI_EXT_CACHE = 0x09057485,
 	SBI_EXT_VENDOR_END = 0x09FFFFFF,
 };
 
@@ -137,6 +138,12 @@ union sbi_pmu_ctr_info {
 };
 
 #define RISCV_PMU_RAW_EVENT_MASK GENMASK_ULL(47, 0)
+
+enum sbi_ext_cache_fid {
+	SBI_EXT_BASE_L2_FLUSH = 0,
+	SBI_EXT_BASE_L2_INVALIDATE,
+};
+
 #define RISCV_PMU_RAW_EVENT_IDX 0x20000
 
 /** General pmu event codes specified in SBI PMU extension */
@@ -294,6 +301,8 @@ int sbi_remote_hfence_vvma_asid(const struct cpumask *cpu_mask,
 				unsigned long size,
 				unsigned long asid);
 long sbi_probe_extension(int ext);
+int sbi_cache_invalidate(unsigned long start, unsigned long len);
+int sbi_cache_flush(unsigned long start, unsigned long len);
 
 /* Check if current SBI specification version is 0.1 or not */
 static inline int sbi_spec_is_0_1(void)
