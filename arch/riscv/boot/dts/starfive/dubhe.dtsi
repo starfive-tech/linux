@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2021 StarFive Technology Co., Ltd. */
+
+/dts-v1/;
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	compatible = "starfive,dubhe";
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			compatible = "starfive,dubhe0", "riscv";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <65536>;
+			device_type = "cpu";
+			i-cache-block-size = <64>;
+			i-cache-sets = <512>;
+			i-cache-size = <65536>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			reg = <0x0>;
+			riscv,isa = "rv64imafdcbhnv";
+			tlb-split;
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+
+		clint: clint@2000000 {
+			#interrupt-cells = <1>;
+			compatible = "riscv,clint0";
+			reg = <0x0 0x2000000 0x0 0x10000>;
+			interrupts-extended = <&cpu0_intc 3>,
+					      <&cpu0_intc 7>;
+		};
+
+		pbus_clk: subsystem_pbus_clock {
+			#clock-cells = <0>;
+			clock-frequency = <50000000>;
+			clock-output-names = "pbus_clock";
+			compatible = "fixed-clock";
+		};
+
+		plic0: interrupt-controller@c000000 {
+			#interrupt-cells = <1>;
+			compatible = "riscv,plic0";
+			reg = <0x0 0xc000000 0x0 0x4000000>;
+			riscv,ndev = <25>;
+			interrupt-controller;
+			interrupts-extended = <&cpu0_intc 11>,
+					      <&cpu0_intc 9>;
+		};
+
+		spi0: spi@10000000 {
+			compatible = "sifive,spi0";
+			reg = <0x0 0x10000000 0x0 0x1000>;
+			interrupt-parent = <&plic0>;
+			interrupts = <7>;
+			clocks = <&pbus_clk>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		qspi1: spi@10010000 {
+			compatible = "sifive,spi0";
+			reg = <0x0 0x10010000 0x0 0x1000>,
+			      <0x0 0x20000000 0x0 0x8000000>;
+			interrupt-parent = <&plic0>;
+			interrupts = <6>;
+			clocks = <&pbus_clk>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		uart0: serial@10012000 {
+			compatible = "sifive,uart0";
+			interrupt-parent = <&plic0>;
+			interrupts = <5>;
+			reg = <0x0 0x10012000 0x0 0x1000>;
+			clocks = <&pbus_clk>;
+			status = "disabled";
+		};
+	};
+};
