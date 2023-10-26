@@ -60,6 +60,9 @@ static int convert_prio(int prio)
 	case MAX_RT_PRIO:
 		cpupri = CPUPRI_HIGHER;		/* 100 */
 		break;
+	default:
+		cpupri = CPUPRI_NORMAL;
+		break;
 	}
 
 	return cpupri;
