@@ -40,6 +40,7 @@
 #define  P_ATR_EVT_DISCARD_ERR_SHIFT		22
 #define  P_ATR_EVT_DOORBELL_MASK		0x00000000u
 #define  P_ATR_EVT_DOORBELL_SHIFT		23
+#define  ERROR_AND_DOORBELL_MASK		GENMASK(23, 16)
 #define  PM_MSI_INT_INTA_MASK			0x01000000u
 #define  PM_MSI_INT_INTA_SHIFT			24
 #define  PM_MSI_INT_INTB_MASK			0x02000000u
@@ -58,6 +59,7 @@
 #define  PM_MSI_INT_EVENTS_SHIFT		30
 #define  PM_MSI_INT_SYS_ERR_MASK		0x80000000u
 #define  PM_MSI_INT_SYS_ERR_SHIFT		31
+#define  SYS_AND_MSI_MASK			GENMASK(31, 28)
 #define  NUM_LOCAL_EVENTS			15
 #define ISTATUS_LOCAL				0x184
 #define IMASK_HOST				0x188
@@ -102,10 +104,41 @@
 #define EVENT_PM_MSI_INT_SYS_ERR		12
 #define NUM_PLDA_EVENTS				13
 
+/*
+ * PLDA local interrupt register
+ *
+ * 31         27     23              15           7          0
+ * +--+--+--+-+------+-+-+-+-+-+-+-+-+-----------+-----------+
+ * |12|11|10|9| intx |7|6|5|4|3|2|1|0| DMA error | DMA end   |
+ * +--+--+--+-+------+-+-+-+-+-+-+-+-+-----------+-----------+
+ * 0:  AXI post error
+ * 1:  AXI fetch error
+ * 2:  AXI discard error
+ * 3:  AXI doorbell
+ * 4:  PCIe post error
+ * 5:  PCIe fetch error
+ * 6:  PCIe discard error
+ * 7:  PCIe doorbell
+ * 8:  4 INTx interruts
+ * 9:  MSI interrupt
+ * 10: AER event
+ * 11: PM/LTR/Hotplug
+ * 12: System error
+ * DMA error : reserved for vendor implement
+ * DMA end : reserved for vendor implement
+ */
+
+#define PM_MSI_TO_MASK_OFFSET			19
+
 struct plda_pcie_rp;
 
 struct plda_event_ops {
 	u32 (*get_events)(struct plda_pcie_rp *pcie);
+};
+
+struct plda_pcie_host_ops {
+	int (*host_init)(struct plda_pcie_rp *pcie);
+	void (*host_deinit)(struct plda_pcie_rp *pcie);
 };
 
 struct plda_msi {
@@ -119,12 +152,18 @@ struct plda_msi {
 
 struct plda_pcie_rp {
 	struct device *dev;
+	struct pci_host_bridge *bridge;
 	struct irq_domain *intx_domain;
 	struct irq_domain *event_domain;
 	raw_spinlock_t lock;
 	struct plda_msi msi;
 	const struct plda_event_ops *event_ops;
+	const struct plda_pcie_host_ops *host_ops;
 	void __iomem *bridge_addr;
+	void __iomem *config_base;
+	int irq;
+	int msi_irq;
+	int intx_irq;
 	int num_events;
 };
 
@@ -137,6 +176,8 @@ struct plda_event {
 	int msi_event;
 };
 
+void __iomem *plda_pcie_map_bus(struct pci_bus *bus, unsigned int devfn,
+				int where);
 int plda_init_interrupts(struct platform_device *pdev,
 			 struct plda_pcie_rp *port,
 			 const struct plda_event *event);
@@ -145,4 +186,12 @@ void plda_pcie_setup_window(void __iomem *bridge_base_addr, u32 index,
 			    size_t size);
 int plda_pcie_setup_iomems(struct pci_host_bridge *bridge,
 			   struct plda_pcie_rp *port);
+int plda_pcie_host_init(struct plda_pcie_rp *pcie, struct pci_ops *ops);
+void plda_pcie_host_deinit(struct plda_pcie_rp *pcie);
+
+static inline void plda_set_default_msi(struct plda_msi *msi)
+{
+	msi->vector_phy = IMSI_ADDR;
+	msi->num_vectors = PLDA_MAX_NUM_MSI_IRQS;
+}
 #endif
