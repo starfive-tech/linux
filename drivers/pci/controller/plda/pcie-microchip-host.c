@@ -821,13 +821,15 @@ static const struct plda_event_ops mc_event_ops = {
 };
 
 static const struct plda_event mc_event = {
+	.domain_ops        = &mc_event_domain_ops,
 	.event_ops         = &mc_event_ops,
 	.request_event_irq = mc_request_event_irq,
 	.intx_event        = EVENT_LOCAL_PM_MSI_INT_INTX,
 	.msi_event         = EVENT_LOCAL_PM_MSI_INT_MSI,
 };
 
-static int plda_pcie_init_irq_domains(struct plda_pcie_rp *port)
+static int plda_pcie_init_irq_domains(struct plda_pcie_rp *port,
+				      const struct irq_domain_ops *ops)
 {
 	struct device *dev = port->dev;
 	struct device_node *node = dev->of_node;
@@ -941,7 +943,7 @@ static int plda_init_interrupts(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	ret = plda_pcie_init_irq_domains(port);
+	ret = plda_pcie_init_irq_domains(port, event->domain_ops);
 	if (ret) {
 		dev_err(dev, "failed creating IRQ domains\n");
 		return ret;

@@ -129,6 +129,7 @@ struct plda_pcie_rp {
 };
 
 struct plda_event {
+	const struct irq_domain_ops *domain_ops;
 	const struct plda_event_ops *event_ops;
 	int (*request_event_irq)(struct plda_pcie_rp *pcie,
 				 int event_irq, int event);
