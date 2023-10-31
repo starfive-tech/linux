@@ -19,6 +19,13 @@
  */
 #define PCIE_PME_TO_L2_TIMEOUT_US	10000
 
+/*
+ * PCIe r6.0, sec 6.6.1, <Conventional Reset>
+ * Requires a minimum waiting of 100ms before sending a configuration
+ * request to the device.
+ */
+#define PCIE_BEFORE_CONFIG_REQUEST_WAIT_MS	100
+
 extern const unsigned char pcie_link_speed[];
 extern bool pci_early_dump;
 
