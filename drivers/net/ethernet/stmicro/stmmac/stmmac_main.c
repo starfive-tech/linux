@@ -1047,6 +1047,8 @@ static void stmmac_mac_link_down(struct phylink_config *config,
 
 	if (priv->dma_cap.fpesel)
 		stmmac_fpe_link_state_handle(priv, false);
+	if (priv->ecdev)
+		ecdev_set_link(priv->ecdev, 0);
 }
 
 static void stmmac_mac_link_up(struct phylink_config *config,
@@ -1146,6 +1148,8 @@ static void stmmac_mac_link_up(struct phylink_config *config,
 
 	if (priv->dma_cap.fpesel)
 		stmmac_fpe_link_state_handle(priv, true);
+	if (priv->ecdev)
+		ecdev_set_link(priv->ecdev, 1);
 }
 
 static const struct phylink_mac_ops stmmac_phylink_mac_ops = {
@@ -1427,6 +1431,7 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 {
 	struct stmmac_rx_queue *rx_q = &priv->rx_queue[queue];
 	struct stmmac_rx_buffer *buf = &rx_q->buf_pool[i];
+	struct sk_buff *skb;
 
 	if (!buf->page) {
 		buf->page = page_pool_dev_alloc_pages(rx_q->page_pool);
@@ -1453,6 +1458,13 @@ static int stmmac_init_rx_buffers(struct stmmac_priv *priv, struct dma_desc *p,
 	if (priv->dma_buf_sz == BUF_SIZE_16KiB)
 		stmmac_init_desc3(priv, p);
 
+	if (priv->ecdev) {
+		skb = netdev_alloc_skb(priv->dev, ETHERCAT_SKB_SIZE);
+		if (skb) {
+			buf->skb = skb;
+		}
+	}
+
 	return 0;
 }
 
@@ -1466,6 +1478,11 @@ static void stmmac_free_rx_buffer(struct stmmac_priv *priv, u32 queue, int i)
 {
 	struct stmmac_rx_queue *rx_q = &priv->rx_queue[queue];
 	struct stmmac_rx_buffer *buf = &rx_q->buf_pool[i];
+
+	if (buf->skb)
+		dev_kfree_skb(buf->skb);
+
+	buf->skb = NULL;
 
 	if (buf->page)
 		page_pool_put_full_page(rx_q->page_pool, buf->page, false);
@@ -2555,7 +2572,8 @@ static int stmmac_tx_clean(struct stmmac_priv *priv, int budget, u32 queue)
 			if (likely(skb)) {
 				pkts_compl++;
 				bytes_compl += skb->len;
-				dev_consume_skb_any(skb);
+				if (!priv->ecdev)
+					dev_consume_skb_any(skb);
 				tx_q->tx_skbuff[entry] = NULL;
 			}
 		}
@@ -2566,16 +2584,18 @@ static int stmmac_tx_clean(struct stmmac_priv *priv, int budget, u32 queue)
 	}
 	tx_q->dirty_tx = entry;
 
-	netdev_tx_completed_queue(netdev_get_tx_queue(priv->dev, queue),
+	if (!priv->ecdev) {
+		netdev_tx_completed_queue(netdev_get_tx_queue(priv->dev, queue),
 				  pkts_compl, bytes_compl);
 
-	if (unlikely(netif_tx_queue_stopped(netdev_get_tx_queue(priv->dev,
+		if (unlikely(netif_tx_queue_stopped(netdev_get_tx_queue(priv->dev,
 								queue))) &&
-	    stmmac_tx_avail(priv, queue) > STMMAC_TX_THRESH(priv)) {
+			stmmac_tx_avail(priv, queue) > STMMAC_TX_THRESH(priv)) {
 
-		netif_dbg(priv, tx_done, priv->dev,
+			netif_dbg(priv, tx_done, priv->dev,
 			  "%s: restart transmit\n", __func__);
-		netif_tx_wake_queue(netdev_get_tx_queue(priv->dev, queue));
+			netif_tx_wake_queue(netdev_get_tx_queue(priv->dev, queue));
+		}
 	}
 
 	if (tx_q->xsk_pool) {
@@ -2607,11 +2627,12 @@ static int stmmac_tx_clean(struct stmmac_priv *priv, int budget, u32 queue)
 	}
 
 	/* We still have pending packets, let's call for a new scheduling */
-	if (tx_q->dirty_tx != tx_q->cur_tx)
-		hrtimer_start(&tx_q->txtimer,
+	if (!priv->ecdev) {
+		if (tx_q->dirty_tx != tx_q->cur_tx)
+			hrtimer_start(&tx_q->txtimer,
 			      STMMAC_COAL_TIMER(priv->tx_coal_timer[queue]),
 			      HRTIMER_MODE_REL);
-
+	}
 	__netif_tx_unlock_bh(netdev_get_tx_queue(priv->dev, queue));
 
 	/* Combine decisions from TX clean and XSK TX */
@@ -3367,6 +3388,9 @@ static void stmmac_free_irq(struct net_device *dev,
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int j;
 
+	if (priv->ecdev)
+		return;
+
 	switch (irq_err) {
 	case REQ_IRQ_ERR_ALL:
 		irq_idx = priv->plat->tx_queues_to_use;
@@ -3617,6 +3641,9 @@ static int stmmac_request_irq(struct net_device *dev)
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret;
 
+	if (priv->ecdev)
+		return 0;
+
 	/* Request the IRQ lines */
 	if (priv->plat->multi_msi_en)
 		ret = stmmac_request_irq_multi_msi(dev);
@@ -3712,8 +3739,9 @@ int stmmac_open(struct net_device *dev)
 		goto init_error;
 	}
 
-	stmmac_init_coalesce(priv);
-
+	if (!priv->ecdev) {
+		stmmac_init_coalesce(priv);
+	}
 	phylink_start(priv->phylink);
 	/* We may have called phylink_speed_down before */
 	phylink_speed_up(priv->phylink);
@@ -3722,8 +3750,10 @@ int stmmac_open(struct net_device *dev)
 	if (ret)
 		goto irq_error;
 
-	stmmac_enable_all_queues(priv);
-	netif_tx_start_all_queues(priv->dev);
+	if (!priv->ecdev) {
+		stmmac_enable_all_queues(priv);
+		netif_tx_start_all_queues(priv->dev);
+	}
 
 	return 0;
 
@@ -3935,7 +3965,7 @@ static void stmmac_flush_tx_descriptors(struct stmmac_priv *priv, int queue)
  *
  * mss is fixed when enable tso, so w/o programming the TDES3 ctx field.
  */
-static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
+netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct dma_desc *desc, *first, *mss_desc = NULL;
 	struct stmmac_priv *priv = netdev_priv(dev);
@@ -3965,13 +3995,18 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Desc availability based on threshold should be enough safe */
 	if (unlikely(stmmac_tx_avail(priv, queue) <
 		(((skb->len - proto_hdr_len) / TSO_MAX_BUFF_SIZE + 1)))) {
-		if (!netif_tx_queue_stopped(netdev_get_tx_queue(dev, queue))) {
-			netif_tx_stop_queue(netdev_get_tx_queue(priv->dev,
-								queue));
-			/* This is a hard error, log it. */
+		if (priv->ecdev) {
 			netdev_err(priv->dev,
+				   "Tso Tx Ring full\n");
+		} else {
+			if (!netif_tx_queue_stopped(netdev_get_tx_queue(dev, queue))) {
+				netif_tx_stop_queue(netdev_get_tx_queue(priv->dev,
+								queue));
+				/* This is a hard error, log it. */
+				netdev_err(priv->dev,
 				   "%s: Tx Ring full when queue awake\n",
 				   __func__);
+			}
 		}
 		return NETDEV_TX_BUSY;
 	}
@@ -3994,11 +4029,13 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 		WARN_ON(tx_q->tx_skbuff[tx_q->cur_tx]);
 	}
 
-	if (netif_msg_tx_queued(priv)) {
-		pr_info("%s: hdrlen %d, hdr_len %d, pay_len %d, mss %d\n",
-			__func__, hdr, proto_hdr_len, pay_len, mss);
-		pr_info("\tskb->len %d, skb->data_len %d\n", skb->len,
-			skb->data_len);
+	if (!priv->ecdev) {
+		if (netif_msg_tx_queued(priv)) {
+			pr_info("%s: hdrlen %d, hdr_len %d, pay_len %d, mss %d\n",
+				__func__, hdr, proto_hdr_len, pay_len, mss);
+			pr_info("\tskb->len %d, skb->data_len %d\n", skb->len,
+				skb->data_len);
+		}
 	}
 
 	/* Check if VLAN can be inserted by HW */
@@ -4105,9 +4142,10 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 	tx_q->cur_tx = STMMAC_GET_ENTRY(tx_q->cur_tx, priv->dma_tx_size);
 
 	if (unlikely(stmmac_tx_avail(priv, queue) <= (MAX_SKB_FRAGS + 1))) {
-		netif_dbg(priv, hw, priv->dev, "%s: stop transmitted packets\n",
+		netif_info(priv, hw, priv->dev, "%s: stop transmitted packets\n",
 			  __func__);
-		netif_tx_stop_queue(netdev_get_tx_queue(priv->dev, queue));
+		if (!priv->ecdev)
+			netif_tx_stop_queue(netdev_get_tx_queue(priv->dev, queue));
 	}
 
 	dev->stats.tx_bytes += skb->len;
@@ -4144,7 +4182,7 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 		stmmac_set_tx_owner(priv, mss_desc);
 	}
 
-	if (netif_msg_pktdata(priv)) {
+	if (!priv->ecdev && netif_msg_pktdata(priv)) {
 		pr_info("%s: curr=%d dirty=%d f=%d, e=%d, f_p=%p, nfrags %d\n",
 			__func__, tx_q->cur_tx, tx_q->dirty_tx, first_entry,
 			tx_q->cur_tx, first, nfrags);
@@ -4152,10 +4190,12 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
 		print_pkt(skb->data, skb_headlen(skb));
 	}
 
-	netdev_tx_sent_queue(netdev_get_tx_queue(dev, queue), skb->len);
+	if (!priv->ecdev)
+		netdev_tx_sent_queue(netdev_get_tx_queue(dev, queue), skb->len);
 
 	stmmac_flush_tx_descriptors(priv, queue);
-	stmmac_tx_timer_arm(priv, queue);
+	if (!priv->ecdev)
+		stmmac_tx_timer_arm(priv, queue);
 
 	return NETDEV_TX_OK;
 
@@ -4205,13 +4245,17 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	if (unlikely(stmmac_tx_avail(priv, queue) < nfrags + 1)) {
-		if (!netif_tx_queue_stopped(netdev_get_tx_queue(dev, queue))) {
-			netif_tx_stop_queue(netdev_get_tx_queue(priv->dev,
+		if (priv->ecdev)
+			netdev_err(priv->dev, "Tx Ring full\n");
+		else {
+			if (!netif_tx_queue_stopped(netdev_get_tx_queue(dev, queue))) {
+				netif_tx_stop_queue(netdev_get_tx_queue(priv->dev,
 								queue));
-			/* This is a hard error, log it. */
-			netdev_err(priv->dev,
+				/* This is a hard error, log it. */
+				netdev_err(priv->dev,
 				   "%s: Tx Ring full when queue awake\n",
 				   __func__);
+			}
 		}
 		return NETDEV_TX_BUSY;
 	}
@@ -4327,14 +4371,16 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 	entry = STMMAC_GET_ENTRY(entry, priv->dma_tx_size);
 	tx_q->cur_tx = entry;
 
-	if (netif_msg_pktdata(priv)) {
-		netdev_dbg(priv->dev,
+	if (!priv->ecdev) {
+		if (netif_msg_pktdata(priv)) {
+			netdev_dbg(priv->dev,
 			   "%s: curr=%d dirty=%d f=%d, e=%d, first=%p, nfrags=%d",
 			   __func__, tx_q->cur_tx, tx_q->dirty_tx, first_entry,
 			   entry, first, nfrags);
 
-		netdev_dbg(priv->dev, ">>> frame to be transmitted: ");
-		print_pkt(skb->data, skb->len);
+			netdev_dbg(priv->dev, ">>> frame to be transmitted: ");
+			print_pkt(skb->data, skb->len);
+		}
 	}
 
 	if (unlikely(stmmac_tx_avail(priv, queue) <= (MAX_SKB_FRAGS + 1))) {
@@ -4393,12 +4439,14 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	stmmac_set_tx_owner(priv, first);
 
-	netdev_tx_sent_queue(netdev_get_tx_queue(dev, queue), skb->len);
+	if (!priv->ecdev)
+		netdev_tx_sent_queue(netdev_get_tx_queue(dev, queue), skb->len);
 
 	stmmac_enable_dma_transmission(priv, priv->ioaddr);
 
 	stmmac_flush_tx_descriptors(priv, queue);
-	stmmac_tx_timer_arm(priv, queue);
+	if (!priv->ecdev)
+		stmmac_tx_timer_arm(priv, queue);
 
 	return NETDEV_TX_OK;
 
@@ -4488,6 +4536,9 @@ static inline void stmmac_rx_refill(struct stmmac_priv *priv, u32 queue)
 
 		dma_wmb();
 		stmmac_set_rx_owner(priv, p, use_rx_wd);
+
+		if (buf->skb)
+			skb_trim(buf->skb, 0);
 
 		entry = STMMAC_GET_ENTRY(entry, priv->dma_rx_size);
 	}
@@ -4778,7 +4829,12 @@ static void stmmac_dispatch_skb_zc(struct stmmac_priv *priv, u32 queue,
 		skb_set_hash(skb, hash, hash_type);
 
 	skb_record_rx_queue(skb, queue);
-	napi_gro_receive(&ch->rxtx_napi, skb);
+	if (priv->ecdev) {
+		skb_push(skb, ETH_HLEN);
+		ecdev_receive(priv->ecdev, skb->data, skb->len);
+		priv->ec_watchdog_jiffies = jiffies;
+	} else
+		napi_gro_receive(&ch->rxtx_napi, skb);
 
 	priv->dev->stats.rx_packets++;
 	priv->dev->stats.rx_bytes += len;
@@ -5049,7 +5105,7 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit, u32 queue)
 	dma_dir = page_pool_get_dma_dir(rx_q->page_pool);
 	buf_sz = DIV_ROUND_UP(priv->dma_buf_sz, PAGE_SIZE) * PAGE_SIZE;
 
-	if (netif_msg_rx_status(priv)) {
+	if (!priv->ecdev && netif_msg_rx_status(priv)) {
 		void *rx_head;
 
 		netdev_dbg(priv->dev, "%s: descriptor ring:\n", __func__);
@@ -5129,7 +5185,11 @@ read_again:
 		if (unlikely(error && (status & rx_not_ls)))
 			goto read_again;
 		if (unlikely(error)) {
-			dev_kfree_skb(skb);
+			if (!priv->ecdev) {
+				dev_kfree_skb(skb);
+			} else {
+				skb_trim(skb, 0);
+			}
 			skb = NULL;
 			count++;
 			continue;
@@ -5220,8 +5280,17 @@ read_again:
 			/* XDP program may expand or reduce tail */
 			buf1_len = xdp.data_end - xdp.data;
 
-			skb = napi_alloc_skb(&ch->rx_napi, buf1_len);
+			if (!priv->ecdev)
+				skb = napi_alloc_skb(&ch->rx_napi, buf1_len);
+			else {
+				if (buf1_len > ETHERCAT_SKB_SIZE)
+					netdev_err(priv->dev, "buff too long %d", buf1_len);
+				else
+					skb = buf->skb;
+			}
+
 			if (!skb) {
+				netdev_err(priv->dev, "skb null, drop data");
 				priv->dev->stats.rx_dropped++;
 				count++;
 				goto drain_data;
@@ -5279,7 +5348,13 @@ drain_data:
 			skb_set_hash(skb, hash, hash_type);
 
 		skb_record_rx_queue(skb, queue);
-		napi_gro_receive(&ch->rx_napi, skb);
+		if (priv->ecdev) {
+			skb_push(skb, ETH_HLEN);
+			//pr_info("receive pkt %d %d %d skb len %d", len, buf1_len, buf2_len, skb->len);
+			ecdev_receive(priv->ecdev, skb->data, skb->len);
+			priv->ec_watchdog_jiffies = jiffies;
+		} else
+			napi_gro_receive(&ch->rx_napi, skb);
 		skb = NULL;
 
 		priv->dev->stats.rx_packets++;
@@ -5294,8 +5369,9 @@ drain_data:
 		rx_q->state.len = len;
 	}
 
-	stmmac_finalize_xdp_rx(priv, xdp_status);
-
+	if (!priv->ecdev) {
+		stmmac_finalize_xdp_rx(priv, xdp_status);
+	}
 	stmmac_rx_refill(priv, queue);
 
 	priv->xstats.rx_pkt_n += count;
@@ -5436,6 +5512,9 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int txfifosz = priv->plat->tx_fifo_size;
 	const int mtu = new_mtu;
+
+	if (priv->ecdev)
+		return 0;
 
 	if (txfifosz == 0)
 		txfifosz = priv->dma_cap.tx_fifo_size;
@@ -5631,6 +5710,10 @@ static irqreturn_t stmmac_interrupt(int irq, void *dev_id)
 {
 	struct net_device *dev = (struct net_device *)dev_id;
 	struct stmmac_priv *priv = netdev_priv(dev);
+
+	if (priv->ecdev) {
+		return IRQ_HANDLED;
+	}
 
 	/* Check if adapter is up */
 	if (test_bit(STMMAC_DOWN, &priv->state))
@@ -6768,6 +6851,28 @@ void stmmac_fpe_handshake(struct stmmac_priv *priv, bool enable)
 }
 
 /**
+ * ec_poll - Ethercat poll Routine
+ * @netdev: net device structure
+ *
+ * This function can never fail.
+ *
+ **/
+void ec_poll(struct net_device *netdev)
+{
+	int i;
+	struct stmmac_priv *priv = netdev_priv(netdev);
+
+	for (i = 0; i < priv->plat->tx_queues_to_use; i++) {
+		stmmac_tx_clean(priv, 256, i);
+	}
+
+	for (i = 0; i < priv->plat->rx_queues_to_use; i++) {
+		stmmac_rx(priv, 256, i);
+	}
+}
+
+
+/**
  * stmmac_dvr_probe
  * @device: device pointer
  * @plat_dat: platform data pointer
@@ -6977,7 +7082,8 @@ int stmmac_dvr_probe(struct device *device,
 		priv->flow_ctrl = FLOW_AUTO;	/* RX/TX pause on */
 
 	/* Setup channels NAPI */
-	stmmac_napi_add(ndev);
+	if (!priv->ecdev)
+		stmmac_napi_add(ndev);
 
 	mutex_init(&priv->lock);
 
@@ -7025,11 +7131,21 @@ int stmmac_dvr_probe(struct device *device,
 		goto error_phy_setup;
 	}
 
-	ret = register_netdev(ndev);
-	if (ret) {
-		dev_err(priv->device, "%s: ERROR %i registering the device\n",
-			__func__, ret);
-		goto error_netdev_register;
+	priv->ecdev = ecdev_offer(ndev, ec_poll, THIS_MODULE);
+	if (priv->ecdev) {
+		ret = ecdev_open(priv->ecdev);
+		if (ret) {
+			ecdev_withdraw(priv->ecdev);
+			goto error_netdev_register;
+		}
+		priv->ec_watchdog_jiffies = jiffies;
+	} else {
+		ret = register_netdev(ndev);
+		if (ret) {
+			dev_err(priv->device, "%s: ERROR %i registering the device\n",
+				__func__, ret);
+			goto error_netdev_register;
+		}
 	}
 
 	if (priv->plat->serdes_powerup) {
@@ -7085,9 +7201,13 @@ int stmmac_dvr_remove(struct device *dev)
 
 	stmmac_stop_all_dma(priv);
 	stmmac_mac_set(priv, priv->ioaddr, false);
-	netif_carrier_off(ndev);
-	unregister_netdev(ndev);
-
+	if (priv->ecdev) {
+		ecdev_close(priv->ecdev);
+		ecdev_withdraw(priv->ecdev);
+	} else {
+		netif_carrier_off(ndev);
+		unregister_netdev(ndev);
+	}
 	/* Serdes power down needs to happen after VLAN filter
 	 * is deleted that is triggered by unregister_netdev().
 	 */
@@ -7129,6 +7249,9 @@ int stmmac_suspend(struct device *dev)
 
 	if (!ndev || !netif_running(ndev))
 		return 0;
+
+	if (priv->ecdev)
+		return -EBUSY;
 
 	mutex_lock(&priv->lock);
 
@@ -7225,6 +7348,9 @@ int stmmac_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	int ret;
+
+	if (priv->ecdev)
+		return -EBUSY;
 
 	if (!netif_running(ndev))
 		return 0;

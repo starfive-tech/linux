@@ -24,6 +24,9 @@
 #include <linux/reset.h>
 #include <net/page_pool.h>
 
+/* EtherCAT header file */
+#include <net/ecdev.h>
+
 struct stmmac_resources {
 	void __iomem *addr;
 	u8 mac[ETH_ALEN];
@@ -54,6 +57,7 @@ struct stmmac_tx_info {
 
 #define STMMAC_TBS_AVAIL	BIT(0)
 #define STMMAC_TBS_EN		BIT(1)
+#define ETHERCAT_SKB_SIZE	1800
 
 /* Frequently used values are kept adjacent for cache effect */
 struct stmmac_tx_queue {
@@ -90,6 +94,7 @@ struct stmmac_rx_buffer {
 	};
 	struct page *sec_page;
 	dma_addr_t sec_addr;
+	struct sk_buff *skb;
 };
 
 struct stmmac_rx_queue {
@@ -299,6 +304,9 @@ struct stmmac_priv {
 	/* XDP BPF Program */
 	unsigned long *af_xdp_zc_qps;
 	struct bpf_prog *xdp_prog;
+	/* EtherCAT device variables */
+	ec_device_t *ecdev;
+	unsigned long ec_watchdog_jiffies;
 };
 
 enum stmmac_state {
