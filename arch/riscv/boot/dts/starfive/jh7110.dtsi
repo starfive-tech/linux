@@ -218,7 +218,7 @@
 			riscv,isa = "rv64imafdc_zba_zbb";
 			tlb-split;
 			#cooling-cells = <2>;
-			status = "okay";
+			status = "disabled";
 			operating-points-v2 = <&cluster0_opp>;
 
 			cpu4intctrl: interrupt-controller {
@@ -1820,6 +1820,10 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "disabled";
+		};
+
+		rtthread: rtthread@0 {
+			compatible = "starfive,rtthread";
 		};
 
 		starfive_cpufreq: starfive,jh7110-cpufreq {

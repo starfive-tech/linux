@@ -71,6 +71,9 @@
 			reg = <0x0 0x69c00000 0x0 0x03001000>;
 		};
 
+		rtthread_reserved: rt@6e400000 {
+			reg = <0x0 0x6e400000 0x0 0x1c00000>;
+		};
 	};
 
 	leds {
@@ -951,6 +954,11 @@
 
 &sof_dsp {
 	memory-region = <&hifi4_reserved>;
+};
+
+&rtthread {
+	memory-region = <&rtthread_reserved>;
+	status = "okay";
 };
 
 &qspi {
