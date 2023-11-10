@@ -81,4 +81,13 @@ struct vs_dc {
 extern struct platform_driver dc_platform_driver;
 extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
 
+void vs_dc_update_cursor_plane(struct vs_dc *dc, struct vs_plane *plane,
+			       struct drm_plane *drm_plane,
+			       struct drm_atomic_state *drm_state);
+void vs_dc_disable_cursor_plane(struct vs_dc *dc, struct vs_plane *plane,
+				struct drm_plane_state *old_state);
+int vs_dc_check_cursor_plane(struct vs_dc *dc, struct drm_plane *plane,
+			     struct drm_atomic_state *state);
+
+
 #endif /* __VS_DC_H__ */
