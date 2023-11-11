@@ -1267,6 +1267,7 @@
 			reg = <0x9 0x40000000 0x0 0x1000000>,
 			      <0x0 0x2b000000 0x0 0x100000>;
 			reg-names = "cfg", "apb";
+			linux,pci-domain = <0>;
 			#address-cells = <3>;
 			#size-cells = <2>;
 			#interrupt-cells = <1>;
@@ -1310,6 +1311,7 @@
 			reg = <0x9 0xc0000000 0x0 0x1000000>,
 			      <0x0 0x2c000000 0x0 0x100000>;
 			reg-names = "cfg", "apb";
+			linux,pci-domain = <1>;
 			#address-cells = <3>;
 			#size-cells = <2>;
 			#interrupt-cells = <1>;
