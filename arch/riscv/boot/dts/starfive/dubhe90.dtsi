@@ -4,6 +4,7 @@
 #include "dubhe.dtsi"
 
 &cpu0 {
+	compatible = "starfive,dubhe-90", "riscv";
 	d-cache-block-size = <64>;
 	d-cache-sets = <1024>;
 	d-cache-size = <65536>;
@@ -17,6 +18,7 @@
 };
 
 &cpu1 {
+	compatible = "starfive,dubhe-90", "riscv";
 	d-cache-block-size = <64>;
 	d-cache-sets = <1024>;
 	d-cache-size = <65536>;
