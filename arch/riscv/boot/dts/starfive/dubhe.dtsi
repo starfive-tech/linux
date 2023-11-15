@@ -13,7 +13,6 @@
 		#size-cells = <0>;
 
 		cpu0: cpu@0 {
-			compatible = "starfive,dubhe", "riscv";
 			device_type = "cpu";
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&l2_cache>;
