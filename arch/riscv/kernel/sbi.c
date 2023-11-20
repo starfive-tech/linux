@@ -8,12 +8,17 @@
 #include <linux/init.h>
 #include <linux/pm.h>
 #include <linux/reboot.h>
+#include <asm/io.h>
 #include <asm/sbi.h>
 #include <asm/smp.h>
 
 /* default SBI version is 0.1 */
 unsigned long sbi_spec_version __ro_after_init = SBI_SPEC_VERSION_DEFAULT;
 EXPORT_SYMBOL(sbi_spec_version);
+
+#ifdef CONFIG_RISCV_AMP
+struct amp_data riscv_amp_data[NR_CPUS] __cacheline_aligned;
+#endif
 
 static void (*__sbi_set_timer)(uint64_t stime) __ro_after_init;
 static int (*__sbi_send_ipi)(const unsigned long *hart_mask) __ro_after_init;
@@ -371,6 +376,33 @@ int sbi_send_ipi(const unsigned long *hart_mask)
 }
 EXPORT_SYMBOL(sbi_send_ipi);
 
+#ifdef CONFIG_RISCV_AMP
+int sbi_send_ipi_amp(unsigned int hartid)
+{
+	struct sbiret ret = {0};
+	unsigned long hmask_val = (1 << hartid);
+
+	ret = sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SEND_EXT_DOMAIN,
+			hmask_val, hartid, 0, 0, 0, 0);
+
+	if (ret.error)
+		pr_err("sbi ipi amp error");
+	return 0;
+}
+
+static int sbi_amp_data_init(void)
+{
+	struct sbiret ret = {0};
+
+	ret = sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SET_AMP_DATA_ADDR,
+			virt_to_phys((void *)riscv_amp_data), 0, 0, 0, 0, 0);
+	if (ret.error)
+		pr_err("set ipi data error");
+
+	return 0;
+}
+#endif
+
 /**
  * sbi_remote_fence_i() - Execute FENCE.I instruction on given remote harts.
  * @hart_mask: A cpu mask containing all the target harts.
@@ -653,4 +685,7 @@ void __init sbi_init(void)
 	}
 
 	riscv_set_ipi_ops(&sbi_ipi_ops);
+#ifdef CONFIG_RISCV_AMP
+	sbi_amp_data_init();
+#endif
 }

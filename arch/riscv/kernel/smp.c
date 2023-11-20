@@ -29,6 +29,9 @@ enum ipi_message_type {
 	IPI_CPU_STOP,
 	IPI_IRQ_WORK,
 	IPI_TIMER,
+#ifdef CONFIG_RISCV_AMP
+	IPI_AMP,
+#endif
 	IPI_MAX
 };
 
@@ -143,21 +146,40 @@ void handle_IPI(struct pt_regs *regs)
 	struct pt_regs *old_regs = set_irq_regs(regs);
 	unsigned long *pending_ipis = &ipi_data[smp_processor_id()].bits;
 	unsigned long *stats = ipi_data[smp_processor_id()].stats;
-
+#ifdef CONFIG_RISCV_AMP
+	unsigned long *pending_amp_ipis;
+	int cpu_id;
+#endif
 	irq_enter();
 
 	riscv_clear_ipi();
 
 	while (true) {
+#ifdef CONFIG_RISCV_AMP
+		unsigned long ops, amp_ops;
+#else
 		unsigned long ops;
+#endif
 
 		/* Order bit clearing and data access. */
 		mb();
 
+#ifdef CONFIG_RISCV_AMP
+		cpu_id = smp_processor_id();
+		pending_amp_ipis = &riscv_amp_data[cpuid_to_hartid_map(cpu_id)].amp_bits;
+		amp_ops = xchg(pending_amp_ipis, 0);
+		ops = xchg(pending_ipis, 0);
+		if (ops == 0 && amp_ops == 0)
+			goto done;
+
+		if (amp_ops) {
+			stats[IPI_AMP]++;
+		}
+#else
 		ops = xchg(pending_ipis, 0);
 		if (ops == 0)
 			goto done;
-
+#endif
 		if (ops & (1 << IPI_RESCHEDULE)) {
 			stats[IPI_RESCHEDULE]++;
 			scheduler_ipi();
@@ -201,6 +223,9 @@ static const char * const ipi_names[] = {
 	[IPI_CPU_STOP]		= "CPU stop interrupts",
 	[IPI_IRQ_WORK]		= "IRQ work interrupts",
 	[IPI_TIMER]		= "Timer broadcast interrupts",
+#ifdef CONFIG_RISCV_AMP
+	[IPI_AMP]		= "AMP rpmsg interrupts",
+#endif
 };
 
 void show_ipi_stats(struct seq_file *p, int prec)
