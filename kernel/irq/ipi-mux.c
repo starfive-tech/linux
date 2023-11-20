@@ -26,6 +26,14 @@ static struct ipi_mux_cpu __percpu *ipi_mux_pcpu;
 static struct irq_domain *ipi_mux_domain;
 static void (*ipi_mux_send)(unsigned int cpu);
 
+#ifdef CONFIG_RISCV_AMP
+static unsigned long (*arch_get_extra_bits)(void);
+void ipi_set_extra_bits(unsigned long (*func)(void))
+{
+	arch_get_extra_bits = func;
+}
+#endif
+
 static void ipi_mux_mask(struct irq_data *d)
 {
 	struct ipi_mux_cpu *icpu = this_cpu_ptr(ipi_mux_pcpu);
@@ -139,6 +147,16 @@ void ipi_mux_process(void)
 
 	for_each_set_bit(hwirq, &ipis, BITS_PER_TYPE(int))
 		generic_handle_domain_irq(ipi_mux_domain, hwirq);
+
+#ifdef CONFIG_RISCV_AMP
+	unsigned long extra_ipis;
+
+	if (arch_get_extra_bits) {
+		extra_ipis = arch_get_extra_bits();
+		for_each_set_bit(hwirq, &extra_ipis, BITS_PER_TYPE(int))
+			generic_handle_domain_irq(ipi_mux_domain, hwirq);
+	}
+#endif
 }
 
 /**

@@ -17,6 +17,19 @@
 
 static struct fwnode_handle *(*__get_intc_node)(void);
 
+#ifdef CONFIG_RISCV_AMP
+static int ipi_amp_enable;
+void riscv_set_ipi_amp_enable(void)
+{
+	ipi_amp_enable = 1;
+}
+
+int riscv_get_ipi_amp_enable(void)
+{
+	return ipi_amp_enable;
+}
+#endif
+
 void riscv_set_intc_hwnode_fn(struct fwnode_handle *(*fn)(void))
 {
 	__get_intc_node = fn;

@@ -16,4 +16,13 @@ void riscv_set_intc_hwnode_fn(struct fwnode_handle *(*fn)(void));
 
 struct fwnode_handle *riscv_get_intc_hwnode(void);
 
+#ifdef CONFIG_RISCV_AMP
+#define IPI_AMP		15
+void riscv_set_ipi_amp_enable(void);
+int riscv_get_ipi_amp_enable(void);
+void ipi_set_extra_bits(unsigned long (*func)(void));
+unsigned long riscv_clear_amp_bits(void);
+void register_ipi_mailbox_handler(void (*handler)(unsigned long));
+#endif
+
 #endif /* _ASM_RISCV_IRQ_H */
