@@ -1857,6 +1857,8 @@ static bool copy_data(struct prb_data_ring *data_ring,
  * descriptor. However, it also verifies that the record is finalized and has
  * the sequence number @seq. On success, 0 is returned.
  *
+ * For the panic CPU, committed descriptors are also considered finalized.
+ *
  * Error return values:
  * -EINVAL: A finalized record with sequence number @seq does not exist.
  * -ENOENT: A finalized record with sequence number @seq exists, but its data
@@ -1875,15 +1877,24 @@ static int desc_read_finalized_seq(struct prb_desc_ring *desc_ring,
 
 	/*
 	 * An unexpected @id (desc_miss) or @seq mismatch means the record
-	 * does not exist. A descriptor in the reserved or committed state
-	 * means the record does not yet exist for the reader.
+	 * does not exist. A descriptor in the reserved state means the
+	 * record does not yet exist for the reader.
 	 */
 	if (d_state == desc_miss ||
 	    d_state == desc_reserved ||
-	    d_state == desc_committed ||
 	    s != seq) {
 		return -EINVAL;
 	}
+
+	/*
+	 * A descriptor in the committed state means the record does not yet
+	 * exist for the reader. However, for the panic CPU, committed
+	 * records are also handled as finalized records since they contain
+	 * message data in a consistent state and may contain additional
+	 * hints as to the cause of the panic.
+	 */
+	if (d_state == desc_committed && !this_cpu_in_panic())
+		return -EINVAL;
 
 	/*
 	 * A descriptor in the reusable state may no longer have its data
