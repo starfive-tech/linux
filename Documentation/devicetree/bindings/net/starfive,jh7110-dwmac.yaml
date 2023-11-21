@@ -17,6 +17,7 @@ select:
       contains:
         enum:
           - starfive,jh7110-dwmac
+          - starfive,dubhe-dwmac
   required:
     - compatible
 
@@ -25,6 +26,7 @@ properties:
     items:
       - enum:
           - starfive,jh7110-dwmac
+          - starfive,dubhe-dwmac
       - const: snps,dwmac-5.20
 
   reg:
