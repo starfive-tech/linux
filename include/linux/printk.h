@@ -782,3 +782,5 @@ static inline void print_hex_dump_debug(const char *prefix_str, int prefix_type,
 	print_hex_dump_debug(prefix_str, prefix_type, 16, 1, buf, len, true)
 
 #endif
+
+void printk_legacy_allow_panic_sync(void);
