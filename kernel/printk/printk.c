@@ -3413,11 +3413,20 @@ static void console_init_seq(struct console *newcon, bool bootcon_registered)
 
 				newcon->seq = prb_next_seq(prb);
 				for_each_console(con) {
-					if ((con->flags & CON_BOOT) &&
-					    (con->flags & CON_ENABLED) &&
-					    con->seq < newcon->seq) {
-						newcon->seq = con->seq;
+					u64 seq;
+
+					if (!((con->flags & CON_BOOT) &&
+					      (con->flags & CON_ENABLED))) {
+						continue;
 					}
+
+					if (con->flags & CON_NBCON)
+						seq = nbcon_seq_read(con);
+					else
+						seq = con->seq;
+
+					if (seq < newcon->seq)
+						newcon->seq = seq;
 				}
 			}
 
