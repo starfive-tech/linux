@@ -71,8 +71,12 @@
 			reg = <0x0 0x69c00000 0x0 0x03001000>;
 		};
 
-		rtthread_reserved: rt@6e400000 {
-			reg = <0x0 0x6e400000 0x0 0x1c00000>;
+		rpmsg_share_mem: rpmsg-shmem {
+			reg = <0x0 0x6e400000 0x0 0x400000>;
+		};
+
+		rtthread_reserved: rt@6e800000 {
+			reg = <0x0 0x6e800000 0x0 0x1800000>;
 		};
 	};
 
@@ -394,6 +398,11 @@
 			starfive,pin-gpio-doen = <OEN_LOW>;
 		};
 	};
+};
+
+&rpmsg {
+	status = "okay";
+	memory-region = <&rpmsg_share_mem>;
 };
 
 &uart0 {
