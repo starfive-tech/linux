@@ -149,6 +149,7 @@ void handle_IPI(struct pt_regs *regs)
 #ifdef CONFIG_RISCV_AMP
 	unsigned long *pending_amp_ipis;
 	int cpu_id;
+	extern void rpmsg_handler(void *param);
 #endif
 	irq_enter();
 
@@ -174,6 +175,7 @@ void handle_IPI(struct pt_regs *regs)
 
 		if (amp_ops) {
 			stats[IPI_AMP]++;
+			rpmsg_handler(NULL);
 		}
 #else
 		ops = xchg(pending_ipis, 0);

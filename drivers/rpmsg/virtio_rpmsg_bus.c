@@ -903,9 +903,14 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	total_buf_space = vrp->num_bufs * vrp->buf_size;
 
 	/* allocate coherent memory for the buffers */
+#if 0
 	bufs_va = dma_alloc_coherent(vdev->dev.parent,
 				     total_buf_space, &vrp->bufs_dma,
 				     GFP_KERNEL);
+#else
+        bufs_va = dma_alloc_noncoherent(vdev->dev.parent, total_buf_space,
+                        &vrp->bufs_dma, DMA_BIDIRECTIONAL, GFP_KERNEL);
+#endif
 	if (!bufs_va) {
 		err = -ENOMEM;
 		goto vqs_del;

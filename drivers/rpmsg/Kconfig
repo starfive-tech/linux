@@ -32,6 +32,14 @@ config RPMSG_MTK_SCP
 	  remote processors in MediaTek platforms.
 	  This use IPI and IPC to communicate with remote processors.
 
+config RPMSG_VIRTIO_STARFIVE
+	tristate "Starfive virtio starfive"
+	select RPMSG
+	help
+	  Say y here to enable support providing rpmsg channels to
+	  remote processors in Starfive platforms.
+	  This use IPI and IPC to communicate with remote processors.
+
 config RPMSG_QCOM_GLINK
 	tristate
 	select RPMSG
