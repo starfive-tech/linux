@@ -22,6 +22,7 @@
 
 #include "vs_drv.h"
 #include "vs_modeset.h"
+#include "vs_dc.h"
 
 #define DRV_NAME	"verisilicon"
 #define DRV_DESC	"Verisilicon DRM driver"
@@ -212,6 +213,7 @@ static const struct component_master_ops vs_drm_ops = {
 };
 
 static struct platform_driver *drm_sub_drivers[] = {
+	&dc_platform_driver,
 };
 
 static struct component_match *vs_drm_match_add(struct device *dev)
