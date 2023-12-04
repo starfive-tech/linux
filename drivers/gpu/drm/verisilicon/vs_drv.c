@@ -23,6 +23,7 @@
 #include "vs_drv.h"
 #include "vs_modeset.h"
 #include "vs_dc.h"
+#include "vs_simple_enc.h"
 
 #define DRV_NAME	"verisilicon"
 #define DRV_DESC	"Verisilicon DRM driver"
@@ -217,6 +218,7 @@ static struct platform_driver *drm_sub_drivers[] = {
 #ifdef CONFIG_DRM_VERISILICON_STARFIVE_HDMI
 	&starfive_hdmi_driver,
 #endif
+	&simple_encoder_driver,
 };
 
 static struct component_match *vs_drm_match_add(struct device *dev)
