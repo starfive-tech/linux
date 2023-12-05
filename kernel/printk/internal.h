@@ -44,6 +44,7 @@ enum printk_info_flags {
 };
 
 extern struct printk_ringbuffer *prb;
+extern bool printk_threads_enabled;
 extern bool have_legacy_console;
 extern bool have_boot_console;
 
@@ -161,6 +162,7 @@ static inline void nbcon_kthread_wake(struct console *con)
 
 static inline void nbcon_kthread_wake(struct console *con) { }
 static inline void nbcon_kthread_create(struct console *con) { }
+#define printk_threads_enabled (false)
 #define printing_via_unlock (false)
 
 /*
