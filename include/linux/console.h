@@ -296,6 +296,8 @@ struct nbcon_write_context {
  * @node:		hlist node for the console list
  *
  * @write_atomic:	Write callback for atomic context
+ * @driver_enter:	Callback to begin synchronization with driver code
+ * @driver_exit:	Callback to finish synchronization with driver code
  * @nbcon_state:	State for nbcon consoles
  * @nbcon_seq:		Sequence number of the next record for nbcon to print
  * @pbufs:		Pointer to nbcon private buffer
@@ -323,6 +325,8 @@ struct console {
 	/* nbcon console specific members */
 	bool			(*write_atomic)(struct console *con,
 						struct nbcon_write_context *wctxt);
+	void			(*driver_enter)(struct console *con, unsigned long *flags);
+	void			(*driver_exit)(struct console *con, unsigned long flags);
 	atomic_t		__private nbcon_state;
 	atomic_long_t		__private nbcon_seq;
 	struct printk_buffers	*pbufs;
