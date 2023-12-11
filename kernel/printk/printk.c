@@ -2823,6 +2823,8 @@ static void __console_unlock(void)
 	up_console_sem();
 }
 
+static DEFINE_WAIT_OVERRIDE_MAP(printk_legacy_map, LD_WAIT_SLEEP);
+
 #ifdef CONFIG_PRINTK
 
 /*
@@ -2991,7 +2993,7 @@ static bool console_emit_next_record(struct console *con, bool *handover, int co
 		/*
 		 * On PREEMPT_RT this function is either in a thread or
 		 * panic context. So there is no need for concern about
-		 * printk reentrance or handovers.
+		 * printk reentrance, handovers, or lockdep complaints.
 		 */
 
 		con->write(con, outbuf, pmsg.outbuf_len);
@@ -3013,7 +3015,9 @@ static bool console_emit_next_record(struct console *con, bool *handover, int co
 		/* Do not trace print latency. */
 		stop_critical_timings();
 
+		lock_map_acquire_try(&printk_legacy_map);
 		con->write(con, outbuf, pmsg.outbuf_len);
+		lock_map_release(&printk_legacy_map);
 
 		start_critical_timings();
 
@@ -3090,7 +3094,10 @@ static bool console_flush_all(bool do_cond_resched, u64 *next_seq, bool *handove
 			any_usable = true;
 
 			if (flags & CON_NBCON) {
+
+				lock_map_acquire_try(&printk_legacy_map);
 				progress = nbcon_atomic_emit_next_record(con, handover, cookie);
+				lock_map_release(&printk_legacy_map);
 
 				printk_seq = nbcon_seq_read(con);
 			} else {
