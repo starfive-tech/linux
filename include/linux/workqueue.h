@@ -636,7 +636,6 @@ extern void __warn_flushing_systemwide_wq(void)
 /* Please stop using this function, for this function will be removed in near future. */
 #define flush_scheduled_work()						\
 ({									\
-	__warn_flushing_systemwide_wq();				\
 	__flush_workqueue(system_wq);					\
 })
 
