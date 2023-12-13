@@ -7,6 +7,8 @@
 
 #include "wave5-helper.h"
 
+extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
+
 #define VPU_DEC_DEV_NAME "C&M Wave5 VPU decoder"
 #define VPU_DEC_DRV_NAME "wave5-dec"
 #define V4L2_CID_VPU_THUMBNAIL_MODE (V4L2_CID_USER_BASE + 0x1001)
@@ -1104,15 +1106,10 @@ static void wave5_vpu_dec_buf_queue_dst(struct vb2_buffer *vb)
 {
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 	struct vpu_instance *inst = vb2_get_drv_priv(vb->vb2_queue);
+	struct frame_buffer *frame_buf;
 	int ret;
 
 	vbuf->sequence = inst->queued_dst_buf_num++;
-	ret = wave5_vpu_dec_clr_disp_flag(inst, vb->index);
-	if (ret) {
-		dev_dbg(inst->dev->dev,
-			"%s: Clearing the display flag of buffer index: %u, fail: %d\n",
-			__func__, vb->index, ret);
-	}
 
 	if (inst->state == VPU_INST_STATE_INIT_SEQ) {
 		dma_addr_t buf_addr_y = 0, buf_addr_cb = 0, buf_addr_cr = 0;
@@ -1150,6 +1147,17 @@ static void wave5_vpu_dec_buf_queue_dst(struct vb2_buffer *vb)
 		inst->frame_buf[vb->index + non_linear_num].map_type = LINEAR_FRAME_MAP;
 		inst->frame_buf[vb->index + non_linear_num].update_fb_info = true;
 		dev_dbg(inst->dev->dev, "linear framebuf y 0x%llx cb 0x%llx cr 0x%llx\n",buf_addr_y, buf_addr_cb, buf_addr_cr);
+	}
+
+	frame_buf = &inst->frame_buf[vb->index + inst->dst_buf_count];
+	if (frame_buf->size < inst->dev->l2_cache_size)
+		sifive_l2_flush64_range(frame_buf->buf_y, frame_buf->size);
+
+	ret = wave5_vpu_dec_clr_disp_flag(inst, vb->index);
+	if (ret) {
+		dev_dbg(inst->dev->dev,
+			"%s: Clearing the display flag of buffer index: %u, fail: %d\n",
+			__func__, vb->index, ret);
 	}
 
 	if (!vb2_is_streaming(vb->vb2_queue))
