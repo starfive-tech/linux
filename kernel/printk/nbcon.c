@@ -962,6 +962,22 @@ static bool nbcon_atomic_emit_one(struct nbcon_write_context *wctxt)
 }
 
 /**
+ * nbcon_get_default_prio - The appropriate nbcon priority to use for nbcon
+ *				printing on the current CPU
+ *
+ * Context:	Any context which could not be migrated to another CPU.
+ * Return:	The nbcon_prio to use for acquiring an nbcon console in this
+ *		context for printing.
+ */
+enum nbcon_prio nbcon_get_default_prio(void)
+{
+	if (this_cpu_in_panic())
+		return NBCON_PRIO_PANIC;
+
+	return NBCON_PRIO_NORMAL;
+}
+
+/**
  * nbcon_atomic_emit_next_record - Print one record for an nbcon console
  *					using the write_atomic() callback
  * @con:	The console to print on
@@ -997,7 +1013,7 @@ bool nbcon_atomic_emit_next_record(struct console *con, bool *handover, int cook
 	cant_migrate();
 
 	ctxt->console	= con;
-	ctxt->prio	= NBCON_PRIO_NORMAL;
+	ctxt->prio	= nbcon_get_default_prio();
 
 	progress = nbcon_atomic_emit_one(&wctxt);
 
@@ -1043,7 +1059,6 @@ static void __nbcon_atomic_flush_all(u64 stop_seq)
 			memset(ctxt, 0, sizeof(*ctxt));
 			ctxt->console			= con;
 			ctxt->spinwait_max_us		= 2000;
-			ctxt->prio			= NBCON_PRIO_NORMAL;
 
 			/*
 			 * Atomic flushing does not use console driver
@@ -1052,8 +1067,13 @@ static void __nbcon_atomic_flush_all(u64 stop_seq)
 			 * disabled to avoid being interrupted and then
 			 * calling into a driver that will deadlock trying
 			 * acquire console ownership.
+			 *
+			 * This also disables migration in order to get the
+			 * current CPU priority.
 			 */
 			local_irq_save(irq_flags);
+
+			ctxt->prio = nbcon_get_default_prio();
 
 			any_progress |= nbcon_atomic_emit_one(&wctxt);
 
@@ -1166,6 +1186,9 @@ static inline bool uart_is_nbcon(struct uart_port *up)
  *
  * If @up is an nbcon console, this console will be acquired and marked as
  * unsafe. Otherwise this function does nothing.
+ *
+ * nbcon consoles acquired via the port lock wrapper always use priority
+ * NBCON_PRIO_NORMAL.
  */
 void nbcon_acquire(struct uart_port *up)
 {
@@ -1200,6 +1223,9 @@ EXPORT_SYMBOL_GPL(nbcon_acquire);
  *
  * If @up is an nbcon console, the console will be marked as safe and
  * released. Otherwise this function does nothing.
+ *
+ * nbcon consoles acquired via the port lock wrapper always use priority
+ * NBCON_PRIO_NORMAL.
  */
 void nbcon_release(struct uart_port *up)
 {
