@@ -7,6 +7,7 @@
 
 #define ANDESTECH_VENDOR_ID	0x31e
 #define SIFIVE_VENDOR_ID	0x489
+#define STARFIVE_VENDOR_ID	0x67e
 #define THEAD_VENDOR_ID		0x5b7
 
 #endif
