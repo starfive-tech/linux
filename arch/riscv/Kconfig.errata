@@ -53,6 +53,27 @@ config ERRATA_SIFIVE_CIP_1200
 
 	  If you don't know what to do here, say "Y".
 
+config ERRATA_STARFIVE
+	bool "Starfive errata"
+	depends on RISCV_ALTERNATIVE
+	help
+	  All Starfive errata Kconfig depend on this Kconfig. Disabling
+	  this Kconfig will disable all Starfive errata. Please say "Y"
+	  here if your platform uses Starfive CPU cores.
+
+	  Otherwise, please say "N" here to avoid unnecessary overhead.
+
+config ERRATA_STARFIVE_CMO
+	bool "Apply Starfive cache management errata"
+	depends on ERRATA_STARFIVE && ARCH_STARFIVE
+	select RISCV_DMA_NONCOHERENT
+	default y
+	help
+	  This will apply the cache management errata to handle the
+	  non-standard handling on non-coherent operations on Starfive cores.
+
+	  If you don't know what to do here, say "Y".
+
 config ERRATA_THEAD
 	bool "T-HEAD errata"
 	depends on RISCV_ALTERNATIVE
