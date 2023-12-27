@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2023 StarFive Technology Co., Ltd. */
+
+#include "dubhe.dtsi"
+
+&cpu0 {
+	d-cache-block-size = <64>;
+	d-cache-sets = <512>;
+	d-cache-size = <32768>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <48>;
+	i-cache-block-size = <64>;
+	i-cache-sets = <512>;
+	i-cache-size = <32768>;
+	i-tlb-sets = <1>;
+	i-tlb-size = <48>;
+};
+
+&cpu1 {
+	d-cache-block-size = <64>;
+	d-cache-sets = <512>;
+	d-cache-size = <32768>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <48>;
+	i-cache-block-size = <64>;
+	i-cache-sets = <512>;
+	i-cache-size = <32768>;
+	i-tlb-sets = <1>;
+	i-tlb-size = <48>;
+};
+
+&l2_cache {
+	compatible = "starfive,dubhe-cache", "cache";
+};
