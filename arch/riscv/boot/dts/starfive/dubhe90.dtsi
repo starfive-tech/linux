@@ -28,3 +28,7 @@
 	i-tlb-sets = <1>;
 	i-tlb-size = <48>;
 };
+
+&l2_cache {
+	compatible = "starfive,dubhe-cache", "cache";
+};
