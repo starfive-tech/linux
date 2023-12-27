@@ -43,6 +43,18 @@
 			};
 		};
 
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&cpu0>;
+				};
+
+				core1 {
+					cpu = <&cpu1>;
+				};
+			};
+		};
+
 		l2_cache: cache-controller {
 			compatible = "cache";
 			cache-block-size = <64>;
