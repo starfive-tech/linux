@@ -12,22 +12,15 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		cpu@0 {
+		cpu0: cpu@0 {
 			compatible = "starfive,dubhe", "riscv";
-			d-cache-block-size = <64>;
-			d-cache-sets = <128>;
-			d-cache-size = <65536>;
 			device_type = "cpu";
-			i-cache-block-size = <64>;
-			i-cache-sets = <512>;
-			i-cache-size = <65536>;
-			i-tlb-sets = <1>;
-			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&l2_cache>;
 			reg = <0x0>;
 			riscv,isa = "rv64imafdcbhn_sscofpmf";
 			tlb-split;
+
 			cpu0_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
@@ -35,22 +28,15 @@
 			};
 		};
 
-		cpu@1 {
+		cpu1: cpu@1 {
 			compatible = "starfive,dubhe", "riscv";
-			d-cache-block-size = <64>;
-			d-cache-sets = <128>;
-			d-cache-size = <65536>;
 			device_type = "cpu";
-			i-cache-block-size = <64>;
-			i-cache-sets = <512>;
-			i-cache-size = <65536>;
-			i-tlb-sets = <1>;
-			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&l2_cache>;
 			reg = <0x1>;
 			riscv,isa = "rv64imafdcbhn_sscofpmf";
 			tlb-split;
+
 			cpu1_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
