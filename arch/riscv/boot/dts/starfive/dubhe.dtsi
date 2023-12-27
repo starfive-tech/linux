@@ -24,6 +24,7 @@
 			i-tlb-sets = <1>;
 			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
+			next-level-cache = <&l2_cache>;
 			reg = <0x0>;
 			riscv,isa = "rv64imafdcbhnv";
 			tlb-split;
@@ -46,6 +47,7 @@
 			i-tlb-sets = <1>;
 			i-tlb-size = <32>;
 			mmu-type = "riscv,sv48";
+			next-level-cache = <&l2_cache>;
 			reg = <0x1>;
 			riscv,isa = "rv64imafdcbhnv";
 			tlb-split;
@@ -55,12 +57,23 @@
 				interrupt-controller;
 			};
 		};
+
+		l2_cache: cache-controller {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-sets = <4096>;
+			cache-size = <0x200000>;
+			cache-unified;
+		};
+
 	};
 
 	soc {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		compatible = "simple-bus";
+		dma-noncoherent;
 		ranges;
 
 		clint: clint@2000000 {
