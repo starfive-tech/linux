@@ -8,4 +8,15 @@ config AX45MP_L2_CACHE
 	help
 	  Support for the L2 cache controller on Andes Technology AX45MP platforms.
 
+config STARFIVE_DUBHE_L2_CACHE
+	bool "StarFive Dubhe L2 Cache controller"
+	depends on ARCH_STARFIVE
+	select RISCV_NONSTANDARD_CACHE_OPS
+	help
+	  Support for the cache controller on StarFive platforms.
+	  StarFive Dubhe Cache Controller implementation predates
+	  RISC-V CMO ISA extension. This allow vendor specific
+	  implementation to handle non-coherent DMA through global
+	  memory pool.
+
 endmenu
