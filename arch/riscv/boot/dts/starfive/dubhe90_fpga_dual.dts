@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
 /* Copyright (c) 2022 StarFive Technology Co., Ltd. */
 
-#include "dubhe.dtsi"
+#include "dubhe90.dtsi"
 
 / {
 	model = "StarFive Dubhe Dual-FPGA";
