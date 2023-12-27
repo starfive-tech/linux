@@ -47,7 +47,8 @@ properties:
               - sifive,u74-mc
               - thead,c906
               - thead,c910
-              - starfive,dubhe
+              - starfive,dubhe-80
+              - starfive,dubhe-90
           - const: riscv
       - items:
           - enum:
