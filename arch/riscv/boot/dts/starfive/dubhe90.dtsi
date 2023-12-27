@@ -5,22 +5,26 @@
 
 &cpu0 {
 	d-cache-block-size = <64>;
-	d-cache-sets = <128>;
+	d-cache-sets = <1024>;
 	d-cache-size = <65536>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <48>;
 	i-cache-block-size = <64>;
-	i-cache-sets = <512>;
+	i-cache-sets = <1024>;
 	i-cache-size = <65536>;
 	i-tlb-sets = <1>;
-	i-tlb-size = <32>;
+	i-tlb-size = <48>;
 };
 
 &cpu1 {
 	d-cache-block-size = <64>;
-	d-cache-sets = <128>;
+	d-cache-sets = <1024>;
 	d-cache-size = <65536>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <48>;
 	i-cache-block-size = <64>;
-	i-cache-sets = <512>;
+	i-cache-sets = <1024>;
 	i-cache-size = <65536>;
 	i-tlb-sets = <1>;
-	i-tlb-size = <32>;
+	i-tlb-size = <48>;
 };
