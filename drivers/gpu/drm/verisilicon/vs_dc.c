@@ -1258,15 +1258,24 @@ static void update_cursor_plane(struct vs_dc *dc, struct vs_plane *plane,
 {
   struct drm_plane_state *state = drm_atomic_get_new_plane_state(drm_state,
 									 drm_plane);
-  struct drm_framebuffer *drm_fb = state->fb;
   struct dc_hw_cursor cursor;
   static u32 pre_address = 0;
 
   cursor.address = plane->dma_addr[0];
-  cursor.x = state->crtc_x;
-  cursor.y = state->crtc_y;
-  cursor.hot_x = drm_fb->hot_x;
-  cursor.hot_y = drm_fb->hot_y;
+  if (state->crtc_x > 0) {
+      cursor.x = state->crtc_x;
+      cursor.hot_x = 0;
+  } else {
+      cursor.hot_x = -state->crtc_x;
+      cursor.x = 0;
+  }
+  if (state->crtc_y > 0) {
+      cursor.y = state->crtc_y;
+      cursor.hot_y = 0;
+  } else {
+      cursor.hot_y = -state->crtc_y;
+      cursor.y = 0;
+  }
   cursor.display_id = to_vs_display_id(dc, state->crtc);
   update_cursor_size(state, &cursor);
   cursor.enable = true;
