@@ -921,18 +921,43 @@ static void update_fb(struct vs_plane *plane, u8 display_id,
 	struct vs_plane_state *plane_state = to_vs_plane_state(state);
 	struct drm_framebuffer *drm_fb = state->fb;
 	struct drm_rect *src = &state->src;
+	u32 src_x, src_y;
+
+	src_y = src->y1 >> 16;
+	src_x = src->x1 >> 16;
 
 	fb->display_id = display_id;
 	fb->y_address = plane->dma_addr[0];
+	if (src_y)
+		fb->y_address += src_y * drm_fb->pitches[0];
+	if (src_x)
+		fb->y_address += src_x * drm_fb->format->cpp[0];
+
 	fb->y_stride = drm_fb->pitches[0];
 	if (drm_fb->format->format == DRM_FORMAT_YVU420) {
 		fb->u_address = plane->dma_addr[2];
+		if (src_y)
+		  fb->u_address += src_y * drm_fb->pitches[2];
+		if (src_x)
+		  fb->u_address += src_x * drm_fb->format->cpp[2];
 		fb->v_address = plane->dma_addr[1];
+		if (src_y)
+		  fb->v_address += src_y * drm_fb->pitches[1];
+		if (src_x)
+		  fb->v_address += src_x * drm_fb->format->cpp[1];
 		fb->u_stride = drm_fb->pitches[2];
 		fb->v_stride = drm_fb->pitches[1];
 	} else {
 		fb->u_address = plane->dma_addr[1];
+		if (src_y)
+		  fb->u_address += src_y * drm_fb->pitches[1];
+		if (src_x)
+		  fb->u_address += src_x * drm_fb->format->cpp[1];
 		fb->v_address = plane->dma_addr[2];
+		if (src_y)
+		  fb->v_address += src_y * drm_fb->pitches[2];
+		if (src_x)
+		  fb->v_address += src_x * drm_fb->format->cpp[2];
 		fb->u_stride = drm_fb->pitches[1];
 		fb->v_stride = drm_fb->pitches[2];
 	}
