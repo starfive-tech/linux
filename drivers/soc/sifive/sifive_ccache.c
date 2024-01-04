@@ -18,6 +18,7 @@
 #include <asm/cacheflush.h>
 #include <asm/cacheinfo.h>
 #include <asm/page.h>
+#include "sifive_pl2.h"
 #include <soc/sifive/sifive_ccache.h>
 
 #define SIFIVE_CCACHE_DIRECCFIX_LOW 0x100
@@ -263,7 +264,7 @@ static int __init sifive_ccache_init(void)
 {
 	struct device_node *np;
 	struct resource res;
-	int i, rc, intr_num;
+	int i, rc, intr_num, cpu;
 	u64 __maybe_unused offset;
 
 	np = of_find_matching_node(NULL, sifive_ccache_ids);
@@ -314,6 +315,16 @@ static int __init sifive_ccache_init(void)
 #endif
 
 	ccache_config_read();
+
+	if (IS_ENABLED(CONFIG_SIFIVE_U74_L2_PMU)) {
+		for_each_cpu(cpu, cpu_possible_mask) {
+			rc = sifive_u74_l2_pmu_probe(np, ccache_base, cpu);
+			if (rc) {
+				pr_err("Failed to probe sifive_u74_l2_pmu driver.\n");
+				return -EINVAL;
+			}
+		}
+	}
 
 	ccache_cache_ops.get_priv_group = ccache_get_priv_group;
 	riscv_set_cacheinfo_ops(&ccache_cache_ops);
