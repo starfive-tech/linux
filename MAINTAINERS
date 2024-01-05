@@ -22857,6 +22857,12 @@ L:	linux-mm@kvack.org
 S:	Maintained
 F:	mm/zswap.c
 
+SIFIVE L2 CACHE PMU
+M:	Minda.chen <minda.chen@starfivetech.com>
+S:	Maintained
+F:	drivers/perf/sifive_u74_l2_pmu.c
+F:	drivers/soc/sifive/sifive_pl2.h
+
 THE REST
 M:	Linus Torvalds <torvalds@linux-foundation.org>
 L:	linux-kernel@vger.kernel.org
