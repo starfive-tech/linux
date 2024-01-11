@@ -46,16 +46,28 @@
 #define SIFIVE_CCACHE_FLUSH64 0x200
 #define SIFIVE_CCACHE_FLUSH32 0x240
 
+#define SIFIVE_L2_WAYMASK_BASE 0x800
+#define SIFIVE_L2_MAX_MASTER_ID 32
+
 #define SIFIVE_CCACHE_WAYENABLE 0x08
 #define SIFIVE_CCACHE_ECCINJECTERR 0x40
 
 #define SIFIVE_CCACHE_MAX_ECCINTR 4
-#define SIFIVE_CCACHE_LINE_SIZE 64
+#define SIFIVE_L2_DEFAULT_WAY_MASK 0xffff
 
 static void __iomem *ccache_base;
 static int g_irq[SIFIVE_CCACHE_MAX_ECCINTR];
 static struct riscv_cacheinfo_ops ccache_cache_ops;
 static int level;
+
+static u32 flush_line_len;
+static u32 cache_size;
+static u32 cache_size_per_way;
+static u32 cache_max_line;
+static u32 cache_ways_per_bank;
+static u32 cache_size_per_block;
+static u32 cache_max_enabled_way;
+static void __iomem *l2_zero_device_base;
 
 enum {
 	DIR_CORR = 0,
@@ -101,14 +113,25 @@ static void ccache_config_read(void)
 	u32 cfg;
 
 	cfg = readl(ccache_base + SIFIVE_CCACHE_CONFIG);
-	pr_info("%llu banks, %llu ways, sets/bank=%llu, bytes/block=%llu\n",
-		FIELD_GET(SIFIVE_CCACHE_CONFIG_BANK_MASK, cfg),
-		FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, cfg),
-		BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_SETS_MASK, cfg)),
-		BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_BLKS_MASK, cfg)));
+	cache_ways_per_bank = FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, cfg);
+	cache_size_per_block = BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_BLKS_MASK, cfg));
+	flush_line_len = cache_size_per_block;
+	cache_size_per_way = cache_size / cache_ways_per_bank;
+	cache_max_line = cache_size_per_way / flush_line_len - 1;
 
-	cfg = readl(ccache_base + SIFIVE_CCACHE_WAYENABLE);
-	pr_info("Index of the largest way enabled: %u\n", cfg);
+	pr_info("%llu banks, %u ways, sets/bank=%llu, bytes/block=%u\n",
+		FIELD_GET(SIFIVE_CCACHE_CONFIG_BANK_MASK, cfg),
+		cache_ways_per_bank,
+		BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_SETS_MASK, cfg)),
+		cache_size_per_block);
+
+	pr_info("max_line=%u, %u bytes/line, %u bytes/way\n",
+		cache_max_line,
+		flush_line_len,
+		cache_size_per_way);
+
+	cache_max_enabled_way = readl(ccache_base + SIFIVE_CCACHE_WAYENABLE);
+	pr_info("Index of the largest way enabled: %u\n", cache_max_enabled_way);
 }
 
 static const struct of_device_id sifive_ccache_ids[] = {
@@ -136,6 +159,52 @@ EXPORT_SYMBOL_GPL(unregister_sifive_ccache_error_notifier);
 static phys_addr_t uncached_offset;
 DEFINE_STATIC_KEY_FALSE(sifive_ccache_handle_noncoherent_key);
 
+static void sifive_ccache_flush_range_by_way_index(u32 start_index, u32 end_index)
+{
+	u32 way, master;
+	u32 index;
+	u64 way_mask;
+	void __iomem *line_addr, *addr;
+
+	mb();
+	way_mask = 1;
+	line_addr = l2_zero_device_base + start_index * flush_line_len;
+	for (way = 0; way <= cache_max_enabled_way; ++way) {
+		addr = ccache_base + SIFIVE_L2_WAYMASK_BASE;
+		for (master = 0; master < SIFIVE_L2_MAX_MASTER_ID; ++master) {
+			writeq_relaxed(way_mask, addr);
+			addr += 8;
+		}
+
+		addr = line_addr;
+		for (index = start_index; index <= end_index; ++index) {
+#ifdef CONFIG_32BIT
+			writel_relaxed(0, addr);
+#else
+			writeq_relaxed(0, addr);
+#endif
+			addr += flush_line_len;
+		}
+
+		way_mask <<= 1;
+		line_addr += cache_size_per_way;
+		mb();
+	}
+
+	addr = ccache_base + SIFIVE_L2_WAYMASK_BASE;
+	for (master = 0; master < SIFIVE_L2_MAX_MASTER_ID; ++master) {
+		writeq_relaxed(SIFIVE_L2_DEFAULT_WAY_MASK, addr);
+		addr += 8;
+	}
+	mb();
+}
+
+void sifive_ccache_flush_entire(void)
+{
+	sifive_ccache_flush_range_by_way_index(0, cache_max_line);
+}
+EXPORT_SYMBOL_GPL(sifive_ccache_flush_entire);
+
 void sifive_ccache_flush_range(phys_addr_t start, size_t len)
 {
 	phys_addr_t end = start + len;
@@ -145,8 +214,8 @@ void sifive_ccache_flush_range(phys_addr_t start, size_t len)
 		return;
 
 	mb();
-	for (line = ALIGN_DOWN(start, SIFIVE_CCACHE_LINE_SIZE); line < end;
-	     line += SIFIVE_CCACHE_LINE_SIZE) {
+	for (line = ALIGN_DOWN(start, flush_line_len); line < end;
+	     line += flush_line_len) {
 #ifdef CONFIG_32BIT
 		writel(line >> 4, ccache_base + SIFIVE_CCACHE_FLUSH32);
 #else
@@ -282,6 +351,18 @@ static int __init sifive_ccache_init(void)
 		goto err_node_put;
 	}
 
+	if (of_address_to_resource(np, 2, &res))
+		return -ENODEV;
+
+	l2_zero_device_base = ioremap(res.start, resource_size(&res));
+	if (!l2_zero_device_base)
+		return -ENOMEM;
+
+	if (of_property_read_u32(np, "cache-size", &cache_size)) {
+		pr_err("L2CACHE: no cache-size property\n");
+		return -ENODEV;
+	}
+
 	if (of_property_read_u32(np, "cache-level", &level)) {
 		rc = -ENOENT;
 		goto err_unmap;
@@ -305,16 +386,16 @@ static int __init sifive_ccache_init(void)
 	}
 	of_node_put(np);
 
+	ccache_config_read();
+
 #ifdef CONFIG_RISCV_DMA_NONCOHERENT
 	if (!of_property_read_u64(np, "uncached-offset", &offset)) {
 		uncached_offset = offset;
 		static_branch_enable(&sifive_ccache_handle_noncoherent_key);
-		riscv_cbom_block_size = SIFIVE_CCACHE_LINE_SIZE;
+		riscv_cbom_block_size = flush_line_len;
 		riscv_noncoherent_supported();
 	}
 #endif
-
-	ccache_config_read();
 
 	if (IS_ENABLED(CONFIG_SIFIVE_U74_L2_PMU)) {
 		for_each_cpu(cpu, cpu_possible_mask) {
