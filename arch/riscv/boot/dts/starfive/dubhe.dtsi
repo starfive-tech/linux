@@ -17,7 +17,10 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&l2_cache>;
 			reg = <0x0>;
-			riscv,isa = "rv64imafdcbh_sscofpmf";
+			riscv,isa = "rv64imafdcbh";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "b", "h",
+					       "zicntr", "zicsr", "zifencei", "zihpm", "sscofpmf";
 			tlb-split;
 
 			cpu0_intc: interrupt-controller {
@@ -33,7 +36,10 @@
 			mmu-type = "riscv,sv48";
 			next-level-cache = <&l2_cache>;
 			reg = <0x1>;
-			riscv,isa = "rv64imafdcbh_sscofpmf";
+			riscv,isa = "rv64imafdcbh";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "b", "h",
+					       "zicntr", "zicsr", "zifencei", "zihpm", "sscofpmf";
 			tlb-split;
 
 			cpu1_intc: interrupt-controller {
