@@ -8,6 +8,7 @@
 
 #include <drm/drm_plane_helper.h>
 #include <drm/drm_fourcc.h>
+#include <soc/sifive/sifive_ccache.h>
 
 #include "vs_type.h"
 #include "vs_fb.h"
@@ -75,7 +76,5 @@ to_vs_plane_state(struct drm_plane_state *state)
 {
 	return container_of(state, struct vs_plane_state, base);
 }
-
-extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
 
 #endif /* __VS_PLANE_H__ */

@@ -948,12 +948,7 @@ static void update_fb(struct vs_plane *plane, u8 display_id,
 	update_swizzle(drm_fb->format->format, fb);
 	update_watermark(plane_state->watermark, fb);
 
-    sifive_l2_flush64_range(fb->y_address, fb->height * fb->y_stride);
-    if (fb->u_address)
-            sifive_l2_flush64_range(fb->u_address, fb->height * fb->u_stride);
-    if (fb->v_address)
-            sifive_l2_flush64_range(fb->v_address, fb->height * fb->v_stride);
-
+	sifive_ccache_flush_entire();
 	plane_state->status.tile_mode = fb->tile_mode;
 }
 
@@ -1277,7 +1272,7 @@ static void update_cursor_plane(struct vs_dc *dc, struct vs_plane *plane,
   cursor.enable = true;
 
   if (cursor.address != pre_address) {
-	  sifive_l2_flush64_range(cursor.address, ((cursor.size == CURSOR_SIZE_32X32) ?
+	  sifive_ccache_flush_range(cursor.address, ((cursor.size == CURSOR_SIZE_32X32) ?
 				  CURSOR_MEM_SIZE_32X32 : CURSOR_MEM_SIZE_64X64));
 	  pre_address = cursor.address;
   }

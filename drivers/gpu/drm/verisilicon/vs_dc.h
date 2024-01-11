@@ -8,6 +8,7 @@
 
 #include <linux/version.h>
 #include <linux/mm_types.h>
+#include <soc/sifive/sifive_ccache.h>
 
 #include <drm/drm_modes.h>
 #if KERNEL_VERSION(5, 5, 0) > LINUX_VERSION_CODE
@@ -77,7 +78,6 @@ struct vs_dc {
 };
 
 extern struct platform_driver dc_platform_driver;
-extern void sifive_l2_flush64_range(unsigned long start, unsigned long len);
 
 void vs_dc_update_cursor_plane(struct vs_dc *dc, struct vs_plane *plane,
 			       struct drm_plane *drm_plane,
