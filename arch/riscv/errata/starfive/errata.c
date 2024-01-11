@@ -23,26 +23,45 @@
 #define STARFIVE_DUBHE80_MARCHID	0x80000000DB000080UL
 #define STARFIVE_DUBHE80_MIMPID		0x0000000020230831UL
 
-static bool errata_probe_cmo(unsigned int stage, unsigned long arch_id,
-			      unsigned long impid)
+#define STARFIVE_DUBHE70_MARCHID	0x80000000DB000070UL
+#define STARFIVE_DUBHE70_MIMPID		0x0000000020240131UL
+
+DEFINE_STATIC_KEY_FALSE(bypass_envcfg_csr_key);
+
+static void errata_probe_cmo(unsigned int stage, unsigned long arch_id,
+			     unsigned long impid)
 {
 	if (!IS_ENABLED(CONFIG_ERRATA_STARFIVE_CMO))
-		return false;
+		return;
 
 	if (arch_id == STARFIVE_DUBHE90_MARCHID) {
 		if (impid > STARFIVE_DUBHE90_MIMPID)
-			return false;
+			return;
 	}
 
 	if (arch_id == STARFIVE_DUBHE80_MARCHID) {
 		if (impid > STARFIVE_DUBHE80_MIMPID)
-			return false;
+			return;
 	}
 
 	riscv_cbom_block_size = L1_CACHE_BYTES;
 	riscv_noncoherent_supported();
+}
 
-	return true;
+static void errata_bypass_envcfg_csr(unsigned int stage, unsigned long arch_id,
+				     unsigned long impid)
+{
+	if (arch_id == STARFIVE_DUBHE90_MARCHID) {
+		if (impid > STARFIVE_DUBHE90_MIMPID)
+			return;
+	}
+
+	if (arch_id == STARFIVE_DUBHE80_MARCHID) {
+		if (impid > STARFIVE_DUBHE80_MIMPID)
+			return;
+	}
+
+	static_branch_enable(&bypass_envcfg_csr_key);
 }
 
 void starfive_errata_patch_func(struct alt_entry *begin,
@@ -51,6 +70,11 @@ void starfive_errata_patch_func(struct alt_entry *begin,
 				unsigned long impid,
 				unsigned int stage)
 {
-	if (stage == RISCV_ALTERNATIVES_BOOT)
+	if (archid == STARFIVE_DUBHE70_MARCHID)
+		return;
+
+	if (stage == RISCV_ALTERNATIVES_BOOT) {
 		errata_probe_cmo(stage, archid, impid);
+		errata_bypass_envcfg_csr(stage, archid, impid);
+	}
 }

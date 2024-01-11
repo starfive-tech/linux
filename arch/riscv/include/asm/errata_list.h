@@ -174,6 +174,8 @@ asm volatile(ALTERNATIVE(						\
 	: "=r" (__ovl) :						\
 	: "memory")
 
+DECLARE_STATIC_KEY_FALSE(bypass_envcfg_csr_key);
+
 #endif /* __ASSEMBLY__ */
 
 #endif
