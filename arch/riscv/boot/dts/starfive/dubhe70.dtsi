@@ -23,6 +23,7 @@
 	i-cache-size = <32768>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <24>;
+	next-level-cache = <&l2_cache0>;
 };
 
 &cpu1 {
@@ -45,4 +46,15 @@
 	i-cache-size = <32768>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <24>;
+	next-level-cache = <&l2_cache1>;
+};
+
+&l2_cache0 {
+	cache-sets = <2048>;
+	cache-size = <0x20000>;
+};
+
+&l2_cache1 {
+	cache-sets = <2048>;
+	cache-size = <0x20000>;
 };

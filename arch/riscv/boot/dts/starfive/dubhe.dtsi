@@ -15,7 +15,6 @@
 		cpu0: cpu@0 {
 			device_type = "cpu";
 			mmu-type = "riscv,sv48";
-			next-level-cache = <&l2_cache>;
 			reg = <0x0>;
 			riscv,isa = "rv64imafdcbh";
 			riscv,isa-base = "rv64i";
@@ -34,7 +33,6 @@
 			compatible = "starfive,dubhe", "riscv";
 			device_type = "cpu";
 			mmu-type = "riscv,sv48";
-			next-level-cache = <&l2_cache>;
 			reg = <0x1>;
 			riscv,isa = "rv64imafdcbh";
 			riscv,isa-base = "rv64i";
@@ -61,15 +59,19 @@
 			};
 		};
 
-		l2_cache: cache-controller {
+		l2_cache0: cache-controller-0 {
 			compatible = "cache";
 			cache-block-size = <64>;
 			cache-level = <2>;
-			cache-sets = <4096>;
-			cache-size = <0x200000>;
 			cache-unified;
 		};
 
+		l2_cache1: cache-controller-1 {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-unified;
+		};
 	};
 
 	pmu {

@@ -15,6 +15,7 @@
 	i-cache-size = <32768>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <48>;
+	next-level-cache = <&l2_cache0>;
 };
 
 &cpu1 {
@@ -29,8 +30,17 @@
 	i-cache-size = <32768>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <48>;
+	next-level-cache = <&l2_cache1>;
 };
 
-&l2_cache {
+&l2_cache0 {
 	compatible = "starfive,dubhe-cache", "cache";
+	cache-sets = <512>;
+	cache-size = <0x40000>;
+};
+
+&l2_cache1 {
+	compatible = "starfive,dubhe-cache", "cache";
+	cache-sets = <512>;
+	cache-size = <0x40000>;
 };

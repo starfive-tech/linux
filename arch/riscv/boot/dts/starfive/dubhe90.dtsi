@@ -15,6 +15,7 @@
 	i-cache-size = <65536>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <48>;
+	next-level-cache = <&l2_cache0>;
 };
 
 &cpu1 {
@@ -29,8 +30,13 @@
 	i-cache-size = <65536>;
 	i-tlb-sets = <1>;
 	i-tlb-size = <48>;
+	next-level-cache = <&l2_cache0>;
 };
 
-&l2_cache {
+&l2_cache0 {
 	compatible = "starfive,dubhe-cache", "cache";
+	cache-sets = <4096>;
+	cache-size = <0x200000>;
 };
+
+/delete-node/ &l2_cache1;
