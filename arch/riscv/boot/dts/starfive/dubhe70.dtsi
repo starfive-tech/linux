@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2023 StarFive Technology Co., Ltd. */
+
+#include "dubhe.dtsi"
+
+&cpu0 {
+	compatible = "starfive,dubhe-70", "riscv";
+	riscv,isa = "rv64imafdcbh";
+	riscv,isa-base = "rv64i";
+	riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "b", "h", "zicbom",
+			       "zicboz", "zicntr", "zicond", "zicsr", "zifencei",
+			       "zihintpause", "zihpm", "svinval", "svnapot", "svpbmt",
+			       "sscofpmf";
+	riscv,cbom-block-size = <64>;
+	riscv,cboz-block-size = <64>;
+	d-cache-block-size = <64>;
+	d-cache-sets = <512>;
+	d-cache-size = <32768>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <16>;
+	i-cache-block-size = <64>;
+	i-cache-sets = <512>;
+	i-cache-size = <32768>;
+	i-tlb-sets = <1>;
+	i-tlb-size = <24>;
+};
+
+&cpu1 {
+	compatible = "starfive,dubhe-70", "riscv";
+	riscv,isa = "rv64imafdcbh";
+	riscv,isa-base = "rv64i";
+	riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "b", "h", "zicbom",
+			       "zicboz", "zicntr", "zicond", "zicsr", "zifencei",
+			       "zihintpause", "zihpm", "svinval", "svnapot", "svpbmt",
+			       "sscofpmf";
+	riscv,cbom-block-size = <64>;
+	riscv,cboz-block-size = <64>;
+	d-cache-block-size = <64>;
+	d-cache-sets = <512>;
+	d-cache-size = <32768>;
+	d-tlb-sets = <1>;
+	d-tlb-size = <16>;
+	i-cache-block-size = <64>;
+	i-cache-sets = <512>;
+	i-cache-size = <32768>;
+	i-tlb-sets = <1>;
+	i-tlb-size = <24>;
+};
