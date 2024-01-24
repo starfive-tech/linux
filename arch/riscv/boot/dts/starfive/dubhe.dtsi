@@ -20,7 +20,7 @@
 			riscv,isa-base = "rv64i";
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zba", "zbb",
 					       "zbc", "zbs", "zicntr", "zicsr", "zifencei",
-					       "zihpm", "sscofpmf";
+					       "zihintpause", "zihpm", "sscofpmf";
 			tlb-split;
 
 			cpu0_intc: interrupt-controller {
@@ -39,7 +39,7 @@
 			riscv,isa-base = "rv64i";
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zba", "zbb",
 					       "zbc", "zbs", "zicntr", "zicsr", "zifencei",
-					       "zihpm", "sscofpmf";
+					       "zihintpause", "zihpm", "sscofpmf";
 			tlb-split;
 
 			cpu1_intc: interrupt-controller {
