@@ -22165,8 +22165,7 @@ F:	include/trace/events/watchdog.h
 
 WAVE5 VPU CODEC DRIVER
 M:	Nas Chung <nas.chung@chipsnmedia.com>
-M:	Robert Beckett <bob.beckett@collabora.com>
-M:	Sebastian Fricke <sebastian.fricke@collabora.com>
+M:	Jackson Lee <jackson.lee@chipsnmedia.com>
 L:	linux-media@vger.kernel.org
 S:	Maintained
 F:	Documentation/devicetree/bindings/media/cnm,wave5.yaml
