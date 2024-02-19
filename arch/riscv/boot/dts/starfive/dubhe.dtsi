@@ -197,8 +197,7 @@
 				"tx",
 				"ptp_ref",
 				"stmmaceth",
-				"pclk",
-				"gtxc";
+				"pclk";
 			interrupt-parent = <&plic0>;
 			interrupts = <8>, <11>, <12>;
 			interrupt-names = "macirq", "eth_wake_irq", "eth_lpi";
