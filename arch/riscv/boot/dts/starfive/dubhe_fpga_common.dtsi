@@ -66,8 +66,7 @@
 		 <&fpga_2p5mhz_clk>,
 		 <&fpga_2p5mhz_clk>,
 		 <&fpga_50mhz_clk>,
-		 <&fpga_50mhz_clk>,
-		 <&fpga_2p5mhz_clk>;
+		 <&fpga_50mhz_clk>;
 
 	mdio0 {
 		compatible = "snps,dwmac-mdio";
