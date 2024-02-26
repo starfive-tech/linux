@@ -327,7 +327,6 @@ static const struct pinmux_ops jh7110_pinmux_ops = {
 	.get_function_name   = pinmux_generic_get_function_name,
 	.get_function_groups = pinmux_generic_get_function_groups,
 	.set_mux	     = jh7110_set_mux,
-	.strict		     = true,
 };
 
 static const u8 jh7110_drive_strength_mA[4] = { 2, 4, 8, 12 };
