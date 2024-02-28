@@ -118,8 +118,8 @@ static int wave5_vpu_load_firmware(struct device *dev, const char *fw_name,
 	return 0;
 }
 
-static const struct of_device_id sifive_l2_ids[] = {
-	{ .compatible = "sifive,fu740-c000-ccache" },
+static const struct of_device_id l2_cache_ids[] = {
+	{ .compatible = "starfive,jh7110-ccache" },
 	{ /* end of table */ },
 };
 
@@ -238,7 +238,7 @@ static int wave5_vpu_probe(struct platform_device *pdev)
 		goto err_enc_unreg;
 	}
 
-	np = of_find_matching_node(NULL, sifive_l2_ids);
+	np = of_find_matching_node(NULL, l2_cache_ids);
 	if (!np) {
 		dev_err(&pdev->dev, "find cache node, fail\n");
 		goto err_enc_unreg;
