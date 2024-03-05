@@ -194,14 +194,14 @@ static int starfive_cryp_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_algs_hash;
 
-	ret = starfive_rsa_register_algs();
-	if (ret)
-		goto err_algs_rsa;
+//	ret = starfive_rsa_register_algs();
+//	if (ret)
+//		goto err_algs_rsa;
 
 	return 0;
 
-err_algs_rsa:
-	starfive_hash_unregister_algs();
+// err_algs_rsa:
+// 	starfive_hash_unregister_algs();
 err_algs_hash:
 	starfive_aes_unregister_algs();
 err_algs_aes:
