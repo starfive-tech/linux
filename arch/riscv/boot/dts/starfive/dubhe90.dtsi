@@ -34,7 +34,7 @@
 };
 
 &l2_cache0 {
-	compatible = "starfive,dubhe-cache", "cache";
+	compatible = "starfive,dubhe-l2cache", "cache";
 	cache-sets = <4096>;
 	cache-size = <0x200000>;
 };

@@ -1,24 +1,24 @@
 # SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
 %YAML 1.2
 ---
-$id: http://devicetree.org/schemas/cache/starfive,dubhe-cache.yaml#
+$id: http://devicetree.org/schemas/cache/starfive,dubhe-l2cache.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: StarFive Dubhe Cache Controller
+title: StarFive Dubhe L2 Cache Controller
 
 maintainers:
   - Ji Sheng Teoh <jisheng.teoh@starfivetech.com>
 
 description:
-  StarFive Dubhe Cache Controller implementation predates the RISC-V CMO ISA
-  extension. Dubhe vendor specific implementation is put in place to handle
-  non-coherent DMA operation through a shared global memory pool.
+  StarFive Dubhe L2 Cache Controller implementation predates the RISC-V CMO
+  ISA extension. Dubhe vendor specific implementation is put in place to
+  handle non-coherent DMA operation through a shared global memory pool.
 
 properties:
   compatible:
     items:
       - enum:
-          - starfive,dubhe-cache
+          - starfive,dubhe-l2cache
       - const: cache
 
   cache-block-size:
@@ -48,7 +48,7 @@ required:
 examples:
   - |
     cache-controller {
-        compatible = "starfive,dubhe-cache", "cache";
+        compatible = "starfive,dubhe-l2cache", "cache";
         cache-block-size = <64>;
         cache-level = <2>;
         cache-sets = <4096>;
