@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * StarFive cache controller driver
+ * StarFive L2 cache controller driver
  *
  * Copyright (C) 2023 StarFive Technology Co., Ltd.
  *
@@ -18,26 +18,26 @@ enum starfive_sbi_ext_fid {
 	STARFIVE_SBI_EXT_L2_INVALIDATE,
 };
 
-static void sbi_cache_flush(phys_addr_t paddr, size_t size)
+static void sbi_l2cache_flush(phys_addr_t paddr, size_t size)
 {
 	sbi_ecall(STARFIVE_SBI_EXT, STARFIVE_SBI_EXT_L2_FLUSH,
 		  paddr, size, 0, 0, 0, 0);
 }
 
-static void sbi_cache_invalidate(phys_addr_t paddr, size_t size)
+static void sbi_l2cache_invalidate(phys_addr_t paddr, size_t size)
 {
 	sbi_ecall(STARFIVE_SBI_EXT, STARFIVE_SBI_EXT_L2_INVALIDATE,
 		  paddr, size, 0, 0, 0, 0);
 }
 
 static const struct riscv_nonstd_cache_ops dubhe_cmo_ops __initdata = {
-	.wback = &sbi_cache_flush,
-	.inv = &sbi_cache_invalidate,
-	.wback_inv = &sbi_cache_invalidate,
+	.wback = &sbi_l2cache_flush,
+	.inv = &sbi_l2cache_invalidate,
+	.wback_inv = &sbi_l2cache_invalidate,
 };
 
-static const struct of_device_id starfive_cache_ids[] = {
-	{ .compatible = "starfive,dubhe-cache" },
+static const struct of_device_id starfive_l2cache_ids[] = {
+	{ .compatible = "starfive,dubhe-l2cache" },
 	{ /* end of table */ }
 };
 
@@ -45,7 +45,7 @@ static int __init starfive_cache_init(void)
 {
 	struct device_node *np;
 
-	np = of_find_matching_node(NULL, starfive_cache_ids);
+	np = of_find_matching_node(NULL, starfive_l2cache_ids);
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
