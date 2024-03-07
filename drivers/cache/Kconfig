@@ -13,8 +13,8 @@ config STARFIVE_DUBHE_L2_CACHE
 	depends on ARCH_STARFIVE
 	select RISCV_NONSTANDARD_CACHE_OPS
 	help
-	  Support for the cache controller on StarFive platforms.
-	  StarFive Dubhe Cache Controller implementation predates
+	  Support for the L2 cache controller on StarFive platforms.
+	  StarFive Dubhe L2 cache controller implementation predates
 	  RISC-V CMO ISA extension. This allow vendor specific
 	  implementation to handle non-coherent DMA through global
 	  memory pool.
