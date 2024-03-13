@@ -457,7 +457,9 @@ static int video_get_subdev_format(struct stfcamss_video *video,
 	struct v4l2_pix_format *pix = &video->active_fmt.fmt.pix;
 	struct v4l2_pix_format_mplane *pix_mp =
 				&video->active_fmt.fmt.pix_mp;
-	struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
 	struct v4l2_subdev *subdev;
 	u32 pixelformat;
 	u32 pad;
@@ -468,7 +470,6 @@ static int video_get_subdev_format(struct stfcamss_video *video,
 		return -EPIPE;
 
 	fmt.pad = pad;
-	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 
 	ret = v4l2_subdev_call(subdev, pad, get_fmt, NULL, &fmt);
 	if (ret)
