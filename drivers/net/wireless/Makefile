@@ -25,3 +25,7 @@ obj-$(CONFIG_WLAN_VENDOR_ZYDAS) += zydas/
 
 obj-$(CONFIG_WLAN) += legacy/
 obj-$(CONFIG_WLAN) += virtual/
+
+obj-$(CONFIG_USB_WIFI_ECR6600U) += eswin/
+obj-$(CONFIG_AIC_WLAN_SUPPORT) += aic8800/
+
