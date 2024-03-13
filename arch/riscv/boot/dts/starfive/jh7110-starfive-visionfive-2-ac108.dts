@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2022 StarFive Technology Co., Ltd.
+ * Copyright (C) 2022 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110-starfive-visionfive-2-v1.3b.dts"
+
+/ {
+	/* i2s + ac108 */
+	sound0: snd-card0 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-AC108-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&sndcodec1>;
+			frame-master = <&sndcodec1>;
+
+			widgets =
+					"Microphone", "Mic Jack",
+					"Line", "Line In",
+					"Line", "Line Out",
+					"Speaker", "Speaker",
+					"Headphone", "Headphone Jack";
+			routing =
+					"Headphone Jack", "HP_L",
+					"Headphone Jack", "HP_R",
+					"Speaker", "SPK_LP",
+					"Speaker", "SPK_LN",
+					"LINPUT1", "Mic Jack",
+					"LINPUT3", "Mic Jack",
+					"RINPUT1", "Mic Jack",
+					"RINPUT2", "Mic Jack";
+
+			cpu {
+				sound-dai = <&i2srx_mst>;
+			};
+
+			sndcodec1: codec {
+				sound-dai = <&ac108>;
+				clocks = <&ac108_mclk>;
+				clock-names = "mclk";
+			};
+		};
+	};
+};
+
+&i2c0 {
+	ac108: ac108@3b {
+		compatible = "x-power,ac108_0";
+		reg = <0x3b>;
+		#sound-dai-cells = <0>;
+		data-protocol = <0>;
+	};
+};
+
+&i2srx_mst {
+	status = "okay";
+};

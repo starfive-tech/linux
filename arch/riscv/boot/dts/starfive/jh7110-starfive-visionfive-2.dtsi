@@ -7,6 +7,7 @@
 /dts-v1/;
 #include "jh7110.dtsi"
 #include "jh7110-pinfunc.h"
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/gpio/gpio.h>
 
 / {
@@ -35,6 +36,44 @@
 	memory@40000000 {
 		device_type = "memory";
 		reg = <0x0 0x40000000 0x1 0x0>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x20000000>;
+			alignment = <0x0 0x1000>;
+			alloc-ranges = <0x0 0x70000000 0x0 0x20000000>;
+			linux,cma-default;
+		};
+
+		e24_mem: e24@c0000000 {
+			reg = <0x0 0x6ce00000 0x0 0x1600000>;
+		};
+
+		xrp_reserved: xrpbuffer@f0000000 {
+			reg = <0x0 0x69c00000 0x0 0x01ffffff
+				0x0 0x6bc00000 0x0 0x00001000
+				0x0 0x6bc01000 0x0 0x00fff000
+				0x0 0x6cc00000 0x0 0x00001000>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led-ack {
+			gpios = <&aongpio 3 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_HEARTBEAT;
+			linux,default-trigger = "heartbeat";
+			label = "ack";
+		};
 	};
 
 	gpio-restart {
@@ -68,6 +107,48 @@
 				sound-dai = <&pwmdac_codec>;
 			};
 		};
+	};
+
+	sound-hdmi {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "StarFive-HDMI-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&sndi2s0>;
+			frame-master = <&sndi2s0>;
+			mclk-fs = <256>;
+			status = "okay";
+
+			sndi2s0: cpu {
+				sound-dai = <&i2stx0>;
+			};
+
+			codec {
+				sound-dai = <&hdmi>;
+			};
+		};
+	};
+
+	ac108_mclk: ac108_mclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+	};
+
+	clk_ext_camera: clk-ext-camera {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+	};
+
+	wm8960_mclk: wm8960_mclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
 	};
 };
 
@@ -177,6 +258,42 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c2_pins>;
 	status = "okay";
+
+	seeed_plane_i2c@45 {
+		compatible = "seeed_panel";
+		reg = <0x45>;
+
+		port {
+			panel_out0: endpoint {
+				remote-endpoint = <&dsi0_output>;
+			};
+		};
+	};
+
+	tinker_ft5406: tinker_ft5406@38 {
+		compatible = "tinker_ft5406";
+		reg = <0x38>;
+	};
+
+	touchscreen@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+		irq-gpios = <&sysgpio 30 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&sysgpio 31 GPIO_ACTIVE_HIGH>;
+	};
+
+	panel_radxa@19 {
+		compatible ="starfive_jadard";
+		reg = <0x19>;
+		reset-gpio = <&sysgpio 23 0>;
+		enable-gpio = <&sysgpio 22 0>;
+
+		port {
+			panel_out1: endpoint {
+				remote-endpoint = <&dsi1_output>;
+			};
+		};
+	};
 };
 
 &i2c5 {
@@ -196,11 +313,36 @@
 		#interrupt-cells = <1>;
 
 		regulators {
+			mipi_0p9: ALDO1 {
+				regulator-boot-on;
+				regulator-compatible = "aldo1";
+				regulator-name = "mipi_0p9";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <900000>;
+			};
+
+			hdmi_0p9: ALDO5 {
+				regulator-boot-on;
+				regulator-compatible = "aldo5";
+				regulator-name = "hdmi_0p9";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <900000>;
+			};
+
+			hdmi_1p8: ALDO3 {
+				regulator-boot-on;
+				regulator-compatible = "aldo3";
+				regulator-name = "hdmi_1p8";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+			};
+
 			vcc_3v3: dcdc1 {
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
+				regulator-compatible = "dcdc1";
 				regulator-name = "vcc_3v3";
 			};
 
@@ -208,6 +350,7 @@
 				regulator-always-on;
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1540000>;
+				regulator-compatible = "dcdc2";
 				regulator-name = "vdd-cpu";
 			};
 
@@ -216,6 +359,7 @@
 				regulator-always-on;
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
+				regulator-compatible = "aldo4";
 				regulator-name = "emmc_vdd";
 			};
 		};
@@ -230,12 +374,68 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c6_pins>;
 	status = "okay";
+
+	imx219: imx219@10 {
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		reset-gpio = <&sysgpio 18 0>;
+		rotation = <0>;
+		orientation = <1>; //CAMERA_ORIENTATION_BACK
+
+		port {
+			/* CSI2 bus endpoint */
+			imx219_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx219>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0 1>;
+				lane-polarities = <0 0 0>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+	imx708: imx708@1a {
+		compatible = "sony,imx708";
+		reg = <0x1a>;
+		clocks = <&clk_ext_camera>;
+		reset-gpio = <&sysgpio 18 0>;
+
+		port {
+			imx708_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx708>;
+				data-lanes = <1 2>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <450000000>;
+			};
+		};
+	};
+
+	ov4689: ov4689@36 {
+		compatible = "ovti,ov4689";
+		reg = <0x36>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		rotation = <180>;
+
+		port {
+			/* Parallel bus endpoint */
+			ov4689_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_ov4689>;
+				bus-type = <4>;		/* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+			};
+		};
+	};
 };
 
 &i2srx {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2srx_pins>;
-	status = "okay";
+	status = "disabled";
 };
 
 &i2stx0 {
@@ -247,7 +447,7 @@
 &i2stx1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2stx1_pins>;
-	status = "okay";
+	status = "disabled";
 };
 
 &mmc0 {
@@ -696,12 +896,46 @@
 			slew-rate = <0>;
 		};
 	};
+
+	hdmi_pins: hdmi-0 {
+		scl-pins {
+			pinmux = <GPIOMUX(0, GPOUT_SYS_HDMI_DDC_SCL,
+					     GPOEN_SYS_HDMI_DDC_SCL,
+					     GPI_SYS_HDMI_DDC_SCL)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		sda-pins {
+			pinmux = <GPIOMUX(1, GPOUT_SYS_HDMI_DDC_SDA,
+					     GPOEN_SYS_HDMI_DDC_SDA,
+					     GPI_SYS_HDMI_DDC_SDA)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		cec-pins {
+			pinmux = <GPIOMUX(14, GPOUT_SYS_HDMI_CEC_SDA,
+					      GPOEN_SYS_HDMI_CEC_SDA,
+					      GPI_SYS_HDMI_CEC_SDA)>;
+			bias-pull-up;
+			input-enable;
+		};
+
+		hpd-pins {
+			pinmux = <GPIOMUX(15, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_HDMI_HPD)>;
+			bias-disable; /* external pull-up */
+			input-enable;
+		};
+	};
 };
 
 &tdm {
 	pinctrl-names = "default";
 	pinctrl-0 = <&tdm_pins>;
-	status = "okay";
+	status = "disabled";
 };
 
 &uart0 {
@@ -729,4 +963,203 @@
 
 &U74_4 {
 	cpu-supply = <&vdd_cpu>;
+};
+
+
+&display {
+	ports = <&dc_out_dpi0>;
+	status = "okay";
+};
+
+&dc8200 {
+	status = "okay";
+
+	dc_out: port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		dc_out_dpi0: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&hdmi_input0>;
+		};
+		dc_out_dpi1: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&hdmi_in_lcdc>;
+		};
+
+		dc_out_dpi2: endpoint@2 {
+			reg = <2>;
+			remote-endpoint = <&mipi_in>;
+		};
+	};
+};
+
+&hdmi {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&hdmi_pins>;
+	hpd-gpio = <&sysgpio 15 GPIO_ACTIVE_HIGH>;
+
+	hdmi_in: port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		hdmi_in_lcdc: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&dc_out_dpi1>;
+		};
+	};
+};
+
+&rgb_output {
+	status = "disabled";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			hdmi_input0:endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&dc_out_dpi0>;
+			};
+		};
+	};
+};
+
+&dsi_output {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_in: endpoint {
+				remote-endpoint = <&dc_out_dpi2>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			sf_dpi_output: endpoint {
+				remote-endpoint = <&dsi_in_port>;
+			};
+		};
+	};
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			dsi0_output: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&panel_out0>;
+			};
+
+			dsi1_output: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&panel_out1>;
+			};
+
+		};
+
+		port@1{
+			reg = <1>;
+			dsi_in_port: endpoint {
+				remote-endpoint = <&sf_dpi_output>;
+			};
+		};
+
+	};
+};
+
+&mipi_dphy {
+	status = "okay";
+};
+
+&co_process {
+	memory-region = <&e24_mem>;
+	status = "okay";
+};
+
+
+&mailbox_contrl0 {
+	status = "okay";
+};
+
+&mailbox_client0 {
+	status = "okay";
+};
+
+&vpu_dec {
+	status = "okay";
+};
+
+&vpu_enc {
+	status = "okay";
+};
+
+&jpu {
+	status = "okay";
+};
+
+&gpu {
+	status = "okay";
+};
+
+&vin_sysctl {
+	/* when use dvp open this pinctrl*/
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* CSI2 bus endpoint */
+			csi2rx0_from_imx219: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&imx219_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0 1>;
+				lane-polarities = <0 0 0>;
+				status = "okay";
+			};
+
+			csi2rx0_from_imx708: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&imx708_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0 1>;
+				lane-polarities = <0 0 0>;
+				status = "okay";
+			};
+
+			csi2rx0_from_ov4689: endpoint@2 {
+				reg = <2>;
+				remote-endpoint = <&ov4689_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0 1>;
+				status = "okay";
+			};
+		};
+	};
 };

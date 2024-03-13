@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2022 StarFive Technology Co., Ltd.
+ * Copyright (C) 2022 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110-starfive-visionfive-2-v1.3b.dts"
+
+/ {
+	/* i2s + wm8960 */
+	sound-wm8960 {
+		compatible = "simple-audio-card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,name = "Starfive-WM8960-Sound-Card";
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			status = "okay";
+			format = "i2s";
+			bitclock-master = <&sndcodec1>;
+			frame-master = <&sndcodec1>;
+			
+			widgets =
+					"Microphone", "Mic Jack",
+					"Line", "Line In",
+					"Line", "Line Out",
+					"Speaker", "Speaker",
+					"Headphone", "Headphone Jack";
+			routing =
+					"Headphone Jack", "HP_L",
+					"Headphone Jack", "HP_R",
+					"Speaker", "SPK_LP",
+					"Speaker", "SPK_LN",
+					"LINPUT1", "Mic Jack",
+					"LINPUT3", "Mic Jack",
+					"RINPUT1", "Mic Jack",
+					"RINPUT2", "Mic Jack";
+			cpu0 {
+				sound-dai = <&i2srx>;
+			};
+			cpu1 {
+				sound-dai = <&i2stx1>;
+			};
+			
+			sndcodec1:codec {
+				sound-dai = <&wm8960>;
+				clocks = <&wm8960_mclk>;
+				clock-names = "mclk";
+			};
+		};
+	};
+};
+
+&i2c0 {
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		wlf,shared-lrclk;
+		#sound-dai-cells = <0>;
+	};
+};
+
+&i2srx {
+	status = "okay";
+};
+
+&i2stx1 {
+	status = "okay";
+};
