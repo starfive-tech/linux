@@ -659,7 +659,7 @@ static int dc_init(struct device *dev)
 	  to set value*/
 	clk_set_rate(dc->dc8200_pix0, 1000);
 	clk_set_parent(dc->dc8200_clk_pix1, dc->hdmitx0_pixelclk);
-	clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix0);
+	clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix0_out);
 	clk_set_parent(dc->dc8200_clk_pix0, dc->dc8200_pix0);
 
 	return 0;
@@ -749,7 +749,7 @@ static void vs_dc_enable(struct device *dev, struct drm_crtc *crtc)
 	{
 		clk_set_rate(dc->dc8200_pix0, mode->clock * 1000);
 		clk_set_parent(dc->dc8200_clk_pix1, dc->dc8200_pix0);
-		clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix1);
+		clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix1_out);
 	}else{
 		clk_set_parent(dc->dc8200_clk_pix0, dc->hdmitx0_pixelclk);
 	}
@@ -800,7 +800,7 @@ static void vs_dc_disable(struct device *dev, struct drm_crtc *crtc)
 		clk_set_rate(dc->dc8200_pix0, 1000);
 		/*reset the parent pixclk  channel*/
 		clk_set_parent(dc->dc8200_clk_pix1, dc->hdmitx0_pixelclk);
-		clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix0);
+		clk_set_parent(dc->vout_top_lcd, dc->dc8200_clk_pix0_out);
 		clk_set_parent(dc->dc8200_clk_pix0, dc->dc8200_pix0);
 
 	}

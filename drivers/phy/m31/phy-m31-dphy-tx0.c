@@ -578,15 +578,16 @@ static int sys_m31_dphy_tx_configure(struct phy *phy, union phy_configure_opts *
 							AON_POWER_READY_N_SHIFT, AON_POWER_READY_N_MASK);
 
 			sf_dphy_set_reg(dphy->topsys, 0x0,
-							CFG_L0_SWAP_SEL_SHIFT, CFG_L0_SWAP_SEL_MASK);//Lane setting
-			sf_dphy_set_reg(dphy->topsys, 0x1,
-							CFG_L1_SWAP_SEL_SHIFT, CFG_L1_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x4,
-							CFG_L2_SWAP_SEL_SHIFT, CFG_L2_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x2,
-							CFG_L3_SWAP_SEL_SHIFT, CFG_L3_SWAP_SEL_MASK);
-			sf_dphy_set_reg(dphy->topsys, 0x3,
-							CFG_L4_SWAP_SEL_SHIFT, CFG_L4_SWAP_SEL_MASK);
+                            CFG_L0_SWAP_SEL_SHIFT, CFG_L0_SWAP_SEL_MASK);//Lane setting
+            sf_dphy_set_reg(dphy->topsys, 0x1,
+                            CFG_L1_SWAP_SEL_SHIFT, CFG_L1_SWAP_SEL_MASK);
+            sf_dphy_set_reg(dphy->topsys, 0x2,
+                            CFG_L2_SWAP_SEL_SHIFT, CFG_L2_SWAP_SEL_MASK);
+            sf_dphy_set_reg(dphy->topsys, 0x3,
+                            CFG_L3_SWAP_SEL_SHIFT, CFG_L3_SWAP_SEL_MASK);
+            sf_dphy_set_reg(dphy->topsys, 0x4,
+                            CFG_L4_SWAP_SEL_SHIFT, CFG_L4_SWAP_SEL_MASK);
+
 			//PLL setting
 			sf_dphy_set_reg(dphy->topsys + 0x1c, 0x0,
 							RG_CDTX_PLL_SSC_EN_SHIFT, RG_CDTX_PLL_SSC_EN_MASK);
