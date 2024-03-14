@@ -29,3 +29,9 @@ if [ -n "${building_out_of_srctree}" ]; then
 		rm -f arch/arm/boot/compressed/${f}
 	done
 fi
+
+rm -f arch/riscv/purgatory/kexec-purgatory.c
+
+rm -f scripts/extract-cert
+
+rm -f arch/x86/purgatory/kexec-purgatory.c
