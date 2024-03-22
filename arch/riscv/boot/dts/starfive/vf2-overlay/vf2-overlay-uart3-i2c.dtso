@@ -1,0 +1,75 @@
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/gpio/gpio.h>
+#include "../jh7110-pinfunc.h"
+/ {
+	compatible = "starfive,jh7110";
+
+	//sysgpio
+	fragment@0 {
+		target-path = "/soc/pinctrl@13040000";
+		__overlay__ {
+			dt_uart3_pins: dt-uart3-0 {
+				tx-pins {
+					pinmux = <GPIOMUX(60, GPOUT_SYS_UART3_TX,
+							      GPOEN_ENABLE,
+							      GPI_NONE)>;
+					bias-disable;
+					drive-strength = <12>;
+					input-disable;
+					input-schmitt-disable;
+					slew-rate = <0>;
+				};
+
+				rx-pins {
+					pinmux = <GPIOMUX(63, GPOUT_LOW,
+							      GPOEN_DISABLE,
+							      GPI_SYS_UART3_RX)>;
+					bias-pull-up;
+					drive-strength = <2>;
+					input-enable;
+					input-schmitt-enable;
+					slew-rate = <0>;
+				};
+			};
+
+			dt_i2c1_pins: dt-i2c1-0 {
+				i2c-pins {
+					pinmux = <GPIOMUX(42, GPOUT_LOW,
+							      GPOEN_SYS_I2C1_CLK,
+							      GPI_SYS_I2C1_CLK)>,
+						 <GPIOMUX(43, GPOUT_LOW,
+							      GPOEN_SYS_I2C1_DATA,
+							      GPI_SYS_I2C1_DATA)>;
+					bias-pull-up;
+					input-enable;
+					input-schmitt-enable;
+				};
+			};
+		};
+	};
+
+	//uart3
+	fragment@1 {
+		target-path = "/soc/serial@12000000";
+		__overlay__ {
+			pinctrl-names = "default";
+			pinctrl-0 = <&dt_uart3_pins>;
+			status = "okay";
+		};
+	};
+
+	//i2c1
+	fragment@2 {
+		target-path = "/soc/i2c@10040000";
+		__overlay__ {
+			clock-frequency = <100000>;
+			i2c-sda-hold-time-ns = <300>;
+			i2c-sda-falling-time-ns = <510>;
+			i2c-scl-falling-time-ns = <510>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&dt_i2c1_pins>;
+			status = "okay";
+		};
+	};
+};
