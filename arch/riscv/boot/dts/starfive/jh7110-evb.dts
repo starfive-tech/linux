@@ -31,5 +31,6 @@
 };
 
 &usb0 {
+	xhci-lowmem-pool;
 	status = "okay";
 };
