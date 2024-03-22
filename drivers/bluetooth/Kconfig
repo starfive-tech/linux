@@ -478,5 +478,9 @@ config BT_NXPUART
 	  Say Y here to compile support for NXP Bluetooth UART device into
 	  the kernel, or say M here to compile as a module (btnxpuart).
 
+config BT_AICUSB
+	tristate "AIC8800 btusb driver"
+	help
+	  AIC8800 usb dongle bluetooth support driver
 
 endmenu
