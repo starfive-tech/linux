@@ -1362,7 +1362,7 @@ static void __exit stfcamss_cleanup(void)
 	platform_driver_unregister(&stfcamss_driver);
 }
 
-module_init(stfcamss_init);
+late_initcall(stfcamss_init);
 //fs_initcall(stfcamss_init);
 module_exit(stfcamss_cleanup);
 
