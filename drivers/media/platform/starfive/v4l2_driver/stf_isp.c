@@ -1266,7 +1266,7 @@ static int isp_match_sensor_format_get_index(struct stf_isp_dev *isp_dev)
 	int ret, idx;
 	struct media_entity *sensor;
 	struct v4l2_subdev *subdev;
-	struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_format fmt = { 0 };
 	const struct isp_format_table *formats;
 
 	if (!isp_dev)
