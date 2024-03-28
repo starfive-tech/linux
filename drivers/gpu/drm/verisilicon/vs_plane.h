@@ -50,6 +50,7 @@ struct vs_plane {
 	struct drm_plane base;
 	u8 id;
 	dma_addr_t dma_addr[MAX_NUM_PLANES];
+	struct vs_plane_info *info;
 
 	struct drm_property *degamma_mode;
 	struct drm_property *watermark_prop;
