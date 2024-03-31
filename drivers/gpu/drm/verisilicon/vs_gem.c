@@ -122,6 +122,11 @@ static int vs_gem_alloc_buf(struct vs_gem_object *vs_obj)
 						&vs_obj->dma_addr, GFP_KERNEL,
 						vs_obj->dma_attrs);
 
+	if (vs_obj->cookie) {
+		if ((vs_obj->dma_addr >= 0x40000000UL) && (vs_obj->dma_addr < 0x440000000UL))
+			vs_obj->dma_addr += 0x400000000UL;
+	}
+
 	DRM_DEV_DEBUG(dev->dev,"Allocated coherent memory, vaddr: 0x%0llX, paddr: 0x%0llX, size: %lu\n",
 		(u64)vs_obj->cookie,vs_obj->dma_addr,vs_obj->size);
 	if (!vs_obj->cookie) {
@@ -332,6 +337,7 @@ static int vs_gem_mmap_obj(struct drm_gem_object *obj,
 	struct vs_gem_object *vs_obj = to_vs_gem_object(obj);
 	struct drm_device *drm_dev = vs_obj->base.dev;
 	unsigned long vm_size;
+	dma_addr_t uc_addr;
 	int ret = 0;
 
 	vm_size = vma->vm_end - vma->vm_start;
@@ -343,12 +349,16 @@ static int vs_gem_mmap_obj(struct drm_gem_object *obj,
 	if (!vs_obj->get_pages) {
 		vm_flags_clear(vma, VM_PFNMAP);
 
+		uc_addr = vs_obj->dma_addr;
+		if ((uc_addr >= 0x40000000UL) && (uc_addr < 0x440000000UL))
+			uc_addr += 0x400000000UL;
+
 		ret = dma_mmap_attrs(to_dma_dev(drm_dev), vma, vs_obj->cookie,
-					vs_obj->dma_addr, vs_obj->size,
+					uc_addr, vs_obj->size,
 					 vs_obj->dma_attrs);
 	} else {
-		u32 i, nr_pages, pfn = 0U;
-		unsigned long start;
+		u32 i, nr_pages;
+		unsigned long start, pfn = 0U;
 
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 		vm_flags_set(vma, VM_IO | VM_DONTCOPY | VM_DONTEXPAND |
@@ -360,6 +370,8 @@ static int vs_gem_mmap_obj(struct drm_gem_object *obj,
 		for (i = 0; i < nr_pages; i++) {
 			pfn = page_to_pfn(vs_obj->pages[i]);
 
+			if ((pfn >= 0x40000UL) && (pfn < 0x440000UL))
+				pfn += 0x400000UL;
 			ret = remap_pfn_range(vma, start, pfn, PAGE_SIZE,
 						vma->vm_page_prot);
 			if (ret < 0)
