@@ -1,5 +1,5 @@
 config DRM_IMG_ROGUE
-	bool "DRM support for PowerVR GPU"
+	tristate "DRM support for PowerVR GPU"
 	select DRM_IMG
 	default n
 	help
