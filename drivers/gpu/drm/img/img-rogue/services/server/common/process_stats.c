@@ -1270,7 +1270,7 @@ PVRSRV_ERROR PVRSRVStatsDeviceConnect(PVRSRV_DEVICE_NODE *psDeviceNode)
 		}
 		else
 		{
-			PVR_DPF((PVR_DBG_ERROR, "%s: Device index %d is greater than device count %d for PID %d.",
+			PVR_DPF((PVR_DBG_MESSAGE, "%s: Device index %d is greater than device count %d for PID %d.",
 					 __func__, ui32DevID, psProcessStats->ui32DevCount, ownerPid));
 		}
 	}
@@ -1320,7 +1320,7 @@ void PVRSRVStatsDeviceDisconnect(PVRSRV_DEVICE_NODE *psDeviceNode)
 		}
 		else
 		{
-			PVR_DPF((PVR_DBG_ERROR, "%s: Device index %d is greater than device count %d for PID %d.",
+			PVR_DPF((PVR_DBG_MESSAGE, "%s: Device index %d is greater than device count %d for PID %d.",
 					 __func__, ui32DevID, psProcessStats->ui32DevCount, currentPid));
 		}
 	}
