@@ -170,6 +170,8 @@ struct imx219_mode {
 	unsigned int width;
 	/* Frame height */
 	unsigned int height;
+	/* Frame rate */
+	u8 fps;
 
 	/* Analog crop rectangle. */
 	struct v4l2_rect crop;
@@ -375,6 +377,7 @@ static const struct imx219_mode supported_modes[] = {
 		/* 8MPix 15fps mode */
 		.width = 3280,
 		.height = 2464,
+		.fps = 15,
 		.crop = {
 			.left = IMX219_PIXEL_ARRAY_LEFT,
 			.top = IMX219_PIXEL_ARRAY_TOP,
@@ -392,6 +395,7 @@ static const struct imx219_mode supported_modes[] = {
 		/* 1080P 30fps cropped */
 		.width = 1920,
 		.height = 1080,
+		.fps = 30,
 		.crop = {
 			.left = 688,
 			.top = 700,
@@ -409,6 +413,7 @@ static const struct imx219_mode supported_modes[] = {
 		/* 2x2 binned 30fps mode */
 		.width = 1640,
 		.height = 1232,
+		.fps = 30,
 		.crop = {
 			.left = IMX219_PIXEL_ARRAY_LEFT,
 			.top = IMX219_PIXEL_ARRAY_TOP,
@@ -426,6 +431,7 @@ static const struct imx219_mode supported_modes[] = {
 		/* 640x480 30fps mode */
 		.width = 640,
 		.height = 480,
+		.fps = 30,
 		.crop = {
 			.left = 1008,
 			.top = 760,
@@ -464,6 +470,8 @@ struct imx219 {
 
 	/* Current mode */
 	const struct imx219_mode *mode;
+	/* Current frame interval*/
+	struct v4l2_fract frame_interval;
 
 	/* Streaming on/off */
 	bool streaming;
@@ -653,6 +661,94 @@ static int imx219_enum_frame_size(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int imx219_try_frame_interval(struct imx219 *imx219,
+				     struct v4l2_fract *fi,
+				     u32 w, u32 h)
+{
+	const struct imx219_mode *mode;
+
+	mode = v4l2_find_nearest_size(supported_modes, ARRAY_SIZE(supported_modes),
+			width, height, w, h);
+	if (!mode || (mode->width != w || mode->height != h))
+		return -EINVAL;
+
+	fi->numerator = 1;
+	fi->denominator = mode->fps;
+
+	return mode->fps;
+}
+
+static int imx219_enum_frame_interval(struct v4l2_subdev *sd,
+			struct v4l2_subdev_state *state,
+			struct v4l2_subdev_frame_interval_enum *fie)
+{
+	struct imx219 *imx219 = to_imx219(sd);
+	struct v4l2_fract tpf;
+	u32 code;
+	int ret;
+
+	if (fie->index > 0)
+		return -EINVAL;
+
+	code = imx219_get_format_code(imx219, fie->code);
+	if (fie->code != code) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = imx219_try_frame_interval(imx219, &tpf,
+				fie->width, fie->height);
+	if (ret < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	fie->interval = tpf;
+
+	return 0;
+
+out:
+	return ret;
+}
+
+static int imx219_g_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *fi)
+{
+	struct imx219 *imx219 = to_imx219(sd);
+
+	fi->interval = imx219->frame_interval;
+
+	return 0;
+}
+
+static int imx219_s_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *fi)
+{
+	struct imx219 *imx219 = to_imx219(sd);
+	const struct imx219_mode *mode = imx219->mode;
+	int frame_rate, ret = 0;
+
+	if (fi->pad != 0)
+		return -EINVAL;
+
+	if (imx219->streaming) {
+		ret = -EBUSY;
+		goto out;
+	}
+
+	frame_rate = imx219_try_frame_interval(imx219, &fi->interval,
+					       mode->width, mode->height);
+	if (frame_rate < 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	imx219->frame_interval = fi->interval;
+
+out:
+	return ret;
+}
+
 static int imx219_set_pad_format(struct v4l2_subdev *sd,
 				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_format *fmt)
@@ -669,6 +765,10 @@ static int imx219_set_pad_format(struct v4l2_subdev *sd,
 				      fmt->format.width, fmt->format.height);
 
 	imx219_update_pad_format(imx219, mode, &fmt->format, fmt->format.code);
+
+	/* update frame rate */
+	imx219->frame_interval.numerator = 1;
+	imx219->frame_interval.denominator = mode->fps;
 
 	format = v4l2_subdev_get_pad_format(sd, sd_state, 0);
 	crop = v4l2_subdev_get_pad_crop(sd, sd_state, 0);
@@ -1035,6 +1135,8 @@ static const struct v4l2_subdev_core_ops imx219_core_ops = {
 
 static const struct v4l2_subdev_video_ops imx219_video_ops = {
 	.s_stream = imx219_set_stream,
+	.g_frame_interval = imx219_g_frame_interval,
+	.s_frame_interval = imx219_s_frame_interval,
 };
 
 static const struct v4l2_subdev_pad_ops imx219_pad_ops = {
@@ -1044,6 +1146,7 @@ static const struct v4l2_subdev_pad_ops imx219_pad_ops = {
 	.set_fmt = imx219_set_pad_format,
 	.get_selection = imx219_get_selection,
 	.enum_frame_size = imx219_enum_frame_size,
+	.enum_frame_interval = imx219_enum_frame_interval,
 };
 
 static const struct v4l2_subdev_ops imx219_subdev_ops = {
@@ -1289,6 +1392,8 @@ static int imx219_probe(struct i2c_client *client)
 
 	/* Set default mode to max resolution */
 	imx219->mode = &supported_modes[0];
+	imx219->frame_interval.numerator = 1;
+	imx219->frame_interval.denominator = supported_modes[0].fps;
 
 	/* sensor doesn't enter LP-11 state upon power up until and unless
 	 * streaming is started, so upon power up switch the modes to:
