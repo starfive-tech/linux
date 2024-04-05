@@ -3,6 +3,10 @@
 
 #include "dubhe.dtsi"
 
+/ {
+	compatible = "starfive,dubhe-80";
+};
+
 &cpu0 {
 	compatible = "starfive,dubhe-80", "riscv";
 	d-cache-block-size = <64>;
