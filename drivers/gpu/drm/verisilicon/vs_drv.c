@@ -27,6 +27,8 @@
 #endif
 #include <linux/of_reserved_mem.h>
 #include <drm/drm_aperture.h>
+#include <drm/drm_gem_atomic_helper.h>
+#include <drm/drm_gem_dma_helper.h>
 
 #include "vs_drv.h"
 #include "vs_fb.h"
@@ -52,17 +54,19 @@ extern struct platform_driver starfive_encoder_driver;
 static bool has_iommu = true;
 static struct platform_driver vs_drm_platform_driver;
 
-static const struct file_operations fops = {
-	.owner			= THIS_MODULE,
-	.open			= drm_open,
-	.release		= drm_release,
-	.unlocked_ioctl	= drm_ioctl,
-	.compat_ioctl	= drm_compat_ioctl,
-	.poll			= drm_poll,
-	.read			= drm_read,
-	.llseek			= noop_llseek,
-	.mmap			= drm_gem_mmap,
-};
+static int vs_drm_gem_dma_dumb_create(struct drm_file *file, struct drm_device *dev,
+			      struct drm_mode_create_dumb *args)
+{
+	struct vs_drm_private *priv = dev->dev_private;
+
+	unsigned int pitch = DIV_ROUND_UP(args->width * args->bpp, 8);
+
+	args->pitch = ALIGN(pitch, priv->pitch_alignment);
+	return drm_gem_dma_dumb_create_internal(file, dev, args);
+}
+
+DEFINE_DRM_GEM_FOPS(vs_drm_fops);
+
 
 #ifdef CONFIG_DEBUG_FS
 static int vs_debugfs_planes_show(struct seq_file *s, void *data)
@@ -126,14 +130,13 @@ static int vs_debugfs_init(struct drm_minor *minor)
 
 static struct drm_driver vs_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_ATOMIC | DRIVER_GEM,
-	.lastclose		= drm_fb_helper_lastclose,
-	.gem_prime_import	= vs_gem_prime_import,
-	.gem_prime_import_sg_table = vs_gem_prime_import_sg_table,
-	.dumb_create		= vs_gem_dumb_create,
+
 #ifdef CONFIG_DEBUG_FS
 	.debugfs_init		= vs_debugfs_init,
 #endif
-	.fops			= &fops,
+	DRM_GEM_DMA_DRIVER_OPS_WITH_DUMB_CREATE(vs_drm_gem_dma_dumb_create),
+
+	.fops			= &vs_drm_fops,
 	.name			= DRV_NAME,
 	.desc			= DRV_DESC,
 	.date			= DRV_DATE,
