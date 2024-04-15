@@ -91,9 +91,9 @@
 		#sound-dai-cells = <0>;
 	};
 
-	sound-pwmdac {
+	sound3: snd-card3 {
 		compatible = "simple-audio-card";
-		simple-audio-card,name = "StarFive-PWMDAC-Sound-Card";
+		simple-audio-card,name = "Starfive-PWMDAC-Sound-Card";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -113,12 +113,12 @@
 		};
 	};
 
-	sound-hdmi {
+	sound1: snd-card1 {
 		compatible = "simple-audio-card";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		simple-audio-card,name = "StarFive-HDMI-Sound-Card";
+		simple-audio-card,name = "Starfive-HDMI-Sound-Card";
 		simple-audio-card,dai-link@0 {
 			reg = <0>;
 			format = "i2s";
