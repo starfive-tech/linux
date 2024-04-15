@@ -10,6 +10,8 @@
 #include <linux/device.h>
 #include <linux/io.h>
 
+#include <dt-bindings/clock/starfive,jh7110-crg.h>
+
 #include "clk-starfive-jh71x0.h"
 
 static struct jh71x0_clk *jh71x0_clk_from(struct clk_hw *hw)
@@ -70,6 +72,11 @@ static unsigned long jh71x0_clk_recalc_rate(struct clk_hw *hw,
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 	u32 div = jh71x0_clk_reg_get(clk) & JH71X0_CLK_DIV_MASK;
 
+	if (clk->idx == JH7110_SYSCLK_UART3_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART4_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART5_CORE)
+		div >>= 8;
+
 	return div ? parent_rate / div : 0;
 }
 
@@ -109,6 +116,12 @@ static int jh71x0_clk_set_rate(struct clk_hw *hw,
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 	unsigned long div = clamp(DIV_ROUND_CLOSEST(parent_rate, rate),
 				  1UL, (unsigned long)clk->max_div);
+
+	/* UART3-5: [15:8]: integer part of the divisor. [7:0] fraction part of the divisor */
+	if (clk->idx == JH7110_SYSCLK_UART3_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART4_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART5_CORE)
+		div <<= 8;
 
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_DIV_MASK, div);
 	return 0;
