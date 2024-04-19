@@ -9,7 +9,7 @@
 
 / {
 	/* i2s + wm8960 */
-	sound-wm8960 {
+	sound6: snd-card6 {
 		compatible = "simple-audio-card";
 		#address-cells = <1>;
 		#size-cells = <0>;

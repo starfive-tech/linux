@@ -8,7 +8,7 @@
 #include "jh7110-starfive-visionfive-2-v1.3b.dts"
 
 / {
-	sound-tdm {
+	sound5: snd-card5 {
 		compatible = "simple-audio-card";
 		#address-cells = <1>;
 		#size-cells = <0>;
