@@ -63,17 +63,6 @@ config ERRATA_STARFIVE
 
 	  Otherwise, please say "N" here to avoid unnecessary overhead.
 
-config ERRATA_STARFIVE_CMO
-	bool "Apply Starfive cache management errata"
-	depends on ERRATA_STARFIVE && ARCH_STARFIVE
-	select RISCV_DMA_NONCOHERENT
-	default y
-	help
-	  This will apply the cache management errata to handle the
-	  non-standard handling on non-coherent operations on Starfive cores.
-
-	  If you don't know what to do here, say "Y".
-
 config ERRATA_THEAD
 	bool "T-HEAD errata"
 	depends on RISCV_ALTERNATIVE
