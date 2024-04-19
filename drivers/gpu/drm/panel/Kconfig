@@ -233,6 +233,16 @@ config DRM_PANEL_JADARD_JD9365DA_H3
 	  WXGA MIPI DSI panel. The panel support TFT dot matrix LCD with
 	  800RGBx1280 dots at maximum.
 
+config DRM_PANEL_STARFIVE_JADARD
+	tristate "STARFIVE JADARD WXGA DSI panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for StarFive Jadard radxa
+	  WXGA MIPI DSI panel. The panel support TFT dot matrix LCD with
+	  800RGBx1280 dots at maximum.
+
 config DRM_PANEL_JDI_LT070ME05000
 	tristate "JDI LT070ME05000 WUXGA DSI panel"
 	depends on OF
