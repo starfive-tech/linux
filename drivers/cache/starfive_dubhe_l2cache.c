@@ -49,6 +49,7 @@ static int __init starfive_cache_init(void)
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
+	riscv_cbom_block_size = L1_CACHE_BYTES;
 	riscv_noncoherent_supported();
 	riscv_noncoherent_register_cache_ops(&dubhe_cmo_ops);
 
