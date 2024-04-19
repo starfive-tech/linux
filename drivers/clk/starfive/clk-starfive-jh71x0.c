@@ -10,6 +10,8 @@
 #include <linux/device.h>
 #include <linux/io.h>
 
+#include <dt-bindings/clock/starfive,jh7110-crg.h>
+
 #include "clk-starfive-jh71x0.h"
 
 static struct jh71x0_clk *jh71x0_clk_from(struct clk_hw *hw)
@@ -70,6 +72,11 @@ static unsigned long jh71x0_clk_recalc_rate(struct clk_hw *hw,
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 	u32 div = jh71x0_clk_reg_get(clk) & JH71X0_CLK_DIV_MASK;
 
+	if (clk->idx == JH7110_SYSCLK_UART3_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART4_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART5_CORE)
+		div >>= 8;
+
 	return div ? parent_rate / div : 0;
 }
 
@@ -109,6 +116,12 @@ static int jh71x0_clk_set_rate(struct clk_hw *hw,
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 	unsigned long div = clamp(DIV_ROUND_CLOSEST(parent_rate, rate),
 				  1UL, (unsigned long)clk->max_div);
+
+	/* UART3-5: [15:8]: integer part of the divisor. [7:0] fraction part of the divisor */
+	if (clk->idx == JH7110_SYSCLK_UART3_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART4_CORE ||
+	    clk->idx == JH7110_SYSCLK_UART5_CORE)
+		div <<= 8;
 
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_DIV_MASK, div);
 	return 0;
@@ -223,11 +236,95 @@ static void jh71x0_clk_debug_init(struct clk_hw *hw, struct dentry *dentry)
 #define jh71x0_clk_debug_init NULL
 #endif
 
+#ifdef CONFIG_PM_SLEEP
+static int jh7110_clk_save_context(struct clk_hw *hw)
+{
+	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
+	struct jh71x0_clk_priv *priv = jh71x0_priv_from(clk);
+
+	if (!clk || !priv)
+		return 0;
+
+	spin_lock(&priv->rmw_lock);
+	clk->saved_reg = jh71x0_clk_reg_get(clk);
+	spin_unlock(&priv->rmw_lock);
+
+	return 0;
+}
+
+static void jh7110_clk_gate_restore_context(struct clk_hw *hw)
+{
+	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_ENABLE, clk->saved_reg);
+}
+
+static void jh7110_clk_div_restore_context(struct clk_hw *hw)
+{
+	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_DIV_MASK, clk->saved_reg);
+}
+
+static void jh7110_clk_mux_restore_context(struct clk_hw *hw)
+{
+	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_MUX_MASK, clk->saved_reg);
+}
+
+static void jh7110_clk_inv_restore_context(struct clk_hw *hw)
+{
+	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
+
+	if (!clk)
+		return;
+
+	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_INVERT, clk->saved_reg);
+}
+
+static void jh7110_clk_gdiv_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_div_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+}
+
+static void jh7110_clk_gmux_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+}
+
+static void jh7110_clk_mdiv_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_div_restore_context(hw);
+}
+
+static void jh7110_clk_gmd_restore_context(struct clk_hw *hw)
+{
+	jh7110_clk_mux_restore_context(hw);
+	jh7110_clk_div_restore_context(hw);
+	jh7110_clk_gate_restore_context(hw);
+}
+#endif
+
 static const struct clk_ops jh71x0_clk_gate_ops = {
 	.enable = jh71x0_clk_enable,
 	.disable = jh71x0_clk_disable,
 	.is_enabled = jh71x0_clk_is_enabled,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_gate_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_div_ops = {
@@ -235,6 +332,8 @@ static const struct clk_ops jh71x0_clk_div_ops = {
 	.determine_rate = jh71x0_clk_determine_rate,
 	.set_rate = jh71x0_clk_set_rate,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_div_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_fdiv_ops = {
@@ -252,6 +351,8 @@ static const struct clk_ops jh71x0_clk_gdiv_ops = {
 	.determine_rate = jh71x0_clk_determine_rate,
 	.set_rate = jh71x0_clk_set_rate,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_gdiv_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_mux_ops = {
@@ -259,6 +360,8 @@ static const struct clk_ops jh71x0_clk_mux_ops = {
 	.set_parent = jh71x0_clk_set_parent,
 	.get_parent = jh71x0_clk_get_parent,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_mux_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_gmux_ops = {
@@ -269,6 +372,8 @@ static const struct clk_ops jh71x0_clk_gmux_ops = {
 	.set_parent = jh71x0_clk_set_parent,
 	.get_parent = jh71x0_clk_get_parent,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_gmux_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_mdiv_ops = {
@@ -278,6 +383,8 @@ static const struct clk_ops jh71x0_clk_mdiv_ops = {
 	.set_parent = jh71x0_clk_set_parent,
 	.set_rate = jh71x0_clk_set_rate,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_mdiv_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_gmd_ops = {
@@ -290,12 +397,16 @@ static const struct clk_ops jh71x0_clk_gmd_ops = {
 	.set_parent = jh71x0_clk_set_parent,
 	.set_rate = jh71x0_clk_set_rate,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_gmd_restore_context),
 };
 
 static const struct clk_ops jh71x0_clk_inv_ops = {
 	.get_phase = jh71x0_clk_get_phase,
 	.set_phase = jh71x0_clk_set_phase,
 	.debug_init = jh71x0_clk_debug_init,
+	.save_context = pm_sleep_ptr(jh7110_clk_save_context),
+	.restore_context = pm_sleep_ptr(jh7110_clk_inv_restore_context),
 };
 
 const struct clk_ops *starfive_jh71x0_clk_ops(u32 max)

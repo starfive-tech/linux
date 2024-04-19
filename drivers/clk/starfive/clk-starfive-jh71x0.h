@@ -107,6 +107,7 @@ struct jh71x0_clk {
 	struct clk_hw hw;
 	unsigned int idx;
 	unsigned int max_div;
+	u32 saved_reg;
 };
 
 struct jh71x0_clk_priv {
