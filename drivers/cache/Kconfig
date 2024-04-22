@@ -11,6 +11,7 @@ config AX45MP_L2_CACHE
 config STARFIVE_DUBHE_L2_CACHE
 	bool "StarFive Dubhe L2 Cache controller"
 	depends on ARCH_STARFIVE
+	select RISCV_DMA_NONCOHERENT
 	select RISCV_NONSTANDARD_CACHE_OPS
 	help
 	  Support for the L2 cache controller on StarFive platforms.
