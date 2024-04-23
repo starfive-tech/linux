@@ -7,6 +7,14 @@
 #include <linux/device.h>
 #include <linux/spinlock.h>
 
+enum JH7110_CLOCK_FLAGS {
+	JH7110_CLK_SYS_FLAG = 0,
+	JH7110_CLK_AON_FLAG,
+	JH7110_CLK_STG_FLAG,
+	JH7110_CLK_ISP_FLAG,
+	JH7110_CLK_VOUT_FLAG,
+};
+
 /* register fields */
 #define JH71X0_CLK_ENABLE	BIT(31)
 #define JH71X0_CLK_INVERT	BIT(30)
@@ -107,6 +115,7 @@ struct jh71x0_clk {
 	struct clk_hw hw;
 	unsigned int idx;
 	unsigned int max_div;
+	unsigned int reg_flags;
 	u32 saved_reg;
 };
 

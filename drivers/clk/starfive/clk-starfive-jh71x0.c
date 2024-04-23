@@ -245,6 +245,9 @@ static int jh7110_clk_save_context(struct clk_hw *hw)
 	if (!clk || !priv)
 		return 0;
 
+	if (clk->reg_flags == JH7110_CLK_ISP_FLAG || clk->reg_flags == JH7110_CLK_VOUT_FLAG)
+		return 0;
+
 	spin_lock(&priv->rmw_lock);
 	clk->saved_reg = jh71x0_clk_reg_get(clk);
 	spin_unlock(&priv->rmw_lock);
@@ -259,6 +262,9 @@ static void jh7110_clk_gate_restore_context(struct clk_hw *hw)
 	if (!clk)
 		return;
 
+	if (clk->reg_flags == JH7110_CLK_ISP_FLAG || clk->reg_flags == JH7110_CLK_VOUT_FLAG)
+		return;
+
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_ENABLE, clk->saved_reg);
 }
 
@@ -267,6 +273,9 @@ static void jh7110_clk_div_restore_context(struct clk_hw *hw)
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 
 	if (!clk)
+		return;
+
+	if (clk->reg_flags == JH7110_CLK_ISP_FLAG || clk->reg_flags == JH7110_CLK_VOUT_FLAG)
 		return;
 
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_DIV_MASK, clk->saved_reg);
@@ -279,6 +288,9 @@ static void jh7110_clk_mux_restore_context(struct clk_hw *hw)
 	if (!clk)
 		return;
 
+	if (clk->reg_flags == JH7110_CLK_ISP_FLAG || clk->reg_flags == JH7110_CLK_VOUT_FLAG)
+		return;
+
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_MUX_MASK, clk->saved_reg);
 }
 
@@ -287,6 +299,9 @@ static void jh7110_clk_inv_restore_context(struct clk_hw *hw)
 	struct jh71x0_clk *clk = jh71x0_clk_from(hw);
 
 	if (!clk)
+		return;
+
+	if (clk->reg_flags == JH7110_CLK_ISP_FLAG || clk->reg_flags == JH7110_CLK_VOUT_FLAG)
 		return;
 
 	jh71x0_clk_reg_rmw(clk, JH71X0_CLK_INVERT, clk->saved_reg);

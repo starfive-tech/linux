@@ -180,6 +180,7 @@ static int jh7110_ispcrg_probe(struct platform_device *pdev)
 		clk->hw.init = &init;
 		clk->idx = idx;
 		clk->max_div = max & JH71X0_CLK_DIV_MASK;
+		clk->reg_flags = JH7110_CLK_ISP_FLAG;
 
 		ret = devm_clk_hw_register(&pdev->dev, &clk->hw);
 		if (ret)
@@ -190,7 +191,7 @@ static int jh7110_ispcrg_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_exit;
 
-	ret = jh7110_reset_controller_register(priv, "rst-isp", 3);
+	ret = jh7110_reset_controller_register(priv, "rst-isp", JH7110_CLK_ISP_FLAG);
 	if (ret)
 		goto err_exit;
 
