@@ -19,6 +19,5 @@ config ARCH_DUBHE_FPGA
 	select STARFIVE_DUBHE_L2_CACHE
 	select DMA_GLOBAL_POOL
 	select ERRATA_STARFIVE
-	select ERRATA_STARFIVE_CMO
 	help
 	  This enables support for the StarFive Dubhe FPGA SoC.
