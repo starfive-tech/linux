@@ -54,12 +54,12 @@ config ERRATA_SIFIVE_CIP_1200
 	  If you don't know what to do here, say "Y".
 
 config ERRATA_STARFIVE
-	bool "Starfive errata"
+	bool "StarFive errata"
 	depends on RISCV_ALTERNATIVE
 	help
-	  All Starfive errata Kconfig depend on this Kconfig. Disabling
-	  this Kconfig will disable all Starfive errata. Please say "Y"
-	  here if your platform uses Starfive CPU cores.
+	  All StarFive errata Kconfig depend on this Kconfig. Disabling
+	  this Kconfig will disable all StarFive errata. Please say "Y"
+	  here if your platform uses StarFive CPU cores.
 
 	  Otherwise, please say "N" here to avoid unnecessary overhead.
 
