@@ -1002,6 +1002,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&hdmi_pins>;
 	hpd-gpio = <&sysgpio 15 GPIO_ACTIVE_HIGH>;
+	hdmi_0p9-supply = <&hdmi_0p9>;
+	hdmi_1p8-supply = <&hdmi_1p8>;
 
 	hdmi_in: port {
 		#address-cells = <1>;
@@ -1125,6 +1127,7 @@
 &vin_sysctl {
 	/* when use dvp open this pinctrl*/
 	status = "okay";
+	mipi_0p9-supply = <&mipi_0p9>;
 
 	ports {
 		#address-cells = <1>;
