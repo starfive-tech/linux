@@ -1,46 +1,9 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
-/* Copyright (c) 2021 StarFive Technology Co., Ltd. */
+/* Copyright (c) 2021-2024 StarFive Technology Co., Ltd. */
 
 #include "dubhe.dtsi"
+#include "dubhe90-cpus.dtsi"
 
 / {
 	compatible = "starfive,dubhe-90";
 };
-
-&cpu0 {
-	compatible = "starfive,dubhe-90", "riscv";
-	d-cache-block-size = <64>;
-	d-cache-sets = <1024>;
-	d-cache-size = <65536>;
-	d-tlb-sets = <1>;
-	d-tlb-size = <48>;
-	i-cache-block-size = <64>;
-	i-cache-sets = <1024>;
-	i-cache-size = <65536>;
-	i-tlb-sets = <1>;
-	i-tlb-size = <48>;
-	next-level-cache = <&l2_cache0>;
-};
-
-&cpu1 {
-	compatible = "starfive,dubhe-90", "riscv";
-	d-cache-block-size = <64>;
-	d-cache-sets = <1024>;
-	d-cache-size = <65536>;
-	d-tlb-sets = <1>;
-	d-tlb-size = <48>;
-	i-cache-block-size = <64>;
-	i-cache-sets = <1024>;
-	i-cache-size = <65536>;
-	i-tlb-sets = <1>;
-	i-tlb-size = <48>;
-	next-level-cache = <&l2_cache0>;
-};
-
-&l2_cache0 {
-	compatible = "starfive,dubhe-l2cache", "cache";
-	cache-sets = <4096>;
-	cache-size = <0x200000>;
-};
-
-/delete-node/ &l2_cache1;
