@@ -15,6 +15,14 @@
 				core1 {
 					cpu = <&cpu1>;
 				};
+
+				core2 {
+					cpu = <&cpu2>;
+				};
+
+				core3 {
+					cpu = <&cpu3>;
+				};
 			};
 		};
 
@@ -37,7 +45,7 @@
 			i-cache-sets = <1024>;
 			i-cache-size = <65536>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <48>;
+			i-tlb-size = <32>;
 			next-level-cache = <&l2_cache0>;
 			tlb-split;
 
@@ -67,11 +75,71 @@
 			i-cache-sets = <1024>;
 			i-cache-size = <65536>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <48>;
+			i-tlb-size = <32>;
 			next-level-cache = <&l2_cache0>;
 			tlb-split;
 
 			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+
+		cpu2: cpu@2 {
+			compatible = "starfive,dubhe-90", "riscv";
+			device_type = "cpu";
+			mmu-type = "riscv,sv48";
+			reg = <0x2>;
+			riscv,isa = "rv64imafdcbh";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zba", "zbb",
+					       "zbc", "zbs", "zicntr", "zicsr", "zifencei",
+					       "zihintpause", "zihpm", "sscofpmf";
+			d-cache-block-size = <64>;
+			d-cache-sets = <1024>;
+			d-cache-size = <65536>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <48>;
+			i-cache-block-size = <64>;
+			i-cache-sets = <1024>;
+			i-cache-size = <65536>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			next-level-cache = <&l2_cache0>;
+			tlb-split;
+
+			cpu2_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+
+		cpu3: cpu@3 {
+			compatible = "starfive,dubhe-90", "riscv";
+			device_type = "cpu";
+			mmu-type = "riscv,sv48";
+			reg = <0x3>;
+			riscv,isa = "rv64imafdcbh";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zba", "zbb",
+					       "zbc", "zbs", "zicntr", "zicsr", "zifencei",
+					       "zihintpause", "zihpm", "sscofpmf";
+			d-cache-block-size = <64>;
+			d-cache-sets = <1024>;
+			d-cache-size = <65536>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <48>;
+			i-cache-block-size = <64>;
+			i-cache-sets = <1024>;
+			i-cache-size = <65536>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			next-level-cache = <&l2_cache0>;
+			tlb-split;
+
+			cpu3_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
