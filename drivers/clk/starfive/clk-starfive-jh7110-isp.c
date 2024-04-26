@@ -86,6 +86,18 @@ static struct clk_hw *jh7110_ispclk_get(struct of_phandle_args *clkspec, void *d
 	return ERR_PTR(-EINVAL);
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int jh7110_ispcrg_sleep_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);
+}
+
+static int jh7110_ispcrg_sleep_resume(struct device *dev)
+{
+	return pm_runtime_force_resume(dev);
+}
+#endif
+
 #ifdef CONFIG_PM
 static int jh7110_ispcrg_suspend(struct device *dev)
 {
@@ -105,6 +117,7 @@ static int jh7110_ispcrg_resume(struct device *dev)
 
 static const struct dev_pm_ops jh7110_ispcrg_pm_ops = {
 	RUNTIME_PM_OPS(jh7110_ispcrg_suspend, jh7110_ispcrg_resume, NULL)
+	LATE_SYSTEM_SLEEP_PM_OPS(jh7110_ispcrg_sleep_suspend, jh7110_ispcrg_sleep_resume)
 };
 #endif
 
@@ -138,6 +151,8 @@ static int jh7110_ispcrg_probe(struct platform_device *pdev)
 		return dev_err_probe(priv->dev, ret, "failed to get main clocks\n");
 	dev_set_drvdata(priv->dev, top);
 
+	pm_runtime_use_autosuspend(priv->dev);
+	pm_runtime_set_autosuspend_delay(priv->dev, 50);
 	/* enable power domain and clocks */
 	pm_runtime_enable(priv->dev);
 	ret = pm_runtime_get_sync(priv->dev);
@@ -180,6 +195,7 @@ static int jh7110_ispcrg_probe(struct platform_device *pdev)
 		clk->hw.init = &init;
 		clk->idx = idx;
 		clk->max_div = max & JH71X0_CLK_DIV_MASK;
+		clk->reg_flags = JH7110_CLK_ISP_FLAG;
 
 		ret = devm_clk_hw_register(&pdev->dev, &clk->hw);
 		if (ret)
@@ -190,9 +206,11 @@ static int jh7110_ispcrg_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_exit;
 
-	ret = jh7110_reset_controller_register(priv, "rst-isp", 3);
+	ret = jh7110_reset_controller_register(priv, "rst-isp", JH7110_CLK_ISP_FLAG);
 	if (ret)
 		goto err_exit;
+
+	pm_runtime_put_sync(&pdev->dev);
 
 	return 0;
 
