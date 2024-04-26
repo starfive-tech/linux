@@ -139,6 +139,7 @@ static int jh7110_stgcrg_probe(struct platform_device *pdev)
 		clk->hw.init = &init;
 		clk->idx = idx;
 		clk->max_div = max & JH71X0_CLK_DIV_MASK;
+		clk->reg_flags = JH7110_CLK_STG_FLAG;
 
 		ret = devm_clk_hw_register(&pdev->dev, &clk->hw);
 		if (ret)
@@ -149,7 +150,7 @@ static int jh7110_stgcrg_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	return jh7110_reset_controller_register(priv, "rst-stg", 2);
+	return jh7110_reset_controller_register(priv, "rst-stg", JH7110_CLK_STG_FLAG);
 }
 
 static const struct of_device_id jh7110_stgcrg_match[] = {
