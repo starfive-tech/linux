@@ -290,10 +290,17 @@ static void vs_plane_atomic_update(struct drm_plane *plane,
 	num_planes = vs_get_plane_number(fb);
 
 	for (i = 0; i < num_planes; i++) {
+#ifdef CONFIG_SOC_STARFIVE_EVB_VOUT
 		dma_addr_t dma_addr;
-
 		dma_addr = drm_fb_dma_get_gem_addr(new_state->fb, new_state, i);
 		vs_plane->dma_addr[i] = dma_addr;
+#endif
+
+#ifdef CONFIG_SOC_STARFIVE_VF2_VOUT
+		struct vs_gem_object *vs_obj;
+		vs_obj = vs_fb_get_gem_obj(fb, i);
+		vs_plane->dma_addr[i] = vs_obj->iova + fb->offsets[i];
+#endif
 	}
 
 	plane_state->status.src = drm_plane_state_src(new_state);
@@ -334,10 +341,17 @@ static void vs_cursor_plane_atomic_update(struct drm_plane *plane,
 	 num_planes = vs_get_plane_number(fb);
 
 	 for (i = 0; i < num_planes; i++) {
+#ifdef CONFIG_SOC_STARFIVE_EVB_VOUT
 		 dma_addr_t dma_addr;
-
 		 dma_addr = drm_fb_dma_get_gem_addr(new_state->fb, new_state, i);
 		 vs_plane->dma_addr[i] = dma_addr;
+#endif
+
+#ifdef CONFIG_SOC_STARFIVE_VF2_VOUT
+		 struct vs_gem_object *vs_obj;
+		 vs_obj = vs_fb_get_gem_obj(fb, i);
+		 vs_plane->dma_addr[i] = vs_obj->iova + fb->offsets[i];
+#endif
 	 }
 
 	 plane_state->status.src = drm_plane_state_src(new_state);
