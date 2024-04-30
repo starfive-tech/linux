@@ -7,11 +7,20 @@ config DRM_VERISILICON
 	select DRM_GEM_DMA_HELPER
 	select CMA
 	select DMA_CMA
+	select SOC_STARFIVE_EVB_VOUT
 	help
 	  Choose this option if you have a VeriSilicon soc chipset.
 	  This driver provides VeriSilicon kernel mode
 	  setting and buffer management. It does not
 	  provide 2D or 3D acceleration.
+
+config SOC_STARFIVE_EVB_VOUT
+	bool
+	default n
+
+config SOC_STARFIVE_VF2_VOUT
+	bool
+	default n
 
 config VERISILICON_VIRTUAL_DISPLAY
 	bool "display content output to debugfs file"
@@ -45,6 +54,7 @@ config STARFIVE_INNO_HDMI
 	  This selects support for Rockchip SoC specific extensions
 	  for the Innosilicon HDMI driver. If you want to enable
 	  HDMI on RK3036 based SoC, you should select this option.
+
 config STARFIVE_DSI
 	bool "Starfive MIPI DSI Select"
 	depends on DRM_VERISILICON
