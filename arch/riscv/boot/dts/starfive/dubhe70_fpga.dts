@@ -10,3 +10,8 @@
 		dma-coherent;
 	};
 };
+
+&l3_pmu {
+	compatible = "starfive,dubhe70-starlink-pmu", "starfive,jh8100-starlink-pmu";
+	status = "okay";
+};
