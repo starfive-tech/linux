@@ -157,5 +157,13 @@
 			snps,rxpbl = <4>;
 			status = "disabled";
 		};
+
+		l3_pmu: pmu@12900000 {
+			compatible = "starfive,jh8100-starlink-pmu";
+			reg = <0x0 0x12900000 0x0 0x10000>;
+			interrupt-parent = <&plic0>;
+			interrupts = <3>;
+			status = "disabled";
+		};
 	};
 };
