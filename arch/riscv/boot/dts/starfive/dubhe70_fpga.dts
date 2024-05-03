@@ -3,3 +3,10 @@
 
 #include "dubhe70.dtsi"
 #include "dubhe_fpga_common.dtsi"
+
+/ {
+	soc {
+		/delete-property/ dma-noncoherent;
+		dma-coherent;
+	};
+};
