@@ -24,8 +24,6 @@
 #define STARFIVE_DUBHE70_MARCHID	0x80000000DB000070UL
 #define STARFIVE_DUBHE70_MIMPID		0x0000000020240131UL
 
-DEFINE_STATIC_KEY_FALSE(bypass_envcfg_csr_key);
-
 static void errata_bypass_envcfg_csr(unsigned int stage, unsigned long arch_id,
 				     unsigned long impid)
 {
