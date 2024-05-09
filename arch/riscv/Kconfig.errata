@@ -63,6 +63,16 @@ config ERRATA_STARFIVE
 
 	  Otherwise, please say "N" here to avoid unnecessary overhead.
 
+config ERRATA_STARFIVE_H_EXT
+	bool "Apply StarFive H-extension errata"
+	depends on ERRATA_STARFIVE && KVM
+	default y
+	help
+	  This will apply the H-Extension errata to handle the older
+	  version of the H-Extension specification on StarFive cores.
+
+	  If you don't know what to do here, say "Y".
+
 config ERRATA_THEAD
 	bool "T-HEAD errata"
 	depends on RISCV_ALTERNATIVE
