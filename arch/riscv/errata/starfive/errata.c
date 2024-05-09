@@ -29,6 +29,12 @@ DEFINE_STATIC_KEY_FALSE(bypass_envcfg_csr_key);
 static void errata_bypass_envcfg_csr(unsigned int stage, unsigned long arch_id,
 				     unsigned long impid)
 {
+	if (!IS_ENABLED(CONFIG_ERRATA_STARFIVE_H_EXT))
+		return;
+
+	if (arch_id == STARFIVE_DUBHE70_MARCHID)
+		return;
+
 	if (arch_id == STARFIVE_DUBHE90_MARCHID) {
 		if (impid > STARFIVE_DUBHE90_MIMPID)
 			return;
@@ -48,9 +54,6 @@ void starfive_errata_patch_func(struct alt_entry *begin,
 				unsigned long impid,
 				unsigned int stage)
 {
-	if (archid == STARFIVE_DUBHE70_MARCHID)
-		return;
-
 	if (stage == RISCV_ALTERNATIVES_BOOT) {
 		errata_bypass_envcfg_csr(stage, archid, impid);
 	}
