@@ -22,6 +22,8 @@
 #include <asm/errata_list.h>
 #include <asm/kvm_vcpu_vector.h>
 
+DEFINE_STATIC_KEY_FALSE(bypass_envcfg_csr_key);
+
 const struct _kvm_stats_desc kvm_vcpu_stats_desc[] = {
 	KVM_GENERIC_VCPU_STATS(),
 	STATS_DESC_COUNTER(VCPU, ecall_exit_stat),
