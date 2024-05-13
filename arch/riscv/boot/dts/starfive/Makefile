@@ -13,6 +13,7 @@ subdir-y += vf2-overlay
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-starfive-visionfive-2-v1.2a.dtb
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-starfive-visionfive-2-v1.3b.dtb	\
 						jh7110-starfive-visionfive-2-ac108.dtb	\
+						jh7110-starfive-visionfive-2-amp.dtb	\
 						jh7110-starfive-visionfive-2-tdm.dtb	\
 						jh7110-starfive-visionfive-2-wm8960.dtb
 

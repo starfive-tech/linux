@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2022 StarFive Technology Co., Ltd.
+ */
+
+/dts-v1/;
+#include "jh7110-starfive-visionfive-2-v1.3b.dts"
+
+/ {
+	reserved-memory {
+		rpmsg_share_mem: rpmsg-shmem {
+			reg = <0x0 0x6e400000 0x0 0x400000>;
+		};
+
+		rtthread_reserved: rt@6e800000 {
+			reg = <0x0 0x6e800000 0x0 0x1800000>;
+		};
+	};
+
+	ipimb: ipimb@0 {
+		compatible = "starfive,ipi-amp-mailbox";
+		reg = <0x0 0x6e402000 0x0 0x2000>;
+		#mbox-cells = <2>;
+		rtos-hart-id = <4>;
+	};
+
+	rpmsg0: rpmsg@0 {
+		compatible = "starfive,amp-virtio-rpmsg";
+		reg = <0x0 0x6e404000 0x0 0x20000>,
+			<0x0 0x6e500000 0x0 0x200000>;
+		mbox-names = "rx", "tx";
+		mboxes = <&ipimb 0 0>, <&ipimb 1 0>;
+		vdev-nums = <8>;
+	};
+};
+
+&cpu1_intc {
+	enable-ipi-amp;
+};
+
+&cpu2_intc {
+	enable-ipi-amp;
+};
+
+&cpu3_intc {
+	enable-ipi-amp;
+};
+
+&gmac1 {
+	status = "disabled";
+};
+
+&pcie1 {
+	status = "disabled";
+};
+
+&U74_4 {
+	status = "disabled";
+};
