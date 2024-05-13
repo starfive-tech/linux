@@ -295,6 +295,12 @@ config QCOM_IPCC
 	  acts as an interrupt controller for receiving interrupts from clients.
 	  Say Y here if you want to build this driver.
 
+config STARFIVE_IPI_MBOX
+	tristate "Starfive AMP IPI Mailbox"
+	depends on OF
+	help
+	  Say Y here if you want to build a AMP IPI Mailbox controller driver.
+
 config STARFIVE_MBOX
 	tristate "Platform Starfive Mailbox"
 	depends on OF
