@@ -1565,7 +1565,7 @@ static void gamma_ex_commit(struct dc_hw *hw)
 				dc_write(hw, DC_DISPLAY_GAMMA_EX_INDEX + (j << 2), 0x00);
 				for (i = 0; i < GAMMA_EX_SIZE; i++) {
 					value = hw->gamma[j].gamma[i][2] |
-						(hw->gamma[j].gamma[i][1] << 12);
+						(hw->gamma[j].gamma[i][1] << 16);
 					dc_write(hw, DC_DISPLAY_GAMMA_EX_DATA + (j << 2), value);
 					dc_write(hw, DC_DISPLAY_GAMMA_EX_ONE_DATA + (j << 2),
 						 hw->gamma[j].gamma[i][0]);
