@@ -110,7 +110,7 @@ static inline void arch_thread_struct_whitelist(unsigned long *offset,
 
 #ifdef CONFIG_RISCV_ISA_ZICBOP
 #define ARCH_HAS_PREFETCHW
-#define RISCV_ISA_EXT_ZICBOP	45
+#define RISCV_ISA_EXT_ZICBOP	126
 
 #define PREFETCHW_ASM(x)						\
 	ALTERNATIVE(__nops(1), CBO_PREFETCH_W(x, 0), 0,			\
