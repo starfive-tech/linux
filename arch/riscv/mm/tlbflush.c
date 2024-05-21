@@ -5,6 +5,10 @@
 #include <linux/sched.h>
 #include <asm/sbi.h>
 #include <asm/mmu_context.h>
+#include <asm/hwcap.h>
+#include <asm/insn-def.h>
+
+#define has_svinval()	riscv_has_extension_unlikely(RISCV_ISA_EXT_SVINVAL)
 
 /*
  * Flush entire TLB if number of entries to be flushed is greater
@@ -25,18 +29,46 @@ static void local_flush_tlb_range_threshold_asid(unsigned long start,
 		return;
 	}
 
+	if (has_svinval())
+		asm volatile(SFENCE_W_INVAL() ::: "memory");
+
+
 	for (i = 0; i < nr_ptes_in_range; ++i) {
-		local_flush_tlb_page_asid(start, asid);
+		if (has_svinval())
+			asm volatile(SINVAL_VMA(%0, zero)
+				     : : "r" (start) : "memory");
+		else
+			local_flush_tlb_page_asid(start, asid);
 		start += stride;
 	}
+
+	if (has_svinval())
+		asm volatile(SFENCE_INVAL_IR() ::: "memory");
 }
 
 static inline void local_flush_tlb_range_asid(unsigned long start,
-		unsigned long size, unsigned long stride, unsigned long asid)
+					      unsigned long size,
+					      unsigned long stride,
+					      unsigned long asid)
 {
-	if (size <= stride)
-		local_flush_tlb_page_asid(start, asid);
-	else if (size == FLUSH_TLB_MAX_SIZE)
+	if (size <= stride) {
+		unsigned long end = start + size;
+
+		if (has_svinval())
+			asm volatile(SFENCE_W_INVAL() ::: "memory");
+
+		while (start < end) {
+			if (has_svinval())
+				asm volatile(SINVAL_VMA(%0, %1) : : "r" (start),
+					"r" (asid) : "memory");
+			else
+				local_flush_tlb_page_asid(start, asid);
+			start += stride;
+		}
+
+		if (has_svinval())
+			asm volatile(SFENCE_INVAL_IR() ::: "memory");
+	} else if (size == FLUSH_TLB_MAX_SIZE)
 		local_flush_tlb_all_asid(asid);
 	else
 		local_flush_tlb_range_threshold_asid(start, size, stride, asid);
