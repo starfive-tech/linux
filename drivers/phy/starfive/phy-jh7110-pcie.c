@@ -129,7 +129,17 @@ static int jh7110_pcie_phy_set_mode(struct phy *_phy,
 	return 0;
 }
 
+static int jh7110_pcie_phy_exit(struct phy *_phy)
+{
+	struct jh7110_pcie_phy *phy = phy_get_drvdata(_phy);
+
+	phy->mode = PHY_MODE_INVALID;
+
+	return 0;
+}
+
 static const struct phy_ops jh7110_pcie_phy_ops = {
+	.exit		= jh7110_pcie_phy_exit,
 	.set_mode	= jh7110_pcie_phy_set_mode,
 	.owner		= THIS_MODULE,
 };
