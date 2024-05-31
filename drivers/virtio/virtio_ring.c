@@ -2869,6 +2869,36 @@ struct virtqueue *vring_new_virtqueue(unsigned int index,
 }
 EXPORT_SYMBOL_GPL(vring_new_virtqueue);
 
+#ifdef CONFIG_RISCV_AMP
+struct virtqueue *vring_new_virtqueue_with_init(unsigned int index,
+						unsigned int num,
+						unsigned int vring_align,
+						struct virtio_device *vdev,
+						bool weak_barriers,
+						bool context,
+						void *pages,
+						bool (*notify)(struct virtqueue *vq),
+						void (*callback)(struct virtqueue *vq),
+						const char *name,
+						unsigned long (*init)(struct vring *vr,
+							unsigned int num,
+							void *p,
+							unsigned long align)
+							)
+{
+	struct vring_virtqueue_split vring_split = {};
+
+	if (virtio_has_feature(vdev, VIRTIO_F_RING_PACKED))
+		return NULL;
+
+	init(&vring_split.vring, num, pages, vring_align);
+	return __vring_new_virtqueue(index, &vring_split, vdev, weak_barriers,
+				     context, notify, callback, name,
+				     vdev->dev.parent);
+}
+EXPORT_SYMBOL_GPL(vring_new_virtqueue_with_init);
+#endif
+
 static void vring_free(struct virtqueue *_vq)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);

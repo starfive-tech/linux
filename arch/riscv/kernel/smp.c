@@ -49,6 +49,21 @@ static DEFINE_PER_CPU_READ_MOSTLY(int, ipi_dummy_dev);
 static int ipi_virq_base __ro_after_init;
 static int nr_ipi __ro_after_init = IPI_MAX;
 static struct irq_desc *ipi_desc[IPI_MAX] __read_mostly;
+#ifdef CONFIG_RISCV_AMP
+static struct irq_desc *amp_desc;
+static void (*ipi_mailbox_handler)(unsigned long msg_type);
+void ipi_amp_handle(unsigned long msg_type)
+{
+	if (ipi_mailbox_handler)
+		ipi_mailbox_handler(msg_type);
+}
+
+void register_ipi_mailbox_handler(void (*handler)(unsigned long))
+{
+	ipi_mailbox_handler = handler;
+}
+EXPORT_SYMBOL_GPL(register_ipi_mailbox_handler);
+#endif
 
 int riscv_hartid_to_cpuid(unsigned long hartid)
 {
@@ -136,6 +151,11 @@ static irqreturn_t handle_IPI(int irq, void *data)
 		tick_receive_broadcast();
 		break;
 #endif
+#ifdef CONFIG_RISCV_AMP
+	case IPI_AMP:
+		ipi_amp_handle(riscv_clear_amp_bits());
+		break;
+#endif
 	default:
 		pr_warn("CPU%d: unhandled IPI%d\n", smp_processor_id(), ipi);
 		break;
@@ -153,6 +173,10 @@ void riscv_ipi_enable(void)
 
 	for (i = 0; i < nr_ipi; i++)
 		enable_percpu_irq(ipi_virq_base + i, 0);
+#ifdef CONFIG_RISCV_AMP
+	if (riscv_get_ipi_amp_enable())
+		enable_percpu_irq(ipi_virq_base + IPI_AMP, 0);
+#endif
 }
 
 void riscv_ipi_disable(void)
@@ -164,6 +188,10 @@ void riscv_ipi_disable(void)
 
 	for (i = 0; i < nr_ipi; i++)
 		disable_percpu_irq(ipi_virq_base + i);
+#ifdef CONFIG_RISCV_AMP
+	if (riscv_get_ipi_amp_enable())
+		disable_percpu_irq(ipi_virq_base + IPI_AMP);
+#endif
 }
 
 bool riscv_ipi_have_virq_range(void)
@@ -194,7 +222,16 @@ void riscv_ipi_set_virq_range(int virq, int nr, bool use_for_rfence)
 		ipi_desc[i] = irq_to_desc(ipi_virq_base + i);
 		irq_set_status_flags(ipi_virq_base + i, IRQ_HIDDEN);
 	}
+#ifdef CONFIG_RISCV_AMP
+	if (riscv_get_ipi_amp_enable()) {
+		err = request_percpu_irq(ipi_virq_base + IPI_AMP, handle_IPI,
+					 "IPI", &ipi_dummy_dev);
+		WARN_ON(err);
 
+		amp_desc = irq_to_desc(ipi_virq_base + IPI_AMP);
+		irq_set_status_flags(ipi_virq_base + IPI_AMP, IRQ_HIDDEN);
+	}
+#endif
 	/* Enabled IPIs for boot CPU immediately */
 	riscv_ipi_enable();
 
@@ -225,6 +262,15 @@ void show_ipi_stats(struct seq_file *p, int prec)
 			seq_printf(p, "%10u ", irq_desc_kstat_cpu(ipi_desc[i], cpu));
 		seq_printf(p, " %s\n", ipi_names[i]);
 	}
+#ifdef CONFIG_RISCV_AMP
+	if (riscv_get_ipi_amp_enable()) {
+		seq_printf(p, "%*s:%s", prec - 1, "IAMP",
+			   prec >= 4 ? " " : "");
+		for_each_online_cpu(cpu)
+			seq_printf(p, "%10u ", irq_desc_kstat_cpu(amp_desc, cpu));
+		seq_printf(p, " %s\n", "AMP rpmsg interrupts");
+	}
+#endif
 }
 
 void arch_send_call_function_ipi_mask(struct cpumask *mask)

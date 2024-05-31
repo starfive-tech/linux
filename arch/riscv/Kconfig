@@ -395,6 +395,10 @@ config HOTPLUG_CPU
 
 	  Say N if you want to disable CPU hotplug.
 
+config RISCV_AMP
+	bool "support for RISCV AMP"
+	depends on SMP && RISCV_SBI
+
 choice
 	prompt "CPU Tuning"
 	default TUNE_GENERIC
