@@ -913,9 +913,24 @@ static int rpmsg_probe(struct virtio_device *vdev)
 	total_buf_space = vrp->num_bufs * vrp->buf_size;
 
 	/* allocate coherent memory for the buffers */
+#ifdef CONFIG_RISCV_AMP
+	if (vdev->config->get_shm_region) {
+		struct virtio_shm_region shm_mem;
+
+		vdev->config->get_shm_region(vdev, &shm_mem, 0);
+		bufs_va = (void *)shm_mem.addr;
+		vrp->bufs_dma = virt_to_phys(bufs_va);
+	} else {
+		bufs_va = dma_alloc_coherent(vdev->dev.parent,
+				     total_buf_space, &vrp->bufs_dma,
+				     GFP_KERNEL);
+	}
+#else
 	bufs_va = dma_alloc_coherent(vdev->dev.parent,
 				     total_buf_space, &vrp->bufs_dma,
 				     GFP_KERNEL);
+#endif
+
 	if (!bufs_va) {
 		err = -ENOMEM;
 		goto vqs_del;
@@ -1002,7 +1017,10 @@ static int rpmsg_probe(struct virtio_device *vdev)
 free_ctrldev:
 	rpmsg_virtio_del_ctrl_dev(rpdev_ctrl);
 free_coherent:
-	dma_free_coherent(vdev->dev.parent, total_buf_space,
+#ifdef CONFIG_RISCV_AMP
+	if (!vdev->config->get_shm_region)
+#endif
+		dma_free_coherent(vdev->dev.parent, total_buf_space,
 			  bufs_va, vrp->bufs_dma);
 vqs_del:
 	vdev->config->del_vqs(vrp->vdev);
@@ -1034,7 +1052,10 @@ static void rpmsg_remove(struct virtio_device *vdev)
 
 	vdev->config->del_vqs(vrp->vdev);
 
-	dma_free_coherent(vdev->dev.parent, total_buf_space,
+#ifdef CONFIG_RISCV_AMP
+	if (!vdev->config->get_shm_region)
+#endif
+		dma_free_coherent(vdev->dev.parent, total_buf_space,
 			  vrp->rbufs, vrp->bufs_dma);
 
 	kfree(vrp);

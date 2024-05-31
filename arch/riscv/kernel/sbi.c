@@ -9,6 +9,7 @@
 #include <linux/init.h>
 #include <linux/pm.h>
 #include <linux/reboot.h>
+#include <asm/io.h>
 #include <asm/sbi.h>
 #include <asm/smp.h>
 #include <asm/tlbflush.h>
@@ -363,6 +364,35 @@ void sbi_send_ipi(unsigned int cpu)
 	__sbi_send_ipi(cpu);
 }
 EXPORT_SYMBOL(sbi_send_ipi);
+
+#ifdef CONFIG_RISCV_AMP
+int sbi_send_ipi_amp(unsigned int hartid, unsigned int msg_type)
+{
+	struct sbiret ret = {0};
+
+	ret = sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SEND_EXT_DOMAIN,
+			0, hartid, msg_type, 0, 0, 0);
+
+	if (ret.error)
+		pr_err("sbi ipi amp error");
+
+	return ret.error;
+}
+EXPORT_SYMBOL_GPL(sbi_send_ipi_amp);
+
+int sbi_amp_data_init(void *riscv_amp_data)
+{
+	struct sbiret ret = {0};
+
+	ret = sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SET_AMP_DATA_ADDR,
+			virt_to_phys((void *)riscv_amp_data), 0,
+			0, 0, 0, 0);
+	if (ret.error)
+		pr_err("set ipi data error");
+
+	return ret.error;
+}
+#endif
 
 /**
  * sbi_remote_fence_i() - Execute FENCE.I instruction on given remote harts.

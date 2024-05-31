@@ -63,6 +63,8 @@ obj-$(CONFIG_QCOM_IPCC)		+= qcom-ipcc.o
 
 obj-$(CONFIG_APPLE_MAILBOX)	+= apple-mailbox.o
 
+obj-$(CONFIG_STARFIVE_IPI_MBOX) += starfive_ipi_mailbox.o
+
 obj-$(CONFIG_STARFIVE_MBOX)    += starfive_mailbox.o
 
 obj-$(CONFIG_STARFIVE_MBOX_TEST)    += starfive_mailbox-test.o

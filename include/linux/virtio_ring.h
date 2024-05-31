@@ -107,7 +107,23 @@ struct virtqueue *vring_new_virtqueue(unsigned int index,
 				      bool (*notify)(struct virtqueue *vq),
 				      void (*callback)(struct virtqueue *vq),
 				      const char *name);
-
+#ifdef CONFIG_RISCV_AMP
+struct virtqueue *vring_new_virtqueue_with_init(unsigned int index,
+						unsigned int num,
+						unsigned int vring_align,
+						struct virtio_device *vdev,
+						bool weak_barriers,
+						bool context,
+						void *pages,
+						bool (*notify)(struct virtqueue *vq),
+						void (*callback)(struct virtqueue *vq),
+						const char *name,
+						unsigned long (*init)(struct vring *vr,
+							unsigned int num,
+							void *p,
+							unsigned long align)
+						);
+#endif
 /*
  * Destroys a virtqueue.  If created with vring_create_virtqueue, this
  * also frees the ring.
