@@ -86,6 +86,8 @@ static int jh7110_usb2_phy_exit(struct phy *_phy)
 
 	clk_disable_unprepare(phy->app_125m);
 
+	phy->mode = PHY_MODE_INVALID;
+
 	return 0;
 }
 

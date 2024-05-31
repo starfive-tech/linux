@@ -39,6 +39,7 @@ struct cdns_starfive {
 	struct clk_bulk_data *clks;
 	int num_clks;
 	u32 stg_usb_mode;
+	int mode;
 };
 
 static void cdns_mode_init(struct platform_device *pdev,
@@ -74,6 +75,7 @@ static void cdns_mode_init(struct platform_device *pdev,
 	default:
 		break;
 	}
+	data->mode = mode;
 }
 
 static int cdns_clk_rst_init(struct cdns_starfive *data)
@@ -103,6 +105,20 @@ static void cdns_clk_rst_deinit(struct cdns_starfive *data)
 	reset_control_assert(data->resets);
 	clk_bulk_disable_unprepare(data->num_clks, data->clks);
 }
+
+static int cdns_starfive_platform_suspend(struct device *dev,
+					  bool suspend, bool wakeup);
+static struct cdns3_platform_data cdns_starfive_pdata = {
+	.platform_suspend = cdns_starfive_platform_suspend,
+};
+
+static const struct of_dev_auxdata cdns_starfive_auxdata[] = {
+	{
+		.compatible = "cdns,usb3",
+		.platform_data = &cdns_starfive_pdata,
+	},
+	{},
+};
 
 static int cdns_starfive_probe(struct platform_device *pdev)
 {
@@ -142,7 +158,7 @@ static int cdns_starfive_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = of_platform_populate(dev->of_node, NULL, NULL, dev);
+	ret = of_platform_populate(dev->of_node, NULL, cdns_starfive_auxdata, dev);
 	if (ret) {
 		dev_err(dev, "Failed to create children\n");
 		cdns_clk_rst_deinit(data);
@@ -211,6 +227,31 @@ static int cdns_starfive_suspend(struct device *dev)
 
 	cdns_clk_rst_deinit(data);
 
+	return 0;
+}
+
+static int cdns_starfive_platform_suspend(struct device *dev,
+					  bool suspend, bool wakeup)
+{
+	struct cdns *cdns = dev_get_drvdata(dev);
+	struct cdns_starfive *data = dev_get_drvdata(dev->parent);
+
+	if (!suspend) {
+		if (data->mode == USB_DR_MODE_HOST) {
+			phy_set_mode(cdns->usb2_phy, PHY_MODE_USB_HOST);
+			phy_set_mode(cdns->usb3_phy, PHY_MODE_USB_HOST);
+		} else if (data->mode == USB_DR_MODE_PERIPHERAL) {
+			phy_set_mode(cdns->usb2_phy, PHY_MODE_USB_DEVICE);
+			phy_set_mode(cdns->usb3_phy, PHY_MODE_USB_DEVICE);
+		}
+	}
+
+	return 0;
+}
+#else
+static int cdns_starfive_platform_suspend(struct device *dev,
+					  bool suspend, bool wakeup)
+{
 	return 0;
 }
 #endif
