@@ -1803,6 +1803,10 @@ static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
 	WARN(!best_freq, "pl022: Matching cpsdvsr and scr not found for %d Hz rate \n",
 			freq);
 
+	if (best_freq != freq)
+		dev_warn(&pl022->adev->dev,
+			 "Requested frequency: %d Hz is unsupported,select by default %d Hz\n",
+			 freq, best_freq);
 	clk_freq->cpsdvsr = (u8) (best_cpsdvsr & 0xFF);
 	clk_freq->scr = (u8) (best_scr & 0xFF);
 	dev_dbg(&pl022->adev->dev,
