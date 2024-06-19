@@ -792,7 +792,7 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 {
 	int tb_size = ARRAY_SIZE(ytphy_rgmii_delays);
 	u16 rxc_dly_en = YT8521_CCR_RXC_DLY_EN;
-	u32 rx_reg, tx_reg;
+	u32 rx_reg, tx_reg, tx_fe_reg;
 	u16 mask, val = 0;
 	int ret;
 
@@ -804,6 +804,10 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 					   ytphy_rgmii_delays, tb_size, NULL,
 					   YT8521_RC1R_RGMII_1_950_NS);
 
+	tx_fe_reg = ytphy_get_delay_reg_value(phydev, "tx-fe-internal-delay-ps",
+					      ytphy_rgmii_delays, tb_size, NULL,
+					      YT8521_RC1R_RGMII_0_000_NS);
+
 	switch (phydev->interface) {
 	case PHY_INTERFACE_MODE_RGMII:
 		rxc_dly_en = 0;
@@ -813,11 +817,13 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 		break;
 	case PHY_INTERFACE_MODE_RGMII_TXID:
 		rxc_dly_en = 0;
-		val |= FIELD_PREP(YT8521_RC1R_GE_TX_DELAY_MASK, tx_reg);
+		val |= FIELD_PREP(YT8521_RC1R_GE_TX_DELAY_MASK, tx_reg) |
+		       FIELD_PREP(YT8521_RC1R_FE_TX_DELAY_MASK, tx_fe_reg);
 		break;
 	case PHY_INTERFACE_MODE_RGMII_ID:
 		val |= FIELD_PREP(YT8521_RC1R_RX_DELAY_MASK, rx_reg) |
-		       FIELD_PREP(YT8521_RC1R_GE_TX_DELAY_MASK, tx_reg);
+		       FIELD_PREP(YT8521_RC1R_GE_TX_DELAY_MASK, tx_reg) |
+		       FIELD_PREP(YT8521_RC1R_FE_TX_DELAY_MASK, tx_fe_reg);
 		break;
 	default: /* do not support other modes */
 		return -EOPNOTSUPP;
@@ -828,8 +834,9 @@ static int ytphy_rgmii_clk_delay_config(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
+	mask = YT8521_RC1R_RX_DELAY_MASK | YT8521_RC1R_GE_TX_DELAY_MASK |
 	/* Generally, it is not necessary to adjust YT8521_RC1R_FE_TX_DELAY */
-	mask = YT8521_RC1R_RX_DELAY_MASK | YT8521_RC1R_GE_TX_DELAY_MASK;
+	       YT8521_RC1R_FE_TX_DELAY_MASK;
 	return ytphy_modify_ext(phydev, YT8521_RGMII_CONFIG1_REG, mask, val);
 }
 
