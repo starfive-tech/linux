@@ -73,7 +73,11 @@ WINDOW_SYSTEM=nulldrmws
 #include $(OUT)/config_kernel.mk
 include $(srctree)/$(src)/config_kernel.mk
 
+ifneq ($(and $(filter notintermediate, $(.FEATURES)),$(filter-out 4.4,$(MAKE_VERSION))),)
+.NOTINTERMEDIATE:
+else
 .SECONDARY:
+endif
 
 define symlink-source-file
 @if [ ! -e $(dir $@) ]; then mkdir -p $(dir $@); fi
