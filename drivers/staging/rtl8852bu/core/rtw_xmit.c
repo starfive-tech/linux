@@ -6677,7 +6677,9 @@ static void fill_txreq_list_skb(_adapter *padapter,
 
 	if (skb_total_frag_nr(head_skb) > NUM_PKT_LIST_PER_TXREQ - 2) {
 		rtw_skb_linearize(head_skb);
+#ifdef CONFIG_RTW_DEBUG
 		RTW_WARN_LMT("skb total frag nr over %d\n", NUM_PKT_LIST_PER_TXREQ - 2);
+#endif
 	}
 
 	_fill_txreq_list_skb(padapter, txreq, pkt_list, head_skb, &req_sz, &offset);
