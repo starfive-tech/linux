@@ -159,6 +159,7 @@
 		};
 
 		l2_cache0: cache-controller-0 {
+			compatible = "cache";
 			cache-block-size = <64>;
 			cache-level = <2>;
 			cache-sets = <1024>;
