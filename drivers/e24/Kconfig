@@ -1,0 +1,5 @@
+config E24
+	tristate  "E24 support"
+	default m
+	help
+      This module provides the function of E24 device.
