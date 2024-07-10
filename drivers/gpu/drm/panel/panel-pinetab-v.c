@@ -24,9 +24,22 @@ struct boe_th101mb31ig002 {
 
 	struct regulator *power;
 	struct gpio_desc *enable;
+	struct gpio_desc *reset;
+
+	bool powered_up;
 
 	enum drm_panel_orientation orientation;
 };
+
+static void boe_th101mb31ig002_reset(struct boe_th101mb31ig002 *ctx)
+{
+	gpiod_direction_output(ctx->reset, 0);
+	usleep_range(10, 100);
+	gpiod_direction_output(ctx->reset, 1);
+	usleep_range(10, 100);
+	gpiod_direction_output(ctx->reset, 0);
+	usleep_range(5000, 6000);
+}
 
 static int boe_th101mb31ig002_enable(struct drm_panel *panel)
 {
@@ -106,14 +119,43 @@ static int boe_th101mb31ig002_prepare(struct drm_panel *panel)
 	struct device *dev = &ctx->dsi->dev;
 	int ret;
 
-	ret = regulator_enable(ctx->power);
-	if (ret) {
-		dev_err(dev, "Failed to enable power supply: %d\n", ret);
-		return ret;
+	/* If the reset pin is not present, the panel needs to be kept powered on */
+	if (ctx->reset || !ctx->powered_up) {
+		ret = regulator_enable(ctx->power);
+		if (ret) {
+			dev_err(dev, "Failed to enable power supply: %d\n", ret);
+			return ret;
+		}
+		
+		gpiod_set_value_cansleep(ctx->enable, 1);
+
+		ctx->powered_up = true;
 	}
 
-	gpiod_set_value_cansleep(ctx->enable, 1);
 	msleep(250);
+	if (ctx->reset)
+		boe_th101mb31ig002_reset(ctx);
+
+	return 0;
+}
+
+static int boe_th101mb31ig002_disable(struct drm_panel *panel)
+{
+	return 0;
+}
+
+static int boe_th101mb31ig002_unprepare(struct drm_panel *panel)
+{
+	struct boe_th101mb31ig002 *ctx = container_of(panel,
+						      struct boe_th101mb31ig002,
+						      panel);
+
+	if (ctx->reset) {
+		gpiod_set_value_cansleep(ctx->reset, 1);
+		gpiod_set_value_cansleep(ctx->enable, 0);
+		regulator_disable(ctx->power);
+		ctx->powered_up = false;
+	}
 
 	return 0;
 }
@@ -181,7 +223,9 @@ boe_th101mb31ig002_get_orientation(struct drm_panel *panel)
 
 static const struct drm_panel_funcs boe_th101mb31ig002_funcs = {
 	.prepare = boe_th101mb31ig002_prepare,
+	.unprepare = boe_th101mb31ig002_unprepare,
 	.enable = boe_th101mb31ig002_enable,
+	.disable = boe_th101mb31ig002_disable,
 	.get_modes = boe_th101mb31ig002_get_modes,
 	.get_orientation = boe_th101mb31ig002_get_orientation,
 };
@@ -215,6 +259,12 @@ static int boe_th101mb31ig002_dsi_probe(struct mipi_dsi_device *dsi)
 		return dev_err_probe(&dsi->dev, PTR_ERR(ctx->enable),
 				     "Failed to get enable GPIO\n");
 
+	ctx->reset = devm_gpiod_get_optional(&dsi->dev, "reset",
+					     GPIOD_OUT_HIGH);
+	if (IS_ERR(ctx->reset))
+		return dev_err_probe(&dsi->dev, PTR_ERR(ctx->reset),
+				     "Failed to get reset GPIO\n");
+
 	ret = of_drm_get_panel_orientation(dsi->dev.of_node,
 					   &ctx->orientation);
 	if (ret)
@@ -244,6 +294,12 @@ static int boe_th101mb31ig002_dsi_probe(struct mipi_dsi_device *dsi)
 static void boe_th101mb31ig002_dsi_remove(struct mipi_dsi_device *dsi)
 {
 	struct boe_th101mb31ig002 *ctx = mipi_dsi_get_drvdata(dsi);
+
+	if (ctx->powered_up) {
+		gpiod_set_value_cansleep(ctx->reset, 1);
+		gpiod_set_value_cansleep(ctx->enable, 0);
+		regulator_disable(ctx->power);
+	}
 
 	mipi_dsi_detach(dsi);
 	drm_panel_remove(&ctx->panel);
