@@ -1634,6 +1634,7 @@
 			reset-names = "dphy_sys", "dphy_txbytehs";
 			#phy-cells = <0>;
 			status = "disabled";
+			power-domains = <&aon_syscon JH7110_AON_PD_DPHY_TX>;
 		};
 
 		co_process: e24@6e210000 {
