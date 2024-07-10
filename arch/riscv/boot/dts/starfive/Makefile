@@ -32,4 +32,5 @@ dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-evb.dtb			\
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-star64.dtb \
 			       jh7110-star64-1.0.dtb
 
-dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-pinetab-v.dtb
+dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-pinetab-v.dtb \
+			       jh7110-pinetab-v-20230614.dtb

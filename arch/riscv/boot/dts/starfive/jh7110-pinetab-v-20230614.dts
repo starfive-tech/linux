@@ -14,10 +14,10 @@
 		debounce-interval = <10>;
 		linux,input-type = <EV_KEY>;
 		linux,code = <KEY_VOLUMEUP>;
-		gpios = <&aongpio 0 GPIO_ACTIVE_HIGH>;
+		gpios = <&sysgpio 51 GPIO_ACTIVE_LOW>;
 	};
 };
 
-&panel {
-	reset-gpio = <&sysgpio 51 GPIO_ACTIVE_LOW>;
+&charger {
+	ti,input-current-limit = <2000000>; /* maximum input current limit (in uA) as 20230614 boards can't detect what type of Charger is connected */
 };
