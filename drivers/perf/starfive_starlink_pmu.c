@@ -592,10 +592,10 @@ starlink_pmu_online_cpu(unsigned int cpu, struct hlist_node *node)
 							     struct starlink_pmu,
 							     node);
 
-	if (cpumask_empty(&starlink_pmu->cpumask))
+	if (cpumask_empty(&starlink_pmu->cpumask)) {
 		cpumask_set_cpu(cpu, &starlink_pmu->cpumask);
-
-	WARN_ON(irq_set_affinity(starlink_pmu->irq, cpumask_of(cpu)));
+		WARN_ON(irq_set_affinity(starlink_pmu->irq, cpumask_of(cpu)));
+	}
 
 	return 0;
 }
