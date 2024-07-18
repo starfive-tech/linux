@@ -17,7 +17,12 @@ description:
 
 properties:
   compatible:
-    const: starfive,jh8100-starlink-pmu
+    oneOf:
+      - const: starfive,jh8100-starlink-pmu
+      - items:
+          - enum:
+              - starfive,dubhe70-starlink-pmu
+          - const: starfive,jh8100-starlink-pmu
 
   reg:
     maxItems: 1
