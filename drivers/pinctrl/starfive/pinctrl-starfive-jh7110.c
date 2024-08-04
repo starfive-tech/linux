@@ -754,7 +754,7 @@ static int starfive_jh7110_sys_irq_set_type(struct irq_data *d,
 	case IRQ_TYPE_LEVEL_LOW:
 		irq_type  = 0;    /* 0: level triggered */
 		edge_both = 0;    /* 0: ignored */
-		polarity  = 1;    /* 1: low level */
+		polarity  = mask; /* 1: low level */
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
 		irq_type  = mask; /* 1: edge triggered */
