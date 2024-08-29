@@ -43,12 +43,12 @@
 			d-cache-sets = <512>;
 			d-cache-size = <32768>;
 			d-tlb-sets = <1>;
-			d-tlb-size = <16>;
+			d-tlb-size = <24>;
 			i-cache-block-size = <64>;
 			i-cache-sets = <512>;
 			i-cache-size = <32768>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <24>;
+			i-tlb-size = <16>;
 			next-level-cache = <&l2_cache0>;
 			tlb-split;
 
@@ -76,12 +76,12 @@
 			d-cache-sets = <512>;
 			d-cache-size = <32768>;
 			d-tlb-sets = <1>;
-			d-tlb-size = <16>;
+			d-tlb-size = <24>;
 			i-cache-block-size = <64>;
 			i-cache-sets = <512>;
 			i-cache-size = <32768>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <24>;
+			i-tlb-size = <16>;
 			next-level-cache = <&l2_cache1>;
 			tlb-split;
 
@@ -109,12 +109,12 @@
 			d-cache-sets = <512>;
 			d-cache-size = <32768>;
 			d-tlb-sets = <1>;
-			d-tlb-size = <16>;
+			d-tlb-size = <24>;
 			i-cache-block-size = <64>;
 			i-cache-sets = <512>;
 			i-cache-size = <32768>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <24>;
+			i-tlb-size = <16>;
 			next-level-cache = <&l2_cache2>;
 			tlb-split;
 
@@ -142,12 +142,12 @@
 			d-cache-sets = <512>;
 			d-cache-size = <32768>;
 			d-tlb-sets = <1>;
-			d-tlb-size = <16>;
+			d-tlb-size = <24>;
 			i-cache-block-size = <64>;
 			i-cache-sets = <512>;
 			i-cache-size = <32768>;
 			i-tlb-sets = <1>;
-			i-tlb-size = <24>;
+			i-tlb-size = <16>;
 			next-level-cache = <&l2_cache3>;
 			tlb-split;
 
