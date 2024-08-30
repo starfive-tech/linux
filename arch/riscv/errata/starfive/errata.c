@@ -22,7 +22,8 @@
 #define STARFIVE_DUBHE80_MIMPID		0x0000000020230831UL
 
 #define STARFIVE_DUBHE70_MARCHID	0x80000000DB000070UL
-#define STARFIVE_DUBHE70_MIMPID		0x0000000020240131UL
+
+#define STARFIVE_DUBHE83_MARCHID	0x80000000DB000083UL
 
 static void errata_bypass_envcfg_csr(unsigned int stage, unsigned long arch_id,
 				     unsigned long impid)
@@ -30,7 +31,8 @@ static void errata_bypass_envcfg_csr(unsigned int stage, unsigned long arch_id,
 	if (!IS_ENABLED(CONFIG_ERRATA_STARFIVE_H_EXT))
 		return;
 
-	if (arch_id == STARFIVE_DUBHE70_MARCHID)
+	if (arch_id == STARFIVE_DUBHE70_MARCHID ||
+	    arch_id == STARFIVE_DUBHE83_MARCHID)
 		return;
 
 	if (arch_id == STARFIVE_DUBHE90_MARCHID) {
