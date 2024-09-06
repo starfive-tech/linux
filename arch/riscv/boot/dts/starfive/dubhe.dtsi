@@ -153,8 +153,8 @@
 			snps,axi-config = <&stmmac_axi_setup>;
 			snps,tso;
 			snps,en-tx-lpi-clockgating;
-			snps,txpbl = <4>;
-			snps,rxpbl = <4>;
+			snps,txpbl = <2>;
+			snps,rxpbl = <2>;
 			status = "disabled";
 		};
 
