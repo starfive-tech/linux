@@ -10,9 +10,22 @@
 
 #include <asm/alternative-macros.h>
 #include <asm/fence.h>
-#include <asm/processor.h>
 #include <asm/hwcap.h>
 #include <asm/insn-def.h>
+
+/**
+ * Don't include asm/processor.h or asm/barrier.h in this file,
+ * this is to avoid to cyclic dependency:
+ * i.e. asm/processor.h includes asm/barrier.h,
+ * but asm/barrier.h includes asm/cmpxchg.h, which is this file.
+ * So, can't use macros like __nops() from asm/processor.h and
+ * PREFETCHW_ASM() from asm/barrier.h here.
+ */
+#ifdef CONFIG_RISCV_ISA_ZICBOP
+#define PREFETCHW_ASM_MACRO(x)						\
+	ALTERNATIVE("nops", CBO_PREFETCH_W(x, 0), 0,			\
+		    RISCV_ISA_EXT_ZICBOP, CONFIG_RISCV_ISA_ZICBOP)
+#endif /* CONFIG_RISCV_ISA_ZICBOP */
 
 #define __arch_xchg_masked(sc_sfx, prepend, append, r, p, n)		\
 ({									\
@@ -26,7 +39,7 @@
 									\
 	__asm__ __volatile__ (						\
 	       prepend							\
-	       PREFETCHW_ASM(%5)					\
+	       PREFETCHW_ASM_MACRO(%5)					\
 	       "0:	lr.w %0, %2\n"					\
 	       "	and  %1, %0, %z4\n"				\
 	       "	or   %1, %1, %z3\n"				\
