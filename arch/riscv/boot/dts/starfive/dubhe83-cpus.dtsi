@@ -36,7 +36,7 @@
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "v", "zba", "zbb",
 					       "zbc", "zbs", "zicbom", "zicbop", "zicboz", "zicclsm", "zicntr",
 					       "zicond", "zicsr", "zifencei", "zihintpause",
-					       "zihpm", "svinval", "svnapot", "sscofpmf", "sstc",
+					       "zihpm", "smstateen", "svinval", "svnapot", "sscofpmf", "sstc",
 					       "zvbb", "zvbc", "zvkb", "zvkg", "zvkned",
 					       "zvknha", "zvknhb", "zvksed", "zvksh";
 			riscv,cbom-block-size = <64>;
@@ -71,7 +71,7 @@
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "v", "zba", "zbb",
 					       "zbc", "zbs", "zicbom", "zicbop", "zicboz", "zicclsm", "zicntr",
 					       "zicond", "zicsr", "zifencei", "zihintpause",
-					       "zihpm", "svinval", "svnapot", "sscofpmf", "sstc",
+					       "zihpm", "smstateen", "svinval", "svnapot", "sscofpmf", "sstc",
 					       "zvbb", "zvbc", "zvkb", "zvkg", "zvkned",
 					       "zvknha", "zvknhb", "zvksed", "zvksh";
 			riscv,cbom-block-size = <64>;
@@ -106,7 +106,7 @@
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "v", "zba", "zbb",
 					       "zbc", "zbs", "zicbom", "zicbop", "zicboz", "zicclsm", "zicntr",
 					       "zicond", "zicsr", "zifencei", "zihintpause",
-					       "zihpm", "svinval", "svnapot", "sscofpmf", "sstc",
+					       "zihpm", "smstateen", "svinval", "svnapot", "sscofpmf", "sstc",
 					       "zvbb", "zvbc", "zvkb", "zvkg", "zvkned",
 					       "zvknha", "zvknhb", "zvksed", "zvksh";
 			riscv,cbom-block-size = <64>;
@@ -141,7 +141,7 @@
 			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "v", "zba", "zbb",
 					       "zbc", "zbs", "zicbom", "zicbop", "zicboz", "zicclsm", "zicntr",
 					       "zicond", "zicsr", "zifencei", "zihintpause",
-					       "zihpm", "svinval", "svnapot", "sscofpmf", "sstc",
+					       "zihpm", "smstateen", "svinval", "svnapot", "sscofpmf", "sstc",
 					       "zvbb", "zvbc", "zvkb", "zvkg", "zvkned",
 					       "zvknha", "zvknhb", "zvksed", "zvksh";
 			riscv,cbom-block-size = <64>;
