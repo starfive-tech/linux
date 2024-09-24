@@ -83,7 +83,7 @@
 	gpio-restart {
 		compatible = "gpio-restart";
 		gpios = <&sysgpio 35 GPIO_ACTIVE_HIGH>;
-		priority = <224>;
+		priority = <160>;
 	};
 
 	pwmdac_codec: pwmdac-codec {
