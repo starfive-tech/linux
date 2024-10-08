@@ -77,6 +77,68 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 }
 EXPORT_SYMBOL(phy_mipi_dphy_get_default_config);
 
+int phy_mipi_dphy_get_default_config_for_hs_clk_rate(unsigned long pixel_clock,
+						     unsigned int bpp,
+						     unsigned int lanes,
+						     unsigned long long hs_clk_rate,
+						     struct phy_configure_opts_mipi_dphy *cfg)
+{
+	unsigned long long ui;
+
+	if (!cfg)
+		return -EINVAL;
+
+	if (!hs_clk_rate) {
+		hs_clk_rate = pixel_clock * bpp;
+		do_div(hs_clk_rate, lanes);
+	}
+
+	ui = ALIGN(PSEC_PER_SEC, hs_clk_rate);
+	do_div(ui, hs_clk_rate);
+
+	cfg->clk_miss = 0;
+	cfg->clk_post = 60000 + 52 * ui;
+	cfg->clk_pre = 8;
+	cfg->clk_prepare = 38000;
+	cfg->clk_settle = 95000;
+	cfg->clk_term_en = 0;
+	cfg->clk_trail = 60000;
+	cfg->clk_zero = 262000;
+	cfg->d_term_en = 0;
+	cfg->eot = 0;
+	cfg->hs_exit = 100000;
+	cfg->hs_prepare = 40000 + 4 * ui;
+	cfg->hs_zero = 105000 + 6 * ui;
+	cfg->hs_settle = 85000 + 6 * ui;
+	cfg->hs_skip = 40000;
+
+	/*
+	 * The MIPI D-PHY specification (Section 6.9, v1.2, Table 14, Page 40)
+	 * contains this formula as:
+	 *
+	 *     T_HS-TRAIL = max(n * 8 * ui, 60 + n * 4 * ui)
+	 *
+	 * where n = 1 for forward-direction HS mode and n = 4 for reverse-
+	 * direction HS mode. There's only one setting and this function does
+	 * not parameterize on anything other that ui, so this code will
+	 * assumes that reverse-direction HS mode is supported and uses n = 4.
+	 */
+	cfg->hs_trail = max(4 * 8 * ui, 60000 + 4 * 4 * ui);
+
+	cfg->init = 100;
+	cfg->lpx = 50000;
+	cfg->ta_get = 5 * cfg->lpx;
+	cfg->ta_go = 4 * cfg->lpx;
+	cfg->ta_sure = cfg->lpx;
+	cfg->wakeup = 1000;
+
+	cfg->hs_clk_rate = hs_clk_rate;
+	cfg->lanes = lanes;
+
+	return 0;
+}
+EXPORT_SYMBOL(phy_mipi_dphy_get_default_config_for_hs_clk_rate);
+
 /*
  * Validate D-PHY configuration according to MIPI D-PHY specification
  * (v1.2, Section Section 6.9 "Global Operation Timing Parameters").

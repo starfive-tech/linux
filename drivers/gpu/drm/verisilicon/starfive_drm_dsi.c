@@ -746,7 +746,13 @@ static int cdns_dsi_mode2cfg(struct cdns_dsi *dsi,
 					  bpp, 0);
 	dsi_cfg->hfp = dpi_to_dsi_timing(mode_to_dpi_hfp(mode, mode_valid_check),
 					 bpp, DSI_HFP_FRAME_OVERHEAD);
-
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	//update dsi timming
+	dsi_cfg->hfp = mode->dsi_hfp - DSI_HFP_FRAME_OVERHEAD;
+	dsi_cfg->hact = mode->dsi_hact;
+	dsi_cfg->hsa = mode->dsi_hsa - DSI_HSA_FRAME_OVERHEAD;
+	dsi_cfg->hbp = mode->dsi_hbp - DSI_HBP_FRAME_OVERHEAD;
+#endif
 	return 0;
 }
 
@@ -826,7 +832,14 @@ static int cdns_dsi_check_conf(struct cdns_dsi *dsi,
 	ret = cdns_dsi_mode2cfg(dsi, mode, dsi_cfg, mode_valid_check);
 	if (ret)
 		return ret;
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	phy_mipi_dphy_get_default_config_for_hs_clk_rate(mode->crtc_clock * 1000,
+				mipi_dsi_pixel_format_to_bpp(output->dev->format),
+				nlanes, mode->dsi_bitrate, phy_cfg);
 
+	phy_cfg->hs_clk_rate = mode->dsi_bitrate;
+
+#else
 	phy_mipi_dphy_get_default_config(mode->crtc_clock * 1000,
 					 mipi_dsi_pixel_format_to_bpp(output->dev->format),
 					 nlanes, phy_cfg);
@@ -834,6 +847,8 @@ static int cdns_dsi_check_conf(struct cdns_dsi *dsi,
 	ret = cdns_dsi_adjust_phy_config(dsi, dsi_cfg, phy_cfg, mode, mode_valid_check);
 	if (ret)
 		return ret;
+
+#endif
 
 	ret = phy_validate(dsi->dphy, PHY_MODE_MIPI_DPHY, 0, &output->phy_opts);
 	if (ret)
@@ -1176,6 +1191,16 @@ static void cdns_dsi_bridge_enable(struct drm_bridge *bridge)
 
 	tmp = readl(dsi->regs + MCTL_MAIN_EN) | IF_EN(input->id);
 	writel(tmp, dsi->regs + MCTL_MAIN_EN);
+
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	tmp = readl(dsi->regs + VID_MODE_STS);
+	printk("%s,VID_MODE_STS %08x************************\n", __func__, tmp);
+	tmp = readl(dsi->regs + MCTL_LANE_STS);
+	printk("%s,MCTL_LANE_STS %08x************************\n", __func__, tmp);
+	tmp = readl(dsi->regs + MCTL_DPHY_ERR);
+	printk("%s,MCTL_DPHY_ERR %08x************************\n", __func__, tmp);
+#endif
+
 }
 
 static const struct drm_bridge_funcs cdns_dsi_bridge_funcs = {
