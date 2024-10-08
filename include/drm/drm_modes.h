@@ -266,6 +266,14 @@ struct drm_display_mode {
 	u16 vsync_end;
 	u16 vtotal;
 	u16 vscan;
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	u32 dsi_bitrate;
+	u16 dsi_dlanes;
+	u16 dsi_hsa;
+	u16 dsi_hbp;
+	u16 dsi_hfp;
+	u16 dsi_hact;
+#endif
 	/**
 	 * @flags:
 	 *
