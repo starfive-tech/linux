@@ -56,6 +56,7 @@ static const struct file_operations starfive_drm_driver_fops = {
 	.unlocked_ioctl = drm_ioctl,
 	.compat_ioctl = drm_compat_ioctl,
 	.release = drm_release,
+	.fop_flags = FOP_UNSIGNED_OFFSET,
 };
 
 static struct drm_driver starfive_drm_driver = {
