@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/* Copyright (c) 2024 StarFive Technology Co., Ltd. */
+
+#include "dubhe.dtsi"
+#include "dubhe83-cpus.dtsi"
+
+/ {
+	compatible = "starfive,dubhe-83";
+};

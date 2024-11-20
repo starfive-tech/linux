@@ -11,8 +11,10 @@ dtb-$(CONFIG_ARCH_STARFIVE) += jh7100-starfive-visionfive-v1.dtb
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-starfive-visionfive-2-v1.2a.dtb
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-starfive-visionfive-2-v1.3b.dtb
 
-dtb-$(CONFIG_ARCH_STARFIVE) += dubhe90_fpga.dtb
-dtb-$(CONFIG_ARCH_STARFIVE) += dubhe90_fpga_dual.dtb
-dtb-$(CONFIG_ARCH_STARFIVE) += dubhe80_fpga.dtb
 dtb-$(CONFIG_ARCH_STARFIVE) += dubhe70a_fpga.dtb
 dtb-$(CONFIG_ARCH_STARFIVE) += dubhe70s_fpga.dtb
+dtb-$(CONFIG_ARCH_STARFIVE) += dubhe80_fpga.dtb
+dtb-$(CONFIG_ARCH_STARFIVE) += dubhe83_fpga.dtb
+dtb-$(CONFIG_ARCH_STARFIVE) += dubhe90_fpga.dtb
+dtb-$(CONFIG_ARCH_STARFIVE) += dubhe90_fpga_dual.dtb
+
