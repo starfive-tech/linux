@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
 /* Copyright (c) 2024 StarFive Technology Co., Ltd. */
 
-#include "dubhe83.dtsi"
-#include "dubhe_fpga_common.dtsi"
+/dts-v1/;
+/plugin/;
 
-/ {
+&{/} {
 	soc {
-		dma-noncoherent;
+		dma-coherent;
 	};
 };
