@@ -172,6 +172,22 @@
 		compatible = "seeed_panel";
 		reg = <0x45>;
 
+		clock = <27000>;  //
+		hdisplay = /bits/ 16 <800>;
+		hsync_start = /bits/ 16 <890>;  // 800 + 90
+		hsync_end = /bits/ 16 <895>;  // 800 + 90 + 5
+		htotal = /bits/ 16 <900>;  // 800 + 90 + 5 + 5
+		vdisplay = /bits/ 16 <480>;
+		vsync_start = /bits/ 16 <540>;  // 480 + 60
+		vsync_end = /bits/ 16 <545>;  // 480 + 60 + 5
+		vtotal = /bits/ 16 <550>;  // 480 + 60 + 5 + 5
+		dsi_dlanes = /bits/ 16 <1>;
+		dsi_bitrate =/bits/ 32 <660000000>;
+		dsi_hsa = /bits/ 16 <120>;
+		dsi_hbp = /bits/ 16 <118>;
+		dsi_hfp = /bits/ 16 <112>;
+		dsi_hact = /bits/ 16 <2400>;
+
 		port {
 			panel_dsi_port: endpoint {
 				remote-endpoint = <&dsi_out_port>;
