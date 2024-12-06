@@ -66,4 +66,12 @@ config STARFIVE_DSI
 	  enable MIPI DSI on VIC7110 based SoC, you should
 	  select this option.
 
+config STARFIVE_MIPI_TOOL_TEST
+	bool "Starfive MIPI TOOL USED"
+	depends on STARFIVE_DSI
+	default n
+	help
+	  This selects use to config the dsi timming parameters produced by Starfive MIPI tool.
+	  if no config, the mipi controller will use the default way to handle it.
+
 source "drivers/gpu/drm/verisilicon/adv7511/Kconfig"
