@@ -811,16 +811,14 @@ static bool vs_dc_mode_fixup(struct device *dev,
 				  struct drm_display_mode *adjusted_mode)
 {
 
-#if 1
-	;//printk("====> %s, %d--pix_clk.\n", __func__, __LINE__);
-#else
 	struct vs_dc *dc = dev_get_drvdata(dev);
-
-	long clk_rate;
-	if (dc->pix_clk) {
-		clk_rate = clk_round_rate(dc->pix_clk,
-					  adjusted_mode->clock * 1000);
-		adjusted_mode->clock = DIV_ROUND_UP(clk_rate, 1000);
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	if (mode->dsi_hact) {
+		long clk_rate;
+		clk_rate = clk_round_rate(dc->dc8200_pix0, mode->clock * 1000 + 1000);
+		clk_rate += 1000;
+		adjusted_mode->clock = clk_rate/1000;
+		printk("adjusted_mode->clock = %ld\n", adjusted_mode->clock);
 	}
 #endif
 

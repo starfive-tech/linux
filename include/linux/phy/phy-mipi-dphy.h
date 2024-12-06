@@ -279,9 +279,16 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 				     unsigned int bpp,
 				     unsigned int lanes,
 				     struct phy_configure_opts_mipi_dphy *cfg);
+
 int phy_mipi_dphy_get_default_config_for_hsclk(unsigned long long hs_clk_rate,
 					       unsigned int lanes,
 					       struct phy_configure_opts_mipi_dphy *cfg);
+
+int phy_mipi_dphy_get_default_config_for_hs_clk_rate(unsigned long pixel_clock,
+						     unsigned int bpp,
+						     unsigned int lanes,
+						     unsigned long long hs_clk_rate,
+						     struct phy_configure_opts_mipi_dphy *cfg);
 int phy_mipi_dphy_config_validate(struct phy_configure_opts_mipi_dphy *cfg);
 
 #endif /* __PHY_MIPI_DPHY_H_ */

@@ -88,6 +88,18 @@ int phy_mipi_dphy_get_default_config(unsigned long pixel_clock,
 }
 EXPORT_SYMBOL(phy_mipi_dphy_get_default_config);
 
+int phy_mipi_dphy_get_default_config_for_hs_clk_rate(unsigned long pixel_clock,
+				     unsigned int bpp,
+				     unsigned int lanes,
+				     unsigned long long hs_clk_rate,
+				     struct phy_configure_opts_mipi_dphy *cfg)
+{
+	return phy_mipi_dphy_calc_config(pixel_clock, bpp, lanes, hs_clk_rate, cfg);
+
+}
+EXPORT_SYMBOL(phy_mipi_dphy_get_default_config_for_hs_clk_rate);
+
+
 int phy_mipi_dphy_get_default_config_for_hsclk(unsigned long long hs_clk_rate,
 					       unsigned int lanes,
 					       struct phy_configure_opts_mipi_dphy *cfg)

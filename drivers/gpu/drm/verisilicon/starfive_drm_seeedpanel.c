@@ -323,33 +323,136 @@ static int seeed_panel_enable(struct drm_panel *panel)
 	return 0;
 }
 
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+static int display_parse_dt(struct device *dev, struct drm_display_mode *mode)
+{
+	struct device_node *np = dev->of_node;
+
+	if (of_property_read_u32(np, "clock", &mode->clock)) {
+		dev_err(dev, "Failed to read clock property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "hdisplay", &mode->hdisplay)) {
+		dev_err(dev, "Failed to read hdisplay property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "hsync_start", &mode->hsync_start)) {
+		dev_err(dev, "Failed to read hsync_start property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "hsync_end", &mode->hsync_end)) {
+		dev_err(dev, "Failed to read hsync_end property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "htotal", &mode->htotal)) {
+		dev_err(dev, "Failed to read htotal property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "vdisplay", &mode->vdisplay)) {
+		dev_err(dev, "Failed to read vdisplay property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "vsync_start", &mode->vsync_start)) {
+		dev_err(dev, "Failed to read vsync_start property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "vsync_end", &mode->vsync_end)) {
+		dev_err(dev, "Failed to read vsync_end property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "vtotal", &mode->vtotal)) {
+		dev_err(dev, "Failed to read vtotal property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "dsi_dlanes", &mode->dsi_dlanes)) {
+		dev_err(dev, "Failed to read dsi_dlanes property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u32(np, "dsi_bitrate", &mode->dsi_bitrate)) {
+		dev_err(dev, "Failed to read dsi_bitrate property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "dsi_hsa", &mode->dsi_hsa)) {
+		dev_err(dev, "Failed to read dsi_hsa property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "dsi_hbp", &mode->dsi_hbp)) {
+		dev_err(dev, "Failed to read dsi_hbp property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "dsi_hfp", &mode->dsi_hfp)) {
+		dev_err(dev, "Failed to read dsi_hfp property\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u16(np, "dsi_hact", &mode->dsi_hact)) {
+		dev_err(dev, "Failed to read dsi_hact property\n");
+		return -EINVAL;
+	}
+
+	dev_info(dev, "Display config parsed successfully:\n");
+	dev_info(dev, "clock: %u\n", mode->clock);
+	dev_info(dev, "hdisplay: %u\n", mode->hdisplay);
+	dev_info(dev, "hsync_start: %u\n", mode->hsync_start);
+	dev_info(dev, "hsync_end: %u\n", mode->hsync_end);
+	dev_info(dev, "htotal: %u\n", mode->htotal);
+	dev_info(dev, "vdisplay: %u\n", mode->vdisplay);
+	dev_info(dev, "vsync_start: %u\n", mode->vsync_start);
+	dev_info(dev, "vsync_end: %u\n", mode->vsync_end);
+	dev_info(dev, "vtotal: %u\n", mode->vtotal);
+	dev_info(dev, "dsi_dlanes: %u\n", mode->dsi_dlanes);
+	dev_info(dev, "dsi_bitrate: %u\n", mode->dsi_bitrate);
+	dev_info(dev, "dsi_hsa: %u\n", mode->dsi_hsa);
+	dev_info(dev, "dsi_hbp: %u\n", mode->dsi_hbp);
+	dev_info(dev, "dsi_hfp: %u\n", mode->dsi_hfp);
+	dev_info(dev, "dsi_hact: %u\n", mode->dsi_hact);
+
+    return 0;
+}
+#endif
 static int seeed_panel_get_modes(struct drm_panel *panel,
 				struct drm_connector *connector)
 {
-	unsigned int i, num = 0;
+	unsigned int num = 0;
 	static const u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
+	struct drm_display_mode *mode;
 
-	for (i = 0; i < ARRAY_SIZE(seeed_panel_modes); i++) {
-		const struct drm_display_mode *m = &seeed_panel_modes[i];
-		struct drm_display_mode *mode;
+#ifdef CONFIG_STARFIVE_MIPI_TOOL_TEST
+	struct drm_display_mode mode_temp;
 
-		mode = drm_mode_duplicate(connector->dev, m);
-		if (!mode) {
-			dev_err(panel->dev, "failed to add mode %ux%u@%u\n",
-				m->hdisplay, m->vdisplay,
-				drm_mode_vrefresh(m));
-			continue;
-		}
+	memset(&mode_temp, 0, sizeof(mode_temp));
+	display_parse_dt(panel->dev, &mode_temp);
 
-		mode->type |= DRM_MODE_TYPE_DRIVER;
-
-		if (i == 0)
-			mode->type |= DRM_MODE_TYPE_PREFERRED;
-
-		drm_mode_set_name(mode);
-		drm_mode_probed_add(connector, mode);
-		num++;
+	mode = drm_mode_duplicate(connector->dev, &mode_temp);
+	if (!mode) {
+		return 0;
 	}
+#else
+	mode = drm_mode_duplicate(connector->dev, &seeed_panel_modes[0]);
+	if (!mode) {
+		return 0;
+	}
+#endif
+
+	mode->type |= DRM_MODE_TYPE_DRIVER;
+	mode->type |= DRM_MODE_TYPE_PREFERRED;
+
+	drm_mode_set_name(mode);
+	drm_mode_probed_add(connector, mode);
+	num++;
 
 	connector->display_info.bpc = 8;
 	connector->display_info.width_mm = 154;
