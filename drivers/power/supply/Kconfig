@@ -844,6 +844,11 @@ config CHARGER_SC2731
 	  Say Y here to enable support for battery charging with SC2731
 	  PMIC chips.
 
+config CHARGER_SC89890H
+	bool "CHARGER_SC89890H"
+	help
+	  Say Yes to enable sc89890h Charger IC.
+
 config FUEL_GAUGE_SC27XX
 	tristate "Spreadtrum SC27XX fuel gauge driver"
 	depends on MFD_SC27XX_PMIC || COMPILE_TEST
