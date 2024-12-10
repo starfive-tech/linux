@@ -18,6 +18,16 @@
 	};
 };
 
+&i2c0 {
+	accelerometer@18 {
+		compatible = "silan,sc7a20";
+		reg = <0x18>;
+		mount-matrix =	 "-1",  "0",  "0",
+				  "0",  "0", "-1",
+				  "0",  "1",  "0";
+	};
+};
+
 &panel {
 	reset-gpio = <&sysgpio 51 GPIO_ACTIVE_LOW>;
 };
