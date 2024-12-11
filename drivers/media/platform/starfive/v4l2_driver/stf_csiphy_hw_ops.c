@@ -250,23 +250,23 @@ static int csi2rx_dphy_config(struct stf_vin_dev *vin,
 
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_188,
-		BIT(22)|BIT(21)|BIT(20), cfg->clock_lane<<20);          //clock lane 0
+		BIT(22)|BIT(21)|BIT(20), 4<<20);          //clock lane 0
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_188,
-		BIT(25)|BIT(24)|BIT(23), cfg->clock1_lane<<23);         //clock lane 1
+		BIT(25)|BIT(24)|BIT(23), 5<<23);         //clock lane 1
 
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_188,
-		BIT(28)|BIT(27)|BIT(26), cfg->data_lanes[0]<<26);       //data lane 0
+		BIT(28)|BIT(27)|BIT(26), 0<<26);       //data lane 0
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_188,
-		BIT(31)|BIT(30)|BIT(29), cfg->data_lanes[1]<<29);       //data lane 1
+		BIT(31)|BIT(30)|BIT(29), 1<<29);       //data lane 1
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_192,
-		BIT(2)|BIT(1)|BIT(0), cfg->data_lanes[2]<<0);           //data lane 2
+		BIT(2)|BIT(1)|BIT(0), 2<<0);           //data lane 2
 	reg_set_bit(vin->rstgen_base,
 		M31DPHY_APBCFGSAIF__SYSCFG_192,
-		BIT(5)|BIT(4)|BIT(3), cfg->data_lanes[3]<<3);           //data lane 3
+		BIT(5)|BIT(4)|BIT(3), 3<<3);           //data lane 3
 
 	reg_set_bit(vin->rstgen_base,		//mp_test_en
 		M31DPHY_APBCFGSAIF__SYSCFG_192,

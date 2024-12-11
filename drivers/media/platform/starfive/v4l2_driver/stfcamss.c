@@ -597,7 +597,7 @@ static int stfcamss_register_mediadevice_subdevnodes(
 
 		ret = media_create_pad_link(sensor, i,
 			input, STF_PAD_SINK,
-			MEDIA_LNK_FL_IMMUTABLE | MEDIA_LNK_FL_ENABLED);
+			NULL);
 		if (ret < 0) {
 			st_err(ST_CAMSS,
 				"Failed to link %s->%s entities: %d\n",
