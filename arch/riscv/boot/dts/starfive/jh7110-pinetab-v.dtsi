@@ -473,6 +473,29 @@
 		};
 	};
 
+	ov5640_pins: ov5640-0 {
+		pwdn-pins {
+			pinmux = <GPIOMUX(22, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+
+		rst-pins {
+			pinmux = <GPIOMUX(34, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+
+		sw-pins {
+			pinmux = <GPIOMUX(53, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
 	gc02m2_pins: gc02m2-0 {
 		pwdn-pins {
 			pinmux = <GPIOMUX(25, GPOUT_HIGH,
@@ -695,6 +718,32 @@
 	pinctrl-0 = <&i2c6_pins>;
 	status = "okay";
 
+	ov5640: camera@3c {
+		status = "okay";
+		compatible = "ovti,ov5640";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ov5640_pins>;
+		reg = <0x3c>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xclk";
+		powerdown-gpios = <&sysgpio 22 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&sysgpio 34 GPIO_ACTIVE_LOW>;
+		sw-gpios = <&sysgpio 53 GPIO_ACTIVE_HIGH>;
+		rotation = <0>;
+
+		port {
+			/* CSI2 bus endpoint */
+			ov5640_to_csi2rx: endpoint {
+				remote-endpoint = <&csi2rx_from_ov5640>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				data-lanes = <2 1>;
+				lane-polarities = <0 0 0>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+
 	gc02m2: gc02m2@37 {
 		status = "okay";
 		compatible = "galaxycore,gc02m2";
@@ -730,6 +779,16 @@
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+			csi2rx_from_ov5640: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&ov5640_to_csi2rx>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <0 0 0>;
+				status = "okay";
+			};
 
 			csi2rx0_from_gc02m2: endpoint@1 {
 				reg = <1>;
