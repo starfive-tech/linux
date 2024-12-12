@@ -50,6 +50,17 @@ config VIDEO_AR0521
 	  To compile this driver as a module, choose M here: the
 	  module will be called ar0521.
 
+config VIDEO_GC02M2
+	tristate "GalaxyCore GC02M2 sensor support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API
+	depends on MEDIA_CAMERA_SUPPORT
+	select V4L2_FWNODE
+	help
+	  Support for the GalaxyCore GC02M2 sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called gc02m2.
+
 config VIDEO_HI556
 	tristate "Hynix Hi-556 sensor support"
 	help

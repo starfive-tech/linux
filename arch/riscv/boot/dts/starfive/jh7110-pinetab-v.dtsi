@@ -201,6 +201,12 @@
 		};
 	};
 
+	clk_ext_camera: clk-ext-camera {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+	};
+
 };
 
 &dvp_clk {
@@ -262,6 +268,20 @@
 				 <GPIOMUX(20, GPOUT_LOW,
 					      GPOEN_SYS_I2C5_DATA,
 					      GPI_SYS_I2C5_DATA)>;
+			bias-disable; /* external pull-up */
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	i2c6_pins: i2c6-0 {
+		i2c-pins {
+			pinmux = <GPIOMUX(16, GPOUT_LOW,
+					      GPOEN_SYS_I2C6_CLK,
+					      GPI_SYS_I2C6_CLK)>,
+				 <GPIOMUX(17, GPOUT_LOW,
+					      GPOEN_SYS_I2C6_DATA,
+					      GPI_SYS_I2C6_DATA)>;
 			bias-disable; /* external pull-up */
 			input-enable;
 			input-schmitt-enable;
@@ -452,6 +472,23 @@
 			input-enable;
 		};
 	};
+
+	gc02m2_pins: gc02m2-0 {
+		pwdn-pins {
+			pinmux = <GPIOMUX(25, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+
+		rst-pins {
+			pinmux = <GPIOMUX(33, GPOUT_HIGH,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-enable;
+		};
+	};
+
 };
 
 &uart0 {
@@ -647,6 +684,64 @@
 		monitored-battery = <&bat>;
 	        power-supplies = <&charger>;
 	 };
+};
+
+&i2c6 {
+	clock-frequency = <100000>;
+	i2c-sda-hold-time-ns = <300>;
+	i2c-sda-falling-time-ns = <510>;
+	i2c-scl-falling-time-ns = <510>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c6_pins>;
+	status = "okay";
+
+	gc02m2: gc02m2@37 {
+		status = "okay";
+		compatible = "galaxycore,gc02m2";
+		pinctrl-names = "default";
+		pinctrl-0 = <&gc02m2_pins>;
+		reg = <0x37>;
+		clocks = <&clk_ext_camera>;
+		clock-names = "xvclk";
+		reset-gpio = <&sysgpio 33 GPIO_ACTIVE_HIGH>;
+		pwdn-gpio = <&sysgpio 25 GPIO_ACTIVE_LOW>;
+
+		port {
+			gc02m2_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_gc02m2>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				data-lanes = <1>;
+				link-frequencies = /bits/ 64 <336000000>;
+			};
+		};
+	};
+
+};
+
+&vin_sysctl {
+	/* when use dvp open this pinctrl*/
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			csi2rx0_from_gc02m2: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&gc02m2_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <0>;
+				data-lanes = <2 1>;
+				lane-polarities = <0 0 0>;
+				status = "okay";
+			};
+		};
+	};
 };
 
 &sfctemp {
