@@ -103,7 +103,6 @@
 		regulator-name = "wifi_3v3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		vin-supply = <&vcc_3v3>;
 	};
 
 	gpio_keys: gpio-keys {
