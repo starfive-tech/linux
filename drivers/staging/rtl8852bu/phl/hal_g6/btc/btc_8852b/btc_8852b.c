@@ -35,17 +35,20 @@ static const u8 btc_8852b_bt_rssi_thres[BTC_BT_RSSI_THMAX] = {40, 36, 31, 28};
 static const u8 btc_8852b_wl_rssi_thres[BTC_WL_RSSI_THMAX] = {70, 60, 50, 40};
 static const u8 btc_8852b_bt_rssi_thres[BTC_BT_RSSI_THMAX] = {50, 40, 30, 20};
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdesignated-init"
 static struct btc_chip_ops btc_8852b_ops = {
-	_8852b_rfe_type,
-	_8852b_init_cfg,
-	_8852b_wl_pri,
-	_8852b_wl_tx_power,
-	_8852b_wl_rx_gain,
-	_8852b_wl_btg_standby,
-	_8852b_wl_req_mac,
-	_8852b_update_bt_cnt,
-	_8852b_bt_rssi
+	.set_rfe = _8852b_rfe_type,
+	.init_cfg = _8852b_init_cfg,
+	.wl_pri = _8852b_wl_pri,
+	.wl_tx_power = _8852b_wl_tx_power,
+	.wl_rx_gain = _8852b_wl_rx_gain,
+	.wl_s1_standby = _8852b_wl_btg_standby,
+	.wl_req_mac = _8852b_wl_req_mac,
+	.update_bt_cnt = _8852b_update_bt_cnt,
+	.bt_rssi = _8852b_bt_rssi
 };
+#pragma GCC diagnostic pop
 
 /* Set  WL/BT periodical moniter reg, Max size: CXMREG_MAX*/
 /*

@@ -86,89 +86,91 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdesignated-init"
 static struct mac_ax_intf_ops mac8852b_sdio_ops = {
-	reg_read8_sdio, /* reg_read8 */
-	reg_write8_sdio, /* reg_write8 */
-	reg_read16_sdio, /* reg_read16 */
-	reg_write16_sdio, /* reg_write16 */
-	reg_read32_sdio, /* reg_read32 */
-	reg_write32_sdio, /* reg_write32 */
-	tx_allow_sdio, /* tx_allow_sdio */
-	tx_cmd_addr_sdio, /* tx_cmd_addr_sdio */
-	sdio_pre_init_8852b, /* intf_pre_init */
-	sdio_init, /* intf_init */
-	sdio_deinit, /* intf_init */
-	reg_read_n_sdio, /* reg_read_n_sdio */
-	NULL, /*get_bulkout_id*/
-	ltr_set_sdio, /* ltr_set_pcie */
-	NULL, /*u2u3_switch*/
-	NULL, /*get_usb_mode*/
-	NULL, /*get_usb_support_ability*/
-	NULL, /*usb_tx_agg_cfg*/
-	NULL, /*usb_rx_agg_cfg*/
-	set_sdio_wowlan, /*set_wowlan*/
-	ctrl_txdma_ch_sdio, /*ctrl_txdma_ch*/
-	clr_idx_all_sdio, /*clr_idx_all*/
-	poll_txdma_ch_idle_sdio, /*poll_txdma_ch_idle*/
-	poll_rxdma_ch_idle_sdio, /*poll_rxdma_ch_idle*/
-	set_pcie_speed_sdio, /*set_pcie_speed*/
-	get_pcie_speed_sdio, /*get_pcie_speed*/
-	ctrl_txhci_sdio, /*ctrl_txhci*/
-	ctrl_rxhci_sdio, /*ctrl_rxhci*/
-	ctrl_dma_io_sdio, /*ctrl_dma_io*/
-	get_io_stat_sdio, /* get_io_stat */
-	sdio_get_txagg_num, /*get_txagg_num*/
-	get_avail_txbd_sdio, /*get_avail_txbd*/
-	get_avail_rxbd_sdio, /*get_avail_rxbd*/
-	trigger_txdma_sdio, /*trigger_txdma*/
-	notify_rxdone_sdio, /*notify_rxdone*/
-	sdio_get_rx_state, /*get_usb_rx_state*/
-	dbcc_hci_ctrl_sdio, /* dbcc_hci_ctrl */
-	sdio_autok_counter_avg, /* pcie_autok_counter_avg */
-	sdio_tp_adjust, /* tp_adjust */
+	.reg_read8 = reg_read8_sdio, /* reg_read8 */
+	.reg_write8 = reg_write8_sdio, /* reg_write8 */
+	.reg_read16 = reg_read16_sdio, /* reg_read16 */
+	.reg_write16 = reg_write16_sdio, /* reg_write16 */
+	.reg_read32 = reg_read32_sdio, /* reg_read32 */
+	.reg_write32 = reg_write32_sdio, /* reg_write32 */
+	.tx_allow_sdio = tx_allow_sdio, /* tx_allow_sdio */
+	.tx_cmd_addr_sdio = tx_cmd_addr_sdio, /* tx_cmd_addr_sdio */
+	.intf_pre_init = sdio_pre_init_8852b, /* intf_pre_init */
+	.intf_init = sdio_init, /* intf_init */
+	.intf_init = sdio_deinit, /* intf_init */
+	.reg_read_n_sdio = reg_read_n_sdio, /* reg_read_n_sdio */
+	.get_bulkout_id = NULL, /*get_bulkout_id*/
+	.ltr_set_pcie = ltr_set_sdio, /* ltr_set_pcie */
+	.u2u3_switch = NULL, /*u2u3_switch*/
+	.get_usb_mode = NULL, /*get_usb_mode*/
+	.get_usb_support_ability = NULL, /*get_usb_support_ability*/
+	.usb_tx_agg_cfg = NULL, /*usb_tx_agg_cfg*/
+	.usb_rx_agg_cfg = NULL, /*usb_rx_agg_cfg*/
+	.set_wowlan = set_sdio_wowlan, /*set_wowlan*/
+	.ctrl_txdma_ch = ctrl_txdma_ch_sdio, /*ctrl_txdma_ch*/
+	.clr_idx_all = clr_idx_all_sdio, /*clr_idx_all*/
+	.poll_txdma_ch_idle = poll_txdma_ch_idle_sdio, /*poll_txdma_ch_idle*/
+	.poll_rxdma_ch_idle = poll_rxdma_ch_idle_sdio, /*poll_rxdma_ch_idle*/
+	.set_pcie_speed = set_pcie_speed_sdio, /*set_pcie_speed*/
+	.get_pcie_speed = get_pcie_speed_sdio, /*get_pcie_speed*/
+	.ctrl_txhci = ctrl_txhci_sdio, /*ctrl_txhci*/
+	.ctrl_rxhci_sdio = ctrl_rxhci_sdio, /*ctrl_rxhci*/
+	.ctrl_rxhci = ctrl_dma_io_sdio, /*ctrl_dma_io*/
+	.get_io_stat = get_io_stat_sdio, /* get_io_stat */
+	.get_txagg_num = sdio_get_txagg_num, /*get_txagg_num*/
+	.get_avail_txbd = get_avail_txbd_sdio, /*get_avail_txbd*/
+	.get_avail_rxbd = get_avail_rxbd_sdio, /*get_avail_rxbd*/
+	.trigger_txdma = trigger_txdma_sdio, /*trigger_txdma*/
+	.notify_rxdone = notify_rxdone_sdio, /*notify_rxdone*/
+	.get_rx_state = sdio_get_rx_state, /*get_usb_rx_state*/
+	.dbcc_hci_ctrl = dbcc_hci_ctrl_sdio, /* dbcc_hci_ctrl */
+	.pcie_autok_counter_avg = sdio_autok_counter_avg, /* pcie_autok_counter_avg */
+	.tp_adjust = sdio_tp_adjust, /* tp_adjust */
 };
 #endif
 
 #if MAC_AX_USB_SUPPORT
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdesignated-init"
 static struct mac_ax_intf_ops mac8852b_usb_ops = {
-	reg_read8_usb_8852b, /* reg_read8 */
-	reg_write8_usb_8852b, /* reg_write8 */
-	reg_read16_usb_8852b, /* reg_read16 */
-	reg_write16_usb_8852b, /* reg_write16 */
-	reg_read32_usb_8852b, /* reg_read32 */
-	reg_write32_usb_8852b, /* reg_write32 */
-	NULL, /* tx_allow_sdio */
-	NULL, /* tx_cmd_addr_sdio */
-	usb_pre_init_8852b, /* intf_pre_init */
-	usb_init_8852b, /* intf_init */
-	usb_deinit_8852b, /* intf_init */
-	NULL, /* reg_read_n_sdio */
-	get_bulkout_id_8852b, /*get_bulkout_id*/
-	ltr_set_usb, /* ltr_set_pcie */
-	u2u3_switch_8852b, /*u2u3_switch*/
-	get_usb_mode, /*get_usb_mode*/
-	get_usb_support_ability_8852b,/*get_usb_support_ability*/
-	usb_tx_agg_cfg_8852b, /*usb_tx_agg_cfg*/
-	usb_rx_agg_cfg_8852b, /*usb_rx_agg_cfg*/
-	set_usb_wowlan_8852b, /*set_wowlan*/
-	ctrl_txdma_ch_usb, /*ctrl_txdma_ch*/
-	clr_idx_all_usb, /*clr_idx_all*/
-	poll_txdma_ch_idle_usb, /*poll_txdma_ch_idle*/
-	poll_rxdma_ch_idle_usb, /*poll_rxdma_ch_idle*/
-	set_pcie_speed_usb, /*set_pcie_speed*/
-	get_pcie_speed_usb, /*get_pcie_speed*/
-	ctrl_txhci_usb, /*ctrl_txhci*/
-	ctrl_rxhci_usb, /*ctrl_rxhci*/
-	ctrl_dma_io_usb, /*ctrl_dma_io*/
-	get_io_stat_usb, /* get_io_stat */
-	usb_get_txagg_num_8852b, /*get_txagg_num*/
-	get_avail_txbd_usb, /*get_avail_txbd*/
-	get_avail_rxbd_usb, /*get_avail_rxbd*/
-	trigger_txdma_usb, /*trigger_txdma*/
-	notify_rxdone_usb, /*notify_rxdone*/
-	usb_get_rx_state_8852b, /*get_usb_rx_state*/
-	dbcc_hci_ctrl_usb, /* dbcc_hci_ctrl */
-	usb_autok_counter_avg, /* pcie_autok_counter_avg */
-	usb_tp_adjust, /* tp_adjust */
+	.reg_read8 = reg_read8_usb_8852b, /* reg_read8 */
+	.reg_write8 = reg_write8_usb_8852b, /* reg_write8 */
+	.reg_read16 = reg_read16_usb_8852b, /* reg_read16 */
+	.reg_write16 = reg_write16_usb_8852b, /* reg_write16 */
+	.reg_read32 = reg_read32_usb_8852b, /* reg_read32 */
+	.reg_write32 = reg_write32_usb_8852b, /* reg_write32 */
+	.tx_allow_sdio = NULL, /* tx_allow_sdio */
+	.tx_cmd_addr_sdio = NULL, /* tx_cmd_addr_sdio */
+	.intf_pre_init = usb_pre_init_8852b, /* intf_pre_init */
+	.intf_init = usb_init_8852b, /* intf_init */
+	.intf_deinit = usb_deinit_8852b, /* intf_deinit */
+	.reg_read_n_sdio = NULL, /* reg_read_n_sdio */
+	.get_bulkout_id = get_bulkout_id_8852b, /*get_bulkout_id*/
+	.ltr_set_pcie = ltr_set_usb, /* ltr_set_pcie */
+	.u2u3_switch = u2u3_switch_8852b, /*u2u3_switch*/
+	.get_usb_mode = get_usb_mode, /*get_usb_mode*/
+	.get_usb_support_ability = get_usb_support_ability_8852b,/*get_usb_support_ability*/
+	.usb_tx_agg_cfg = usb_tx_agg_cfg_8852b, /*usb_tx_agg_cfg*/
+	.usb_rx_agg_cfg = usb_rx_agg_cfg_8852b, /*usb_rx_agg_cfg*/
+	.set_wowlan = set_usb_wowlan_8852b, /*set_wowlan*/
+	.ctrl_txdma_ch = ctrl_txdma_ch_usb, /*ctrl_txdma_ch*/
+	.clr_idx_all = clr_idx_all_usb, /*clr_idx_all*/
+	.poll_txdma_ch_idle = poll_txdma_ch_idle_usb, /*poll_txdma_ch_idle*/
+	.poll_rxdma_ch_idle = poll_rxdma_ch_idle_usb, /*poll_rxdma_ch_idle*/
+	.set_pcie_speed = set_pcie_speed_usb, /*set_pcie_speed*/
+	.get_pcie_speed = get_pcie_speed_usb, /*get_pcie_speed*/
+	.ctrl_txhci = ctrl_txhci_usb, /*ctrl_txhci*/
+	.ctrl_rxhci = ctrl_rxhci_usb, /*ctrl_rxhci*/
+	.ctrl_dma_io = ctrl_dma_io_usb, /*ctrl_dma_io*/
+	.get_io_stat = get_io_stat_usb, /* get_io_stat */
+	.get_txagg_num = usb_get_txagg_num_8852b, /*get_txagg_num*/
+	.get_avail_txbd = get_avail_txbd_usb, /*get_avail_txbd*/
+	.get_avail_rxbd = get_avail_rxbd_usb, /*get_avail_rxbd*/
+	.trigger_txdma = trigger_txdma_usb, /*trigger_txdma*/
+	.notify_rxdone = notify_rxdone_usb, /*notify_rxdone*/
+	.get_rx_state = usb_get_rx_state_8852b, /*get_rx_state*/
+	.dbcc_hci_ctrl = dbcc_hci_ctrl_usb, /* dbcc_hci_ctrl */
+	.pcie_autok_counter_avg = usb_autok_counter_avg, /* pcie_autok_counter_avg */
+	.tp_adjust = usb_tp_adjust, /* tp_adjust */
 };
 #endif
 
