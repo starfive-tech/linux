@@ -43,14 +43,14 @@
 		#size-cells = <2>;
 		ranges;
 
-		dma-reserved@260000000 {
-			reg = <0x2 0x60000000 0x0 0x20000000>;
+		dma-reserved@90000000 {
+			reg = <0x0 0x90000000 0x0 0x10000000>;
 			no-map;
 		};
 
-		linux,dma@660000000 {
+		linux,dma@490000000 {
 			compatible = "shared-dma-pool";
-			reg = <0x6 0x60000000 0x0 0x20000000>;
+			reg = <0x4 0x90000000 0x0 0x10000000>;
 			no-map;
 			linux,dma-default;
 		};
