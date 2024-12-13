@@ -1059,6 +1059,10 @@ config SND_SOC_ES8316
 	tristate "Everest Semi ES8316 CODEC"
 	depends on I2C
 
+config SND_SOC_ES8316_TABV
+	tristate "Everest Semi ES8316 CODEC on PineTab-V"
+	depends on I2C
+
 config SND_SOC_ES8326
 	tristate "Everest Semi ES8326 CODEC"
 	depends on I2C

@@ -148,12 +148,6 @@
 		priority = <160>;
 	};
 
-	speaker_amp: speaker-amplifier {
-		compatible = "simple-audio-amplifier";
-		enable-gpios = <&sysgpio 50 GPIO_ACTIVE_HIGH>;
-		sound-name-prefix = "Speaker Amplifier";
-	};
-
 	sound1: snd-card1 {
 		compatible = "simple-audio-card";
 		#address-cells = <1>;
@@ -174,14 +168,8 @@
 			"MIC2", "Internal Mic",
 			"Headphones", "HPOL",
 			"Headphones", "HPOR",
-			"Speaker Amplifier INL", "HPOL",
-			"Speaker Amplifier INR", "HPOR",
-			"Speaker", "Speaker Amplifier OUTL",
-			"Speaker", "Speaker Amplifier OUTR";
-
-		simple-audio-card,hp-det-gpio = <&sysgpio 36 GPIO_ACTIVE_LOW>;
-		simple-audio-card,aux-devs = <&speaker_amp>;
-		simple-audio-card,pin-switches = "Speaker";
+			"Speaker", "HPOL",
+			"Speaker", "HPOR";
 
 		simple-audio-card,cpu@0 {
 			reg = <0>;
@@ -532,6 +520,9 @@
 		clocks = <&mclk_ext>;
 		clock-names = "mclk";
 		#sound-dai-cells = <0>;
+
+		papower-gpio = <&sysgpio 50 GPIO_ACTIVE_LOW>;
+		hp-det-gpio = <&sysgpio 36 GPIO_ACTIVE_LOW>;
 	};
 };
 
