@@ -718,19 +718,23 @@
 	};
 
 	charger: sc89890@6a {
-		compatible = "sc,sc89890";
+		compatible = "sc,sc89890h";
 		status = "okay";
 		reg = <0x6a>;
-		interrupt-parent = <&sysgpio>;
-		interrupts = <48 IRQ_TYPE_EDGE_FALLING>;
-		ti,battery-regulation-voltage = <4350000>; /* maximum charging voltage (in uV) */
-		ti,charge-current = <2000000> /* maximum charging current (in uA) */;
-		ti,termination-current = <300000>;  /* charge will be terminated when current in constant-voltage phase drops below this value (in uA) */
-		ti,precharge-current = <128000>; /* maximum charge current during precharge phase (in uA) */
-		ti,minimum-sys-voltage = <3400000>; /* when battery is charging and it is below minimum system voltage, the system will be regulated above minimum-sys-voltage setting (in uV) */
-		ti,boost-voltage = <5000000>; /* VBUS voltage level in boost mode (in uV) */
-		ti,boost-max-current = <1500000>; /* maximum allowed current draw in boost mode (in uA) */
-		ti,use-ilim-pin = <0>; /* dont use ILIM pin to set charge current */
+                irq-gpios = <&sysgpio 48 GPIO_ACTIVE_LOW>;
+
+                charger_name = "primary_chg";
+                eint_name = "chr_stat";
+                /*sc,sc8989x,charge-detect-enable*/
+                sc,sc89890h,usb-vlim = <4500>;
+                sc,sc89890h,usb-ilim = <2000>;
+                sc,sc89890h,usb-vreg = <4200>;
+                sc,sc89890h,usb-ichg = <2000>;
+                sc,sc89890h,precharge-current = <180>;
+                sc,sc89890h,termination-current = <180>;
+                sc,sc89890h,boost-voltage = <5000>;
+                sc,sc89890h,boost-current = <1200>;
+                sc,sc89890h,charge-current = <1500>;
 		monitored-battery = <&bat>;
 	};
 
