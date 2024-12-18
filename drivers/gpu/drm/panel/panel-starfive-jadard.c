@@ -519,38 +519,6 @@ static int panel_probe(struct i2c_client *client)//, const struct i2c_device_id 
 
 	mipi_dsi_set_drvdata(jd_panel->dsi, jd_panel);
 
-	//radxa 10inch connect detect
-	gpiod_direction_output(jd_panel->enable, 0);
-	gpiod_set_value(jd_panel->enable, 1);
-	mdelay(100);
-
-	gpiod_direction_output(jd_panel->reset, 0);
-	mdelay(100);
-	gpiod_set_value(jd_panel->reset, 1);
-	mdelay(100);
-	gpiod_set_value(jd_panel->reset, 0);
-	mdelay(100);
-	gpiod_set_value(jd_panel->reset, 1);
-	mdelay(150);
-
-	jd_panel->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
-	if(jd_panel->dsi) {
-		//use this command to detect the connected status
-		err = mipi_dsi_dcs_get_power_mode(jd_panel->dsi, &mode);
-		dev_info(dev, "dsi command return %d, mode %d\n", err, mode);
-		if (err == -EIO) {
-			dev_info(dev, "raxda 10 inch detected\n");
-			jd_panel->choosemode = 1;
-			desc = &cz101b4001_desc[1];//choose 1200x1920 mode
-			jd_panel->desc = desc;
-			jd_panel->dsi->hs_rate = 980000000;//after this, dsi and phy will config again
-		} else {
-			dev_info(dev, "4lane is radxa 8inch\n");
-			jd_panel->dsi->hs_rate = 490000000;
-		}
-	}
-	jd_panel->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
-
 	//acceleroter SC7A20
 	dev_info(dev, "probe sc7a20 begin\n");
 	settings = st_accel_get_settings("sc7a20");
