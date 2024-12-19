@@ -129,14 +129,7 @@ static int es8316_reset(struct snd_soc_component *component)
 
 static bool es8316_headphone_det(struct es8316_priv *es8316)
 {
-	unsigned int temp;
-
-	/* Read the flag from hardware not cache */
-	regcache_cache_bypass(es8316->regmap, true);
-	regmap_read(es8316->regmap, ES8316_GPIO_FLAG, &temp);
-	regcache_cache_bypass(es8316->regmap, false);
-
-	return !!(temp & ES8316_FLAG_HP_INS_MASK);
+	return !gpiod_get_value_cansleep(es8316->hp_det);
 }
 
 static void es8316_enable_spk(struct es8316_priv *es8316, bool enable)
@@ -1357,6 +1350,7 @@ static int es8316_i2c_probe(struct i2c_client *i2c)
 		dev_err(&i2c->dev, "Failed to get pa-power gpio : %ld\n", PTR_ERR(es8316->pa_power));
 		es8316->pa_power = NULL;
 	}
+	gpiod_set_value_cansleep(es8316->pa_power, 0);
 
 	es8316->hp_det = devm_gpiod_get_optional(&i2c->dev, "hp-det", GPIOD_IN);
 	if (!es8316->hp_det || IS_ERR(es8316->hp_det)) {
@@ -1372,7 +1366,7 @@ static int es8316_i2c_probe(struct i2c_client *i2c)
 		INIT_DELAYED_WORK(&es8316->work, es8316_hp_work);
 		ret = devm_request_threaded_irq(&i2c->dev, es8316->hp_det_irq, NULL,
 						es8316_irq_handler,
-						IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+						IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 						"es8316_interrupt", es8316);
 		if (ret < 0) {
 			dev_err(&i2c->dev, "request_irq failed: %d\n", ret);

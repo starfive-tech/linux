@@ -557,8 +557,8 @@
 		clock-names = "mclk";
 		#sound-dai-cells = <0>;
 
-		papower-gpio = <&sysgpio 50 GPIO_ACTIVE_LOW>;
-		hp-det-gpio = <&sysgpio 36 GPIO_ACTIVE_LOW>;
+		papower-gpio = <&sysgpio 50 GPIO_ACTIVE_HIGH>;
+		hp-det-gpio = <&sysgpio 36 GPIO_ACTIVE_HIGH>;
 	};
 };
 
