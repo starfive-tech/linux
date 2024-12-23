@@ -135,7 +135,7 @@
 
 	bat: battery {
 		compatible = "simple-battery";
-		charge-full-design-microamp-hours = <9800000>;
+		charge-full-design-microamp-hours = <6000000>;
 		voltage-max-design-microvolt = <4350000>;
 		voltage-min-design-microvolt = <3000000>;
 	};
@@ -718,42 +718,39 @@
 	};
 
 	charger: sc89890@6a {
-		compatible = "sc,sc89890h";
+		compatible = "sc,sc89890";
 		status = "okay";
 		reg = <0x6a>;
-                irq-gpios = <&sysgpio 48 GPIO_ACTIVE_LOW>;
-
-                charger_name = "primary_chg";
-                eint_name = "chr_stat";
-                /*sc,sc8989x,charge-detect-enable*/
-                sc,sc89890h,usb-vlim = <4500>;
-                sc,sc89890h,usb-ilim = <2000>;
-                sc,sc89890h,usb-vreg = <4200>;
-                sc,sc89890h,usb-ichg = <2000>;
-                sc,sc89890h,precharge-current = <180>;
-                sc,sc89890h,termination-current = <180>;
-                sc,sc89890h,boost-voltage = <5000>;
-                sc,sc89890h,boost-current = <1200>;
-                sc,sc89890h,charge-current = <1500>;
+		interrupt-parent = <&sysgpio>;
+		interrupts = <48 IRQ_TYPE_EDGE_FALLING>;
+		ti,battery-regulation-voltage = <4350000>; /* maximum charging voltage (in uV) */
+		ti,charge-current = <3000000> /* maximum charging current (in uA) */;
+		ti,termination-current = <300000>;  /* charge will be terminated when current in constant-voltage phase drops below this value (in uA) */
+		ti,precharge-current = <128000>; /* maximum charge current during precharge phase (in uA) */
+		ti,minimum-sys-voltage = <3400000>; /* when battery is charging and it is below minimum system voltage, the system will be regulated above minimum-sys-voltage setting (in uV) */
+		ti,boost-voltage = <5000000>; /* VBUS voltage level in boost mode (in uV) */
+		ti,boost-max-current = <1500000>; /* maximum allowed current draw in boost mode (in uA) */
+		ti,use-ilim-pin = <0>; /* dont use ILIM pin to set charge current */
+		ti,input-current-limit = <3000000>; /* maximum input current limit (in uA) as PtV can't detect what type of Charger is connected */
 		monitored-battery = <&bat>;
 	};
 
 	cw2015@62 {
-	        status = "okay";
-	        compatible = "cellwise,cw2015";
-	        reg = <0x62>;
-	        cellwise,battery-profile = /bits/ 8
-			<0x17 0x67 0x63 0x64 0x63 0x62 0x61 0x5E
-			 0x59 0x61 0x55 0x57 0x60 0x50 0x43 0x3C
-			 0x33 0x2D 0x27 0x24 0x26 0x2D 0x39 0x47
-			 0x44 0x11 0x0E 0x15 0x20 0x41 0x48 0x55
-			 0x59 0x5B 0x60 0x60 0x3F 0x19 0x6A 0x4A
-			 0x0B 0x1B 0x2D 0x57 0x8B 0x93 0x96 0x13
-			 0x2E 0x56 0xA3 0xCA 0x80 0x6A 0x99 0xCB
-			 0x2F 0x00 0x64 0xA5 0xB5 0x11 0xF0 0x31>;
-	        cellwise,monitor-interval-ms = <5000>;
+	    status = "okay";
+	    compatible = "cellwise,cw2015";
+	    reg = <0x62>;
+	    cellwise,battery-profile = /bits/ 8
+		<0x17 0x67 0x6C 0x68 0x66 0x64 0x63 0x5D
+		 0x64 0x6C 0x4B 0x58 0x59 0x4D 0x42 0x3A
+		 0x30 0x28 0x23 0x1D 0x24 0x2C 0x3C 0x4A
+		 0x30 0x21 0x0C 0xCD 0x30 0x50 0x52 0x6A
+		 0x73 0x70 0x70 0x73 0x40 0x1B 0x65 0x3D
+		 0x0A 0x28 0x25 0x55 0x84 0x93 0x97 0x19
+		 0x41 0x7D 0x97 0xAF 0x80 0x8C 0xAE 0xCB
+		 0x2F 0x00 0x64 0xA5 0xB5 0x11 0xF0 0x39>;
+	    cellwise,monitor-interval-ms = <5000>;
 		monitored-battery = <&bat>;
-	        power-supplies = <&charger>;
+	    power-supplies = <&charger>;
 	 };
 };
 
