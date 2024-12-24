@@ -1254,10 +1254,14 @@ static int es8316_probe(struct snd_soc_component *component)
 
 			if (device_property_match_string(component->dev,
 							 "starfive,dmic-mode", "true") < 0) {
-				/* Use Lin1-Rin1 analog MIC */
+				/* Use Lin2-Rin2 analog MIC */
 				snd_soc_component_update_bits(component,
 							      ES8316_ADC_PDN_LINSEL_REG22,
-							      0x30, 0x0);
+							      0x30, 0x30);
+				/* Disable DMIC */
+				snd_soc_component_update_bits(component,
+							      ES8316_ADC_DMIC_REG25,
+							      0x3, 0x0);
 			} else {
 				/* Use Lin1-Rin1 */
 				snd_soc_component_update_bits(component,
