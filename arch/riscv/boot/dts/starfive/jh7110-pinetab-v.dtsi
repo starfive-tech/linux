@@ -602,9 +602,9 @@
                 status = "okay";
                 compatible ="starfive_jadard";
                 reg = <0x19>;
-                //reset-gpio = <&gpio 23 0>;
-                blen-gpio = <&sysgpio 45 GPIO_ACTIVE_HIGH>;
-                enable-gpio = <&sysgpio 37 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&sysgpio 51 0>;
+		blen-gpio = <&sysgpio 45 0>;
+		enable-gpio = <&sysgpio 37 0>;
 		power-supply = <&vcc_3v3>;
                 port {
                         panel_out1: endpoint {
