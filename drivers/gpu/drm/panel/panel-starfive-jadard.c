@@ -225,17 +225,13 @@ static int jadard_prepare(struct drm_panel *panel)
 	if (jadard->enable_initialized == true)
 		return 0;
 
-	gpiod_direction_output(jadard->enable, 0);
-	gpiod_set_value(jadard->enable, 1);
-	mdelay(100);
-
-	/*gpiod_direction_output(jadard->reset, 0);
+	gpiod_direction_output(jadard->reset, 0);
 	mdelay(100);
 	gpiod_set_value(jadard->reset, 1);
 	mdelay(100);
 	gpiod_set_value(jadard->reset, 0);
 	mdelay(100);
-	gpiod_set_value(jadard->reset, 1);*/
+	gpiod_set_value(jadard->reset, 1);
 	mdelay(150);
 
 	return 0;
@@ -245,7 +241,7 @@ static int jadard_unprepare(struct drm_panel *panel)
 {
 	struct jadard *jadard = panel_to_jadard(panel);
 
-//	gpiod_set_value(jadard->reset, 1);
+	gpiod_set_value(jadard->reset, 1);
 	msleep(120);
 #if 0
 	regulator_disable(jadard->vdd);
@@ -474,13 +470,8 @@ static int panel_probe(struct i2c_client *client)//, const struct i2c_device_id 
 		DRM_DEV_ERROR(dev, "failed to get our enable GPIO\n");
 		return PTR_ERR(jd_panel->enable);
 	}
+	gpiod_direction_output(jd_panel->enable, 1);
 
-	/*use i2c read to detect whether the panel has connected */
-/*	ret = jadard_i2c_read(client, 0x00, &reg_value);
-	if (ret < 0) {
-		dev_info(dev, "no 4lane connect!!!!\n");
-		return -ENODEV;
-	}*/
 	dev_info(dev, "==4lane panel!!! maybe 8inch==\n");
 	jd_panel->choosemode = 0;
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
