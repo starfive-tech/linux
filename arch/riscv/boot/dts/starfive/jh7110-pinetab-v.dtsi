@@ -415,14 +415,6 @@
         };
     };
 
-	mclk_ext_pins: mclk-ext-0 {
-        mclk-ext-pins {
-            pinmux = <GPIOMUX(4, GPOUT_LOW,
-                         GPOEN_DISABLE,
-                         GPI_SYS_MCLK_EXT)>;
-            input-enable;
-        };
-    };
 
 	uart0_pins: uart0-0 {
 		tx-pins {
@@ -945,7 +937,7 @@
 
 &i2srx {
 	pinctrl-names = "default";
-	pinctrl-0 = <&i2s_clk_pins &i2srx_pins &mclk_ext_pins>;
+	pinctrl-0 = <&i2s_clk_pins &i2srx_pins >;
 	status = "okay";
 };
 
