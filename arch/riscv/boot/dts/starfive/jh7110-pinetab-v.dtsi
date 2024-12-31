@@ -28,6 +28,7 @@
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
+		pcie0 = &pcie0;
 	};
 
 	chosen {
@@ -102,6 +103,20 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 	};
+
+        rfkill_bt {
+                compatible = "rfkill-gpio";
+                label = "BlueTooth";
+                radio-type = "bluetooth";
+                shutdown-gpios = <&sysgpio 54 GPIO_ACTIVE_HIGH>;
+        };
+
+        rfkill_wifi {
+                compatible = "rfkill-gpio";
+                label = "Wi-Fi";
+                radio-type = "wlan";
+                shutdown-gpios = <&sysgpio 42 GPIO_ACTIVE_HIGH>;
+        };
 
 	gpio_keys: gpio-keys {
 		status = "okay";
@@ -331,10 +346,28 @@
 		usb-pins {
 			pinmux = <GPIOMUX(43, GPOUT_LOW,
 					      GPOEN_DISABLE,
-					      GPI_SYS_USB_OVERCURRENT)>;
-			input-enable;
+					      GPI_NONE)>;
+			bias-disable;
 		};
 	};
+
+        rfkill_wifi_pins: rfkill_wifi-0 {
+                rfkill_wifi-pins {
+                        pinmux = <GPIOMUX(42, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_NONE)>;
+                        input-enable;
+                };
+        };
+
+        rfkill_bt_pins: rfkill_bt-0 {
+                rfkill_bt-pins {
+                        pinmux = <GPIOMUX(54, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_NONE)>;
+                        input-enable;
+                };
+        };
 
 	i2srx_pins: i2srx-0 {
         i2srx-pins {
@@ -479,6 +512,30 @@
 			slew-rate = <0>;
 		};
 	};
+
+	pcie0_pins: pcie0-0 {
+                clkreq-pins {
+                        pinmux = <GPIOMUX(27, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_NONE)>;
+                        bias-pull-down;
+                        drive-strength = <2>;
+                        input-enable;
+                        input-schmitt-disable;
+                        slew-rate = <0>;
+                };
+
+                wake-pins {
+                        pinmux = <GPIOMUX(32, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_NONE)>;
+                        bias-pull-up;
+                        drive-strength = <2>;
+                        input-enable;
+                        input-schmitt-disable;
+                        slew-rate = <0>;
+                };
+        };
 
 	hdmi_pins: hdmi-0 {
 		scl-pins {
@@ -1053,6 +1110,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb_pins>;
 	dr_mode = "host";
+	xhci-lowmem-pool;
 	status = "okay";
 };
 
@@ -1105,6 +1163,13 @@
 	status = "okay";
 };
 
+&pcie0 {
+        perst-gpios = <&sysgpio 26 GPIO_ACTIVE_LOW>;
+        phys = <&pciephy0>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&pcie0_pins>;
+        status = "okay";
+};
 
 &hdmi {
 	status = "okay";
