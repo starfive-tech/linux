@@ -135,10 +135,19 @@ static bool es8316_headphone_det(struct es8316_priv *es8316)
 static void es8316_enable_spk(struct es8316_priv *es8316, bool enable)
 {
 	if (es8316->pa_power) {
-		if (enable)
+		if (enable) {
 			gpiod_set_value_cansleep(es8316->pa_power, 1);
-		else
+			/* Use Lin2-Rin2 MIC */
+			snd_soc_component_update_bits(es8316_component,
+							      ES8316_ADC_PDN_LINSEL_REG22,
+							      0x30, 0x30);
+		} else {
 			gpiod_set_value_cansleep(es8316->pa_power, 0);
+			/* Use Lin1-Rin1 MIC */
+			snd_soc_component_update_bits(es8316_component,
+							      ES8316_ADC_PDN_LINSEL_REG22,
+							      0x30, 0x20);
+		}
 	}
 }
 
