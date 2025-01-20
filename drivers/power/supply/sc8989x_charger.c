@@ -903,11 +903,12 @@ static int sc89890h_usb_get_property(struct power_supply *psy,
 {
 
     struct sc89890h *sc = power_supply_get_drvdata(psy);
-    u8 type = sc89890h_get_vbus_type(sc);
+    u8 stat;
 
     switch (psp) {
     case POWER_SUPPLY_PROP_ONLINE:
-        if (type == SC89890H_VBUS_USB_SDP || type == SC89890H_VBUS_USB_DCP)
+		stat = sc89890h_get_charging_status(sc);
+        if (stat != SC89890H_CHRG_STAT_IDLE)
             val->intval = 1;
         else
             val->intval = 0;
