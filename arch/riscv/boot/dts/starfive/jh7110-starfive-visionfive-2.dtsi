@@ -307,6 +307,9 @@
 		reg = <0x19>;
 		reset-gpio = <&sysgpio 23 0>;
 		enable-gpio = <&sysgpio 22 0>;
+		mount-matrix =	"1",  "0",  "0",
+				"0",  "-1", "0",
+				"0",  "0",  "-1";
 
 		port {
 			panel_out1: endpoint {
