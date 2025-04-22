@@ -57,6 +57,8 @@
 
 #define USB3_PHY_RES_INDEX		0
 #define USB2_PHY_RES_INDEX		1
+#define USB_CLK_MODE_OFF		0x0
+#define USB_CLK_MODE_RX_NORMAL_PWR	1
 #define USB_LS_KEEPALIVE_OFF		0x4
 #define USB_LS_KEEPALIVE_ENABLE		4
 
@@ -200,6 +202,10 @@ exit:
 static void cdns_starfive_set_phy(struct cdns_starfive *data)
 {
 	unsigned int val;
+
+	val = readl(data->phybase_20 + USB_CLK_MODE_OFF);
+	val |= BIT(USB_CLK_MODE_RX_NORMAL_PWR);
+	writel(val, data->phybase_20 + USB_CLK_MODE_OFF);
 
 	if (data->mode != USB_DR_MODE_PERIPHERAL) {
 		/* Enable the LS speed keep-alive signal */
