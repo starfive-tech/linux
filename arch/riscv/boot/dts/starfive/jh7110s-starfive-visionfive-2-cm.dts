@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2025 StarFive Technology Co., Ltd.
+ * Copyright (C) 2025 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110-starfive-visionfive-2-v1.3b.dts"
+
+/ {
+	model = "StarFive VisionFive 2 CM";
+	compatible = "starfive,visionfive-2-cm", "starfive,jh7110s";
+};
+
+&mmc1 {
+	/delete-property/ no-sdio;
+	/delete-property/ no-mmc;
+	/delete-property/ cd-gpios;
+	/delete-property/ disable-wp;
+	/delete-property/ post-power-on-delay-ms;
+	max-frequency = <50000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	cap-sdio-irq;
+	cap-power-off-card;
+	non-removable;
+	keep-power-in-suspend;
+	gpio_wl_reg_on = <&sysgpio 33 GPIO_ACTIVE_LOW>;
+
+	brcmf: bcmdhd_wlan {
+		compatible = "bcmdhd_wlan";
+		gpio_wl_host_wake = <&sysgpio 34 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&gmac1 {
+	status = "disabled";
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i2c6 {
+	status = "disabled";
+};
+
+&pwmdac {
+	status = "disabled";
+};
+
+&pwmdac_codec {
+	status = "disabled";
+};
+
+&sound3 {
+	status = "disabled";
+};
+
+&syscrg {
+	assigned-clock-rates = <500000000>, <1250000000>;
+};
+
+&sysgpio {
+	uart1_pins: uart1-0 {
+		tx-pins {
+			pinmux = <GPIOMUX(16, GPOUT_SYS_UART1_TX,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			drive-strength = <12>;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+
+		rx-pins {
+			pinmux = <GPIOMUX(17, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_UART1_RX)>;
+			bias-pull-up;
+			drive-strength = <2>;
+			input-enable;
+			input-schmitt-enable;
+			slew-rate = <0>;
+		};
+
+		cts-pins {
+			pinmux = <GPIOMUX(3, GPOUT_LOW,
+					     GPOEN_DISABLE,
+					     GPI_SYS_UART1_CTS)>;
+			input-enable;
+		};
+
+		rts-pins {
+			pinmux = <GPIOMUX(2, GPOUT_SYS_UART1_RTS,
+					     GPOEN_ENABLE,
+					     GPI_NONE)>;
+			input-enable;
+		};
+	};
+
+	usb0_pins: usb0-0 {
+		vbus-pins {
+			pinmux = <GPIOMUX(25, GPOUT_SYS_USB_DRIVE_VBUS,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+			input-schmitt-disable;
+			slew-rate = <0>;
+		};
+	};
+};
+
+&uart1 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart1_pins>;
+        status = "okay";
+};
+
+&usb0 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb0_pins>;
+};
