@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2025 StarFive Technology Co., Ltd.
+ * Copyright (C) 2025 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110s-starfive-visionfive-2-cm.dts"
+
+/ {
+	model = "StarFive VisionFive 2 Lite";
+	compatible = "starfive,visionfive-2-lite", "starfive,jh7110s";
+};
+
+&mmc0 {
+	/delete-property/ cap-mmc-highspeed;
+	/delete-property/ mmc-ddr-1_8v;
+	/delete-property/ mmc-hs200-1_8v;
+	/delete-property/ cap-mmc-hw-reset;
+	/delete-property/ vmmc-supply;
+	/delete-property/ vqmmc-supply;
+	/delete-property/ non-removable;
+	bus-width = <4>;
+	no-sdio;
+	no-mmc;
+	disable-wp;
+	cap-sd-highspeed;
+};
+
+&mmc0_pins{
+	 rst-pins {
+		pinmux = <GPIOMUX(22, GPOUT_SYS_SDIO0_RST,
+				      GPOEN_ENABLE,
+				      GPI_NONE)>;
+		bias-pull-up;
+		drive-strength = <12>;
+		input-disable;
+		input-schmitt-disable;
+		slew-rate = <0>;
+	};
+};
