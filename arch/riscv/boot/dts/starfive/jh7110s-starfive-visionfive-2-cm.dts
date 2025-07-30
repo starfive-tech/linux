@@ -21,16 +21,11 @@
 	max-frequency = <50000000>;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	cap-sdio-irq;
-	cap-power-off-card;
+//	cap-sdio-irq;
 	non-removable;
 	keep-power-in-suspend;
 	gpio_wl_reg_on = <&sysgpio 33 GPIO_ACTIVE_LOW>;
 
-	brcmf: bcmdhd_wlan {
-		compatible = "bcmdhd_wlan";
-		gpio_wl_host_wake = <&sysgpio 34 GPIO_ACTIVE_HIGH>;
-	};
 };
 
 &gmac1 {
