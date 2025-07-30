@@ -59,6 +59,10 @@
 	status = "disabled";
 };
 
+&pcie1 {
+	enable-gpios = <&sysgpio 27 GPIO_ACTIVE_HIGH>;
+};
+
 &pciephy0 {
 	starfive,sys-syscon = <&sys_syscon 0x18>;
 	starfive,stg-syscon = <&stg_syscon 0x148 0x1f4>;
