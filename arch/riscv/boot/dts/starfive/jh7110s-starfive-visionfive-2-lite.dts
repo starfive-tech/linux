@@ -110,14 +110,14 @@
 		};
 
 		cts-pins {
-			pinmux = <GPIOMUX(25, GPOUT_LOW,
+			pinmux = <GPIOMUX(24, GPOUT_LOW,
 					      GPOEN_DISABLE,
 					      GPI_SYS_UART1_CTS)>;
 			input-enable;
 		};
 
 		rts-pins {
-			pinmux = <GPIOMUX(24, GPOUT_SYS_UART1_RTS,
+			pinmux = <GPIOMUX(25, GPOUT_SYS_UART1_RTS,
 					      GPOEN_ENABLE,
 					      GPI_NONE)>;
 			input-enable;
