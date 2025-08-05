@@ -23,7 +23,6 @@
 	bus-width = <4>;
 	no-sdio;
 	no-mmc;
-	cd-gpios = <&sysgpio 41 GPIO_ACTIVE_LOW>;
 	disable-wp;
 	cap-sd-highspeed;
 };
