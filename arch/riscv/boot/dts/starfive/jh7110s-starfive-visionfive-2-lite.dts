@@ -38,6 +38,7 @@
 	/delete-property/ cd-gpios;
 	/delete-property/ disable-wp;
 	/delete-property/ post-power-on-delay-ms;
+	board-is-vf2-lite;
 	max-frequency = <50000000>;
 	#address-cells = <1>;
 	#size-cells = <0>;
