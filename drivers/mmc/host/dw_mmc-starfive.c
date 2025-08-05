@@ -146,14 +146,19 @@ static int dw_mci_starfive_probe(struct platform_device *pdev)
 	int gpio_wl_reg_on = -1;
 	int ret;
 
-	if (device_property_read_bool(&pdev->dev, "board-is-devkits")) {
-		power_gpio = devm_gpiod_get_optional(&pdev->dev, "power", GPIOD_OUT_LOW);
-		if (IS_ERR(power_gpio)) {
-			dev_err(&pdev->dev, "Failed to get power-gpio\n");
-			return -EINVAL;
-		}
+	if (device_property_read_bool(&pdev->dev, "board-is-devkits")
+		|| device_property_read_bool(&pdev->dev, "board-is-vf2-lite")
+			|| device_property_read_bool(&pdev->dev, "board-is-vf2-cm")) {
 
-		gpiod_set_value_cansleep(power_gpio, 1);
+		if (device_property_read_bool(&pdev->dev, "board-is-devkits")) {
+			power_gpio = devm_gpiod_get_optional(&pdev->dev, "power", GPIOD_OUT_LOW);
+			if (IS_ERR(power_gpio)) {
+				dev_err(&pdev->dev, "Failed to get power-gpio\n");
+				return -EINVAL;
+			}
+
+			gpiod_set_value_cansleep(power_gpio, 1);
+		}
 
 		gpio_wl_reg_on = of_get_named_gpio(pdev->dev.of_node, "gpio_wl_reg_on", 0);
 		if (gpio_wl_reg_on >= 0) {
