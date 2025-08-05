@@ -26,7 +26,8 @@ dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-starfive-visionfive-2-v1.3b.dtb	\
 			       jh7110s-starfive-visionfive-2-lite-ac108.dtb	\
 			       jh7110s-starfive-visionfive-2-lite-amp.dtb	\
 			       jh7110s-starfive-visionfive-2-lite-tdm.dtb	\
-			       jh7110s-starfive-visionfive-2-lite-wm8960.dtb
+			       jh7110s-starfive-visionfive-2-lite-wm8960.dtb	\
+			       jh7110s-starfive-visionfive-2-lite-usbdevice.dtb
 
 subdir-y += evb-overlay
 dtb-$(CONFIG_ARCH_STARFIVE) += jh7110-evb.dtb			\
