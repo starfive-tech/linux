@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Copyright (C) 2025 StarFive Technology Co., Ltd.
+ * Copyright (C) 2025 Hal Feng <hal.feng@starfivetech.com>
+ */
+
+/dts-v1/;
+#include "jh7110s-starfive-visionfive-2-lite.dts"
+
+&aongpio {
+	usb_device_pins: usb-device-0 {
+		switch-pins {
+			pinmux = <GPIOMUX(0, GPOUT_HIGH,
+					     GPOEN_ENABLE,
+					     GPI_NONE)>;
+			input-disable;
+		};
+	};
+};
+
+&usb0 {
+	pinctrl-names = "default", "usb_device";
+	pinctrl-0 = <&usb0_pins>, <&usb_device_pins>;
+	dr_mode = "peripheral";
+};
