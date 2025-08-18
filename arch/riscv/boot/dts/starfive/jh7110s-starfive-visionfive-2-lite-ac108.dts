@@ -38,7 +38,7 @@
 					"RINPUT2", "Mic Jack";
 
 			cpu {
-				sound-dai = <&i2srx_mst>;
+				sound-dai = <&i2srx>;
 			};
 
 			sndcodec1: codec {
@@ -59,6 +59,6 @@
 	};
 };
 
-&i2srx_mst {
+&i2srx {
 	status = "okay";
 };

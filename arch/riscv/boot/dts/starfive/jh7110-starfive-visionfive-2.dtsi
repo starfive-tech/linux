@@ -224,9 +224,10 @@
 
 &i2srx {
 	pinctrl-names = "default";
-	pinctrl-0 = <&i2srx_pins>;
-	status = "disabled";
+	pinctrl-0 = <&i2s_clk_pins &i2srx_pins>;
+	status = "disabled"; 
 };
+
 
 &i2stx0 {
 	pinctrl-names = "default";
@@ -307,6 +308,24 @@
 			input-enable;
 		};
 	};
+
+        i2s_clk_pins: i2s-clk-0 {
+                bclk-lrck-pins {
+                        pinmux = <GPIOMUX(38, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_SYS_I2STX1_BCLK)>,
+                                 <GPIOMUX(38, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_SYS_I2SRX_BCLK)>,
+                                 <GPIOMUX(63, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_SYS_I2STX1_LRCK)>,
+                                 <GPIOMUX(63, GPOUT_LOW,
+                                              GPOEN_DISABLE,
+                                              GPI_SYS_I2SRX_LRCK)>;
+                        input-enable;
+                };
+        };
 
 	i2stx1_pins: i2stx1-0 {
 		sd-pins {
