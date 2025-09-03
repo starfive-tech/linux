@@ -1,0 +1,5 @@
+config AIC8800D80WLAN_SUPPORT
+	tristate "AIC8800D80 wlan Support"
+	help
+	  This is support for aic wifi driver.
+

@@ -1,0 +1,18 @@
+config AIC_SDIO_WLAN_SUPPORT
+	bool "AIC SDIO wireless Support"
+	default n
+	help
+	  This is support for aic wireless chip.
+
+config AIC_FW_PATH
+	depends on AIC_SDIO_WLAN_SUPPORT
+	string "Firmware & config file path"
+	default "/vendor/etc/firmware"
+	#default "/lib/firmware/aic8800_sdio"
+	help
+	  Path to the firmware & config file.
+
+if AIC_SDIO_WLAN_SUPPORT
+source "drivers/net/wireless/aic8800D80/aic8800D80_fdrv/Kconfig"
+source "drivers/net/wireless/aic8800D80/aic8800D80_btlpm/Kconfig"
+endif

@@ -26,4 +26,4 @@ obj-$(CONFIG_WLAN) += virtual/
 
 obj-$(CONFIG_USB_WIFI_ECR6600U) += eswin/
 obj-$(CONFIG_AIC_WLAN_SUPPORT) += aic8800/
-
+obj-$(CONFIG_AIC_SDIO_WLAN_SUPPORT) += aic8800D80/
