@@ -131,6 +131,13 @@
 					      GPI_NONE)>;
 			input-disable;
 		};
+
+		switch-pins {
+			pinmux = <GPIOMUX(62, GPOUT_LOW,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			input-disable;
+		};
 	};
 };
 
