@@ -18,8 +18,17 @@
 	};
 };
 
+&usb0_pins {
+	switch-pins {
+		pinmux = <GPIOMUX(62, GPOUT_HIGH,
+				      GPOEN_ENABLE,
+				      GPI_NONE)>;
+		input-disable;
+	};
+};
+
 &usb0 {
-	pinctrl-names = "default", "usb_device";
+	pinctrl-names = "default";
 	pinctrl-0 = <&usb0_pins>, <&usb_device_pins>;
 	dr_mode = "peripheral";
 };
