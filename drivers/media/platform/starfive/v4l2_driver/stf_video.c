@@ -36,6 +36,8 @@ static const struct stfcamss_format_info formats_pix_st7110_wr[] = {
 	  { { 1, 1 } }, { { 1, 1 } }, { 10 } },
 	{ MEDIA_BUS_FMT_SBGGR10_1X10, V4L2_PIX_FMT_SBGGR10, 1,
 	  { { 1, 1 } }, { { 1, 1 } }, { 10 } },
+	{ MEDIA_BUS_FMT_Y10_1X10, V4L2_PIX_FMT_Y10, 1,
+	  { { 1, 1 } }, { { 1, 1 } }, { 16 } },
 };
 
 static const struct stfcamss_format_info formats_raw_st7110_isp[] = {
@@ -1501,7 +1503,7 @@ int stf_video_register(struct stfcamss_video *video,
 	if (video->id == VIN_LINE_WR) {
 		video->formats = formats_pix_st7110_wr;
 		video->nformats = ARRAY_SIZE(formats_pix_st7110_wr);
-		video->bpl_alignment = STFCAMSS_FRAME_WIDTH_ALIGN_8;
+		video->bpl_alignment = STFCAMSS_FRAME_WIDTH_ALIGN_64;
 	} else if (isp_pad == STF_ISP_PAD_SRC
 		|| isp_pad == STF_ISP_PAD_SRC_SS0
 		|| isp_pad == STF_ISP_PAD_SRC_SS1) {

@@ -18,6 +18,7 @@ static const struct csiphy_format csiphy_formats_st7110[] = {
 	{ MEDIA_BUS_FMT_SGRBG10_1X10, 10},
 	{ MEDIA_BUS_FMT_SGBRG10_1X10, 10},
 	{ MEDIA_BUS_FMT_SBGGR10_1X10, 10},
+	{ MEDIA_BUS_FMT_Y10_1X10, 10},
 };
 
 int stf_csiphy_subdev_init(struct stfcamss *stfcamss)
