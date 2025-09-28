@@ -87,6 +87,12 @@
 		clock-frequency = <24000000>;
 	};
 
+	clk_ext_camera_54m: clk-ext-camera54m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <54000000>;
+	};
+
 	wm8960_mclk: wm8960_mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -183,6 +189,28 @@
 				data-lanes = <0 1>;
 				lane-polarities = <0 0 0>;
 				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+
+	imx296: imx296@1a {
+		compatible = "sony,imx296";
+		reg = <0x1a>;
+		clocks = <&clk_ext_camera_54m>;
+		clock-names = "inck";
+		reset-gpio = <&sysgpio 18 0>;
+		rotation = <0>;
+		orientation = <1>; //CAMERA_ORIENTATION_BACK
+
+		port {
+			/* CSI2 bus endpoint */
+			imx296_to_csi2rx0: endpoint {
+				remote-endpoint = <&csi2rx0_from_imx296>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <594000000>;
 			};
 		};
 	};
@@ -581,6 +609,16 @@
 				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
 				clock-lanes = <4>;
 				data-lanes = <0 1>;
+				status = "okay";
+			};
+
+			csi2rx0_from_imx296: endpoint@3 {
+				reg = <3>;
+				remote-endpoint = <&imx296_to_csi2rx0>;
+				bus-type = <4>;      /* MIPI CSI-2 D-PHY */
+				clock-lanes = <4>;
+				data-lanes = <0>;
+				clock-noncontinuous;
 				status = "okay";
 			};
 		};
