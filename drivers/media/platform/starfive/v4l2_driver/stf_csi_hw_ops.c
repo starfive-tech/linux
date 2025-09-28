@@ -192,10 +192,16 @@ static int csi2rx_start(struct stf_csi_dev *csi_dev, void *reg_base, u32 dt)
 		writel(CSI2RX_STREAM_CFG_FIFO_MODE_LARGE_BUF,
 		       reg_base + CSI2RX_STREAM_CFG_REG(i));
 
-		writel(CSI2RX_STREAM_DATA_CFG_EN_VC_SELECT |
-		       CSI2RX_STREAM_DATA_CFG_VC_SELECT(i) |
-		       CSI2RX_STREAM_DATA_CFG_EN_DATA_TYPE_0 | dt,
-		       reg_base + CSI2RX_STREAM_DATA_CFG_REG(i));
+		if (dt) {
+			writel(CSI2RX_STREAM_DATA_CFG_EN_VC_SELECT |
+			       CSI2RX_STREAM_DATA_CFG_VC_SELECT(i) |
+			       CSI2RX_STREAM_DATA_CFG_EN_DATA_TYPE_0 | dt,
+			       reg_base + CSI2RX_STREAM_DATA_CFG_REG(i));
+		} else {
+			writel(CSI2RX_STREAM_DATA_CFG_EN_VC_SELECT |
+			       CSI2RX_STREAM_DATA_CFG_VC_SELECT(i) ,
+			       reg_base + CSI2RX_STREAM_DATA_CFG_REG(i));
+		}
 
 		writel(CSI2RX_STREAM_CTRL_START,
 		       reg_base + CSI2RX_STREAM_CTRL_REG(i));

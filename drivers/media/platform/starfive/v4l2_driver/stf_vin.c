@@ -47,6 +47,7 @@ static const struct vin2_format vin2_formats_st7110[] = {
 	{ MEDIA_BUS_FMT_Y12_1X12, 8},
 	{ MEDIA_BUS_FMT_YUV8_1X24, 8},
 	{ MEDIA_BUS_FMT_AYUV8_1X32, 32},
+	{ MEDIA_BUS_FMT_Y10_1X10, 16},
 };
 
 static const struct vin2_format isp_formats_st7110_raw[] = {

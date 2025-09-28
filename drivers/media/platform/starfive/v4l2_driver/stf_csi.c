@@ -18,6 +18,7 @@ static const struct csi_format csi_formats_sink[] = {
 	{ MEDIA_BUS_FMT_SGRBG10_1X10, 10},
 	{ MEDIA_BUS_FMT_SGBRG10_1X10, 10},
 	{ MEDIA_BUS_FMT_SBGGR10_1X10, 10},
+	{ MEDIA_BUS_FMT_Y10_1X10, 10},
 };
 
 /* this bpp need see csi controllor */
@@ -27,6 +28,7 @@ static const struct csi_format csi_formats_src[] = {
 	{ MEDIA_BUS_FMT_SGRBG10_1X10, 16},
 	{ MEDIA_BUS_FMT_SGBRG10_1X10, 16},
 	{ MEDIA_BUS_FMT_SBGGR10_1X10, 16},
+	{ MEDIA_BUS_FMT_Y10_1X10, 16},
 };
 
 static int csi_find_format(u32 code,
@@ -86,6 +88,8 @@ static u32 code_to_data_type(int code)
 		return 0x2b;
 	case MEDIA_BUS_FMT_UYVY8_2X8:
 		return 0x1E;
+	case MEDIA_BUS_FMT_Y10_1X10:
+		return 0;
 	default:
 		return 0x2b;
 	}
