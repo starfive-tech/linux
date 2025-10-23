@@ -230,7 +230,7 @@
 &gmac1 {
 	phy-handle = <&phy1>;
 	phy-mode = "rgmii-id";
-	status = "okay";
+	status = "disabled";
 
 	mdio {
 		#address-cells = <1>;

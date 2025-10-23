@@ -1050,6 +1050,7 @@
 				 <&syscrg JH7110_SYSRST_TIMER3>;
 			reset-names = "apb", "ch0", "ch1",
 				      "ch2", "ch3";
+			status = "disabled";
 		};
 
 		mailbox_contrl0: mailbox@13060000 {
