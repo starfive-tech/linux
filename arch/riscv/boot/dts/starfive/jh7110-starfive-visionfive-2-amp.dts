@@ -15,13 +15,19 @@
 		rtthread_reserved: rt@6e800000 {
 			reg = <0x0 0x6e800000 0x0 0x1800000>;
 		};
+
+		/* RT-Thread2 kernel + RPMSG channel */
+		rtthread2_reserved: rt@70000000 {
+			reg = <0x0 0x70000000 0x0 0x2000000>;
+		};
 	};
 
 	ipimb: ipimb@0 {
 		compatible = "starfive,ipi-amp-mailbox";
 		reg = <0x0 0x6e402000 0x0 0x2000>;
 		#mbox-cells = <2>;
-		rtos-hart-id = <4>;
+		/* ch0: hart 4, ch1: hart 3 */
+		rtos-hart-ids = <4 3>;
 	};
 
 	rpmsg0: rpmsg@0 {
@@ -30,7 +36,16 @@
 			<0x0 0x6e500000 0x0 0x200000>;
 		mbox-names = "rx", "tx";
 		mboxes = <&ipimb 0 0>, <&ipimb 1 0>;
-		vdev-nums = <8>;
+		vdev-nums = <1>;
+	};
+
+	rpmsg1: rpmsg@1 {
+		compatible = "starfive,amp-virtio-rpmsg";
+		reg = <0x0 0x72000000 0x0 0x20000>,
+		      <0x0 0x72200000 0x0 0x200000>;
+		mbox-names = "rx", "tx";
+		mboxes = <&ipimb 0 1>, <&ipimb 1 1>;
+		vdev-nums = <1>;
 	};
 };
 
@@ -42,15 +57,15 @@
 	enable-ipi-amp;
 };
 
-&cpu3_intc {
-	enable-ipi-amp;
-};
-
 &gmac1 {
 	status = "disabled";
 };
 
 &pcie1 {
+	status = "disabled";
+};
+
+&U74_3 {
 	status = "disabled";
 };
 
