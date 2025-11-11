@@ -1347,7 +1347,7 @@ static int ecrnx_cfg80211_change_iface(struct wiphy *wiphy,
     {
         if((ECRNX_VIF_TYPE(vif) == NL80211_IFTYPE_AP) || (ECRNX_VIF_TYPE(vif) == NL80211_IFTYPE_P2P_GO))
         {
-            ecrnx_cfg80211_stop_ap(wiphy, dev, NULL);
+            ecrnx_cfg80211_stop_ap(wiphy, dev, 0);
         }
         else if((ECRNX_VIF_TYPE(vif) == NL80211_IFTYPE_STATION) || (ECRNX_VIF_TYPE(vif) == NL80211_IFTYPE_P2P_CLIENT))
         {
@@ -1712,7 +1712,7 @@ static int ecrnx_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
         key_params.key_len = sme->key_len;
         key_params.seq_len = 0;
         key_params.cipher = sme->crypto.cipher_group;
-        ecrnx_cfg80211_add_key(wiphy, dev, NULL, sme->key_idx, false, NULL, &key_params);
+        ecrnx_cfg80211_add_key(wiphy, dev, 0, sme->key_idx, false, NULL, &key_params);
     }
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
     else if ((sme->auth_type == NL80211_AUTHTYPE_SAE) &&
