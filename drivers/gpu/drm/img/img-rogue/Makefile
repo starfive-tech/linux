@@ -73,7 +73,7 @@ WINDOW_SYSTEM=nulldrmws
 #include $(OUT)/config_kernel.mk
 include $(src)/config_kernel.mk
 
-.SECONDARY:
+# .SECONDARY:
 
 define symlink-source-file
 @if [ ! -e $(dir $@) ]; then mkdir -p $(dir $@); fi
