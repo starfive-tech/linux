@@ -299,7 +299,9 @@ typedef const gimple *const_gimple_ptr;
 #define gimple gimple_ptr
 #define const_gimple const_gimple_ptr
 #undef CONST_CAST_GIMPLE
-#define CONST_CAST_GIMPLE(X) CONST_CAST(gimple, (X))
+#define CONST_CAST_GIMPLE(X) const_cast<gimple>((X))
+#undef CONST_CAST_TREE
+#define CONST_CAST_TREE(X) const_cast<tree>((X))
 #endif
 
 /* gimple related */
