@@ -3091,7 +3091,10 @@ static IMG_UINT32 _CleanCheckpointPool(_SYNC_CHECKPOINT_CONTEXT *psContext)
 	DECLARE_DLLIST(sCleanupList);
 	DLLIST_NODE *psThis, *psNext;
 	OS_SPINLOCK_FLAGS uiFlags;
-	IMG_UINT32 ui32ItemsFreed = 0, ui32NullScpCount = 0, __maybe_unused ui32PoolCount;
+	IMG_UINT32 ui32ItemsFreed = 0, __maybe_unused ui32PoolCount;
+#if (ENABLE_SYNC_CHECKPOINT_POOL_DEBUG == 1)
+	IMG_UINT32 ui32NullScpCount = 0;
+#endif
 
 	/* Acquire sync checkpoint pool lock */
 	OSSpinLockAcquire(psCtxCtl->hSyncCheckpointPoolLock, uiFlags);
@@ -3116,10 +3119,12 @@ static IMG_UINT32 _CleanCheckpointPool(_SYNC_CHECKPOINT_CONTEXT *psContext)
 			 * from the list so it's safe to use sListNode here */
 			dllist_add_to_head(&sCleanupList, &psCheckpoint->sListNode);
 		}
+#if (ENABLE_SYNC_CHECKPOINT_POOL_DEBUG == 1)
 		else
 		{
 			ui32NullScpCount++;
 		}
+#endif
 	}
 
 	/* Release sync checkpoint pool lock */

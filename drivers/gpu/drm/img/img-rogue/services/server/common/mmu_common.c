@@ -3035,7 +3035,9 @@ MMU_MapPages(MMU_CONTEXT *psMMUContext,
 	IMG_UINT32 uiPTEIndex = 0;
 	IMG_UINT32 uiPageSize = (1 << uiLog2HeapPageSize);
 	IMG_UINT32 uiLoop = 0;
+#if defined(PDUMP)
 	IMG_UINT32 ui32MappedCount = 0;
+#endif /*PDUMP*/
 	IMG_DEVMEM_OFFSET_T uiPgOffset = 0;
 	IMG_UINT32 uiFlushEnd = 0, uiFlushStart = 0;
 
@@ -3333,7 +3335,9 @@ MMU_MapPages(MMU_CONTEXT *psMMUContext,
 						sDevVAddr.uiAddr,
 						uiPgOffset * uiPageSize));
 
+#if defined(PDUMP)
 				ui32MappedCount++;
+#endif /*PDUMP*/
 			}
 		}
 
