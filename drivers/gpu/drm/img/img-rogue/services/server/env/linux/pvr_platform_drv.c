@@ -153,7 +153,9 @@ static void pvr_devices_unregister(void)
 #if defined(MODULE) && !defined(PVR_LDM_PLATFORM_PRE_REGISTERED)
 	unsigned int i;
 
-	BUG_ON(!pvr_devices);
+	/* pvr_init() no longer registers devices; they come from the DT */
+	if (!pvr_devices)
+		return;
 
 	for (i = 0; i < pvr_num_devices && pvr_devices[i]; i++)
 		platform_device_unregister(pvr_devices[i]);
